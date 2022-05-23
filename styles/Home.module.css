@@ -1,37 +1,27 @@
 .container {
-  padding: 0 2rem;
+  display: flex;
+  min-height: calc(100vh);
+  flex-direction: column;
 }
 
 .main {
-  min-height: 100vh;
-  padding: 4rem 0;
+  padding: 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: start;
   align-items: center;
 }
 
 .footer {
   display: flex;
-  flex: 1;
-  padding: 2rem 0;
-  border-top: 1px solid #eaeaea;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  padding: 10px;
+  height: 50px;
 }
 
-.footer a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-grow: 1;
-}
-
-.title a {
-  color: #0070f3;
-  text-decoration: none;
-}
 
 .title a:hover,
 .title a:focus,
@@ -41,7 +31,7 @@
 
 .title {
   margin: 0;
-  line-height: 1.15;
+  line-height: 1em;
   font-size: 4rem;
 }
 
@@ -51,7 +41,6 @@
 }
 
 .description {
-  margin: 4rem 0;
   line-height: 1.5;
   font-size: 1.5rem;
 }
