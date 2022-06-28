@@ -12,15 +12,19 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
+      <div className={styles.header}>
         <h1 className={styles.title}>
           dsaflash.cards
         </h1>
 
-        <p className={styles.description}>
-          data structures and algorithms flashcards to supplement your leetcode work.
-        </p>
+        <div className={styles.description}>
+          <span>
+            data structures and algorithms flashcards to supplement your leetcode work.
+          </span>
+        </div>
+      </div>
 
+      <main className={styles.main}>
         <div className={styles.grid}>
           <a href="https://nextjs.org/docs" className={styles.card}>
             <h2>Documentation &rarr;</h2>
@@ -30,7 +34,7 @@ const Home: NextPage = () => {
       </main>
 
       <footer className={styles.footer}>
-        <div><p>risky click</p></div>
+        <div><p>Risky Click</p></div>
       </footer>
     </div>
   )
