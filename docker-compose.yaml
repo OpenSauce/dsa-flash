@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    container_name: dsa-backend
+    environment:
+      # Pull database settings from the same .env file the app uses
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@db:5432/flashcards}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/usr/src/app/app          # hot‑reload code
+      - ./backend/alembic:/usr/src/app/alembic  # live migrations
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    container_name: dsa-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/usr/src/app                # HMR code volume
+  db:
+    image: postgres:15
+    container_name: dsa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flashcards
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d flashcards"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  pgdata:
