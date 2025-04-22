@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    depends_on: [db]
+    volumes:
+      - ./dsa-flash-cards/:/data/flashcards
+  frontend:
+    build: ./frontend
+    environment:
+      API_BASE: http://backend:8000
+    ports: ["3000:3000"]
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flashcards
+    ports: ["5432:5432"]
