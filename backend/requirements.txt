@@ -4,3 +4,7 @@ sqlmodel
 psycopg2-binary
 python-dotenv
 PyYAML
+passlib[bcrypt]
+python-jose
+python-multipart
+bcrypt==4.0.1

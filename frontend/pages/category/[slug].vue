@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import MarkdownIt from 'markdown-it'
+import { useCookie } from '#imports'
 
 /* ─── runtime + routing ──────────────────────────────────────── */
 const route      = useRoute()
@@ -41,10 +42,15 @@ const fetchKey = computed(() =>
   `flashcards-${category}-${language.value}-${page.value}`
 )
 
+const token = useCookie('token')
+
 /* fetch cards */
 const { data: cards, pending, error, refresh } = await useFetch(url, {
   key: fetchKey.value,      // plain string
   server: true,
+  headers: token.value
+    ? { Authorization: `Bearer ${token.value}` }
+    : {}
 })
 
 /* refresh when language or page changes */

@@ -13,23 +13,24 @@ const { isLoggedIn, login, logout } = useAuth()
 
         <!-- Right‑side nav -->
         <nav class="flex items-center gap-6 text-sm font-medium">
-          <NuxtLink to="/about"                       class="hover:underline hidden sm:inline">About</NuxtLink>
-          <NuxtLink to="https://github.com/OpenSauce/dsa-flash-cards" target="_blank" class="hover:underline hidden sm:inline">
+          <NuxtLink to="/about" class="hover:underline hidden sm:inline">About</NuxtLink>
+          <NuxtLink to="https://github.com/OpenSauce/dsa-flash-cards" target="_blank"
+            class="hover:underline hidden sm:inline">
             GitHub
           </NuxtLink>
 
-<!-- 🔐 Auth area -->
-<div v-if="!isLoggedIn" class="flex items-center gap-3">
-  <NuxtLink to="/login"  class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;in</NuxtLink>
-  <NuxtLink to="/signup" class="bg-white text-indigo-600 font-semibold px-3 py-1 rounded-md hover:bg-white/90">
-    Sign&nbsp;up
-  </NuxtLink>
-</div>
-
-<div v-else class="flex items-center gap-3">
-  <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
-  <button @click="user.value = null" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
-</div>
+          <!-- 🔐 Auth area -->
+          <div v-if="!isLoggedIn" class="flex items-center gap-3">
+            <NuxtLink to="/login" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;in</NuxtLink>
+            <NuxtLink to="/signup"
+              class="bg-white text-indigo-600 font-semibold px-3 py-1 rounded-md hover:bg-white/90">
+              Sign&nbsp;up
+            </NuxtLink>
+          </div>
+          <div v-else class="flex items-center gap-3">
+            <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
+            <button @click="logout()" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
+          </div>
 
         </nav>
       </div>
