@@ -9,6 +9,10 @@ const username = ref('')
 const password = ref('')
 const errorMsg = ref<string | null>(null)
 
+interface TokenResponse {
+  access_token: string
+}
+
 async function onLogin() {
   errorMsg.value = null
   try {
@@ -16,7 +20,7 @@ async function onLogin() {
       username: username.value,
       password: password.value
     })
-    const res = await $fetch('/api/token', {
+    const res = await $fetch<TokenResponse>('/api/token', {
       method: 'POST',
       body: form
     })
