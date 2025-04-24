@@ -1,35 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter, useCookie } from '#imports'
-const { isLoggedIn, login, logout } = useAuth()
+import { useRouter } from '#imports'
+import { useAuth } from '~/composables/useAuth'
 
+const { login } = useAuth()
 const router = useRouter()
-const tokenCookie = useCookie('token')
+
 const username = ref('')
 const password = ref('')
 const errorMsg = ref<string | null>(null)
 
-interface TokenResponse {
-  access_token: string
-}
-
 async function onLogin() {
   errorMsg.value = null
+
   try {
-    const form = new URLSearchParams({
-      username: username.value,
-      password: password.value
-    })
-    const res = await $fetch<TokenResponse>('/api/token', {
-      method: 'POST',
-      body: form
-    })
-    // set the JWT in a cookie
-    tokenCookie.value = res.access_token
-    login({ name: username.value })
-    // navigate home
+    // now all HTTP + cookie logic is in useAuth.login()
+    await login(username.value, password.value)
+
+    // redirect on success
     router.push('/')
   } catch (err: any) {
+    // surfacing any API error
     errorMsg.value = err.data?.detail || 'Login failed'
   }
 }
@@ -37,7 +28,7 @@ async function onLogin() {
 
 <template>
   <div class="max-w-md mx-auto py-20 px-6">
-    <h1 class="text-3xl font-bold mb-6">Log In</h1>
+    <h1 class="text-3xl font-bold mb-6">Log In</h1>
     <div v-if="errorMsg" class="text-red-500 mb-4">{{ errorMsg }}</div>
 
     <form @submit.prevent="onLogin" class="space-y-4">
@@ -51,7 +42,7 @@ async function onLogin() {
 
     <p class="mt-4 text-sm text-gray-600">
       Need an account?
-      <NuxtLink to="/signup" class="text-indigo-600 hover:underline">Sign up</NuxtLink>
+      <NuxtLink to="/signup" class="text-indigo-600 hover:underline">Sign up</NuxtLink>
     </p>
   </div>
 </template>

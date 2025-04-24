@@ -6,27 +6,26 @@ from sqlmodel import SQLModel, Field
 from pydantic import BaseModel
 
 
-# ─── your existing Flashcard model ────────────────────────────────────
 class Flashcard(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     front: str
     back: str
     title: str
     difficulty: Optional[str] = None
-    tags: Optional[List[str]] = Field(default=None, sa_column=Column(ARRAY(String)))
+    tags: List[str] = Field(
+        default_factory=list, sa_column=Column(ARRAY(String), nullable=False)
+    )
     category: Optional[str] = None
     language: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
-# ─── new User model ───────────────────────────────────────────────────
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
     hashed_password: str
 
 
-# ─── Pydantic schemas for signup/login/token ─────────────────────────
 class UserCreate(BaseModel):
     username: str
     password: str

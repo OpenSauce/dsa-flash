@@ -1,29 +1,44 @@
 // composables/useAuth.ts
 import { computed } from 'vue'
+import { useCookie } from '#imports'
 
-// 1) Define your user shape
 interface UserInfo {
   name: string
-  // …add other fields here as needed
+}
+
+interface TokenResponse {
+  access_token: string
 }
 
 export const useAuth = () => {
-  // 2) Tell useState that `user.value` will be UserInfo or null
   const user = useState<UserInfo | null>('user', () => null)
-
-  // normalize any `undefined` into `null`
   if (user.value === undefined) user.value = null
 
   const isLoggedIn = computed(() => !!user.value)
+  const tokenCookie = useCookie('token')
 
-  // 3) Annotate `info` so TS knows it must be a UserInfo
-  const login = (info: UserInfo) => {
-    user.value = info
+  const login = async (username: string, password: string): Promise<void> => {
+    const form = new URLSearchParams({ username, password })
+    const { access_token } = await $fetch<TokenResponse>('/api/token', {
+      method: 'POST',
+      body: form,
+    })
+    tokenCookie.value = access_token
+    user.value = { name: username }
+  }
+
+  const signup = async (username: string, password: string): Promise<void> => {
+    await $fetch('/api/signup', {
+      method: 'POST',
+      body: { username, password },
+    })
+    // note: we do NOT log in here
   }
 
   const logout = () => {
+    tokenCookie.value = null
     user.value = null
   }
 
-  return { user, isLoggedIn, login, logout }
+  return { user, isLoggedIn, login, signup, logout }
 }
