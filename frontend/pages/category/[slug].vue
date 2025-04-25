@@ -39,6 +39,7 @@ const url = computed(() => {
     category,
     page: String(page.value),
     page_size: String(pageSize),
+    random: 'true',
   })
   if (language.value) qs.append('language', language.value)
   return `${apiBase}/flashcards?${qs.toString()}`
