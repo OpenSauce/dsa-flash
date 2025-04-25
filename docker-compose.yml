@@ -1,20 +1,49 @@
-version: "3.8"
 services:
   backend:
-    build: ./backend
-    ports: ["8000:8000"]
-    depends_on: [db]
+    profiles: ["prod", "dev"]
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
     volumes:
-      - ./dsa-flash-cards/:/data/flashcards
+      - ./dsa-flash-cards:/data/flashcards
+
   frontend:
-    build: ./frontend
+    profiles: ["prod"]
+    build:
+      context: ./frontend
     environment:
       API_BASE: http://backend:8000
-    ports: ["3000:3000"]
+    ports:
+      - "3000:3000"
+
   db:
+    profiles: ["prod","dev"]
     image: postgres:15
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: flashcards
-    ports: ["5432:5432"]
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn dev
+    environment:
+      API_BASE: http://backend:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:

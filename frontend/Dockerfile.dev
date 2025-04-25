@@ -1,0 +1,13 @@
+# frontend/Dockerfile.dev
+FROM node:18-alpine
+WORKDIR /usr/src/app
+
+# install dependencies
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+
+# copy source (we’ll mount over it in dev for live‐reload)
+COPY . .
+
+EXPOSE 3000
+CMD ["yarn", "dev"]

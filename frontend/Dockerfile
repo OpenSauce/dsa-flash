@@ -7,7 +7,6 @@ RUN yarn install --frozen-lockfile
 COPY . .
 RUN yarn build
 
-# Production stage
 FROM node:18-alpine
 WORKDIR /usr/src/app
 
