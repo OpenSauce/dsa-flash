@@ -12,7 +12,7 @@ module.exports = {
       fontFamily: {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         headline: ['"Space Grotesk"', 'sans-serif'], // optional alias
-        poppins: ['Poppins', 'sans-serif'],
+        tektur: ['Tektur', 'sans-serif'],
       },
     },
   },

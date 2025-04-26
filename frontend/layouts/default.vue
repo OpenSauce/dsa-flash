@@ -12,8 +12,7 @@ const { isLoggedIn, logout, authReady } = useAuth()
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <NuxtLink to="/" class="
      text-2xl sm:text-3xl 
-     font-poppins font-extrabold tracking-tight
-     bg-clip-text 
+     font-tektur font-bold tracking-tight
      drop-shadow-lg
    ">
           dsaflash.cards
