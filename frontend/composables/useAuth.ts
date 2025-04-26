@@ -11,16 +11,13 @@ interface TokenResponse {
 }
 
 export const useAuth = () => {
-  // persisted state across pages
   const user = useState<UserInfo | null>('user', () => null)
   const tokenCookie = useCookie<string | null>('token')
 
-  // grab your API base URL from runtime config
   const { public: { apiBase } } = useRuntimeConfig()
 
   const isLoggedIn = computed(() => !!user.value)
 
-  // 1) On mount, if we have a token but no user yet, fetch /users/me
   onMounted(async () => {
     if (tokenCookie.value && !user.value) {
       try {
@@ -34,7 +31,6 @@ export const useAuth = () => {
         )
         user.value = me
       } catch {
-        // token might be invalid/expired
         tokenCookie.value = null
         user.value = null
       }
@@ -51,7 +47,6 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    // set the user right away so UI updates immediately
     user.value = { name: username }
   }
 
@@ -68,7 +63,6 @@ export const useAuth = () => {
   const logout = async () => {
     tokenCookie.value = null
     user.value = null
-    // inform backend to clear any server‐side session or cookie if needed
     await $fetch(
       `${apiBase}/auth/logout`,
       { method: 'POST' }
