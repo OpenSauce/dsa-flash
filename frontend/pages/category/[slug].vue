@@ -1,12 +1,25 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
 import { useCookie } from '#imports'
 
 /* ─── runtime + routing ──────────────────────────────────────── */
 const route = useRoute()
 const apiBase = useRuntimeConfig().public.apiBase
-const md = new MarkdownIt({ breaks: true })
+const md: MarkdownIt = new MarkdownIt({
+  breaks: true,
+  highlight: (str: string, lang: string) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return `<pre class="hljs"><code class="language-${lang}">` +
+        hljs.highlight(str, { language: lang }).value +
+        `</code></pre>`;
+    }
+    return `<pre class="hljs"><code>` +
+      hljs.highlightAuto(str).value +
+      `</code></pre>`;
+  }
+})
 
 const category = route.params.slug as string
 if (!category) throw createError({ statusCode: 404, statusMessage: 'Category not found' })

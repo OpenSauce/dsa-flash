@@ -37,17 +37,26 @@ def upsert_flashcard(card: Flashcard, session: Session) -> None:
 def load_yaml_flashcards() -> None:
     """
     Walk every *.yml / *.yaml under ROOT and upsert cards.
+    Skips .github/ directory and .yamllint.yml file.
     """
     yaml_paths = list(ROOT.rglob("*.yml")) + list(ROOT.rglob("*.yaml"))
 
     with Session(engine) as session:
         for file in yaml_paths:
+            # Skip .yamllint.yml
+            if file.name == ".yamllint.yml":
+                continue
+            # Skip any file under a .github/ directory
+            if ".github" in file.parts:
+                continue
+
             category, language = _dir_metadata(file)
             if category is not None:
                 category = category.replace(" ", "-")
             data = yaml.safe_load(file.read_text()) or []
             if not isinstance(data, list):
-                raise ValueError(f"{file} must contain a YAML list, not {type(data)}")
+                print(f"Skipping {file}: root is {type(data).__name__}, not list")
+                continue
             for raw in data:
                 card = Flashcard(
                     title=raw["title"],

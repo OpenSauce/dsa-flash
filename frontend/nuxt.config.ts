@@ -7,12 +7,15 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/api/**': { proxy: { to: 'http://backend:8000/**' } },
-    // e.g. /api/flashcards → http://localhost:8000/flashcards
   },
 
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
+  ],
+
+  css: [
+    'highlight.js/styles/github.min.css'
   ],
 
   googleFonts: {
