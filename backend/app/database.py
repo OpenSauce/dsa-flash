@@ -1,5 +1,6 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
+from typing import Generator
 
 DB_URL = os.getenv(
     "DATABASE_URL",
@@ -15,5 +16,9 @@ def init_db() -> None:
     SQLModel.metadata.create_all(engine)
 
 
-def get_session() -> Session:  # FastAPI dependency helper
-    return Session(engine)
+def get_session() -> Generator[Session, None, None]:  # FastAPI dependency helper
+    session = Session(engine)
+    try:
+        yield session
+    finally:
+        session.close()

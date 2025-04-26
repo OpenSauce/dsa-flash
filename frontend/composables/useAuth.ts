@@ -32,7 +32,6 @@ export const useAuth = () => {
       method: 'POST',
       body: { username, password },
     })
-    // note: we do NOT log in here
   }
 
   const logout = () => {

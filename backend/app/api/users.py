@@ -34,7 +34,7 @@ def get_user(session: Session, username: str) -> Optional[User]:
     return session.exec(select(User).where(User.username == username)).first()
 
 
-def authenticate_user(session: Session, username: str, password: str):
+def authenticate_user(session: Session, username: str, password: str) -> User | None:
     user = get_user(session, username)
     if not user or not verify_password(password, user.hashed_password):
         return None

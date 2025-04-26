@@ -5,7 +5,6 @@ import { useCookie } from '#imports'
 
 /* ─── runtime + routing ──────────────────────────────────────── */
 const route = useRoute()
-const config = useRuntimeConfig()
 const apiBase = useRuntimeConfig().public.apiBase
 const md = new MarkdownIt({ breaks: true })
 
@@ -39,7 +38,7 @@ const url = computed(() => {
     category,
     page: String(page.value),
     page_size: String(pageSize),
-    random: 'true',
+    random: "true",
   })
   if (language.value) qs.append('language', language.value)
   return `${apiBase}/flashcards?${qs.toString()}`
@@ -94,9 +93,28 @@ const backHtml = computed(() =>
   currentCard.value ? md.render(currentCard.value.back) : ''
 )
 
-function recordResponse(grade: 'easy' | 'good' | 'again') {
-  // TODO: POST to /reviews with { cardId, grade }
-  console.log('review', currentCard.value?.id, grade)
+const qualityMap: Record<'easy' | 'good' | 'again', number> = {
+  easy: 5,          // perfect recall
+  good: 3,          // got it with effort
+  again: 1,         // wrong / forgot
+}
+
+async function recordResponse(grade: 'easy' | 'good' | 'again') {
+  if (!currentCard.value) return
+  const quality = qualityMap[grade]
+
+  try {
+    await $fetch(`${apiBase}/flashcards/${currentCard.value.id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+      },
+      body: { quality },
+    })
+  } catch (err) {
+    console.error('review failed', err)
+  }
 
   nextCard()
 }
