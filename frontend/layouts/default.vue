@@ -3,28 +3,6 @@ import { definePageMeta, useHead } from '#imports'
 
 const { isLoggedIn, logout, authReady } = useAuth()
 
-useHead({
-  link: [
-    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-    { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
-    { rel: 'manifest', href: '/site.webmanifest' }
-  ],
-  meta: [
-    { name: 'theme-color', content: '#ffffff' },  // Customize to match your brand if you want
-    { name: 'msapplication-TileColor', content: '#ffffff' }  // Windows tiles
-  ]
-})
-
-definePageMeta({
-  title: 'Learn DSA with Flashcards - dsaflash.cards',
-  description: 'Master data structures, algorithms, and Big O notation through efficient flashcards. Built for DSA learners and coding interview preparation.',
-  ogTitle: 'Learn DSA with Flashcards',
-  ogDescription: 'Boost your DSA skills with beautifully crafted flashcards covering data structures, algorithms, and Big O concepts.',
-  ogImage: '/social-preview.png', // optional if you have an image!
-  ogUrl: 'https://dsaflash.cards',
-})
 </script>
 
 <template>
