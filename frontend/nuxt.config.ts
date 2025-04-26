@@ -21,6 +21,7 @@ export default defineNuxtConfig({
   googleFonts: {
     families: {
       'Space Grotesk': [400, 500, 600, 700],
+      'Poppins': [700, 800],
     },
     display: 'swap',   // avoids FOIT
     inject: true,      // <link> is injected during SSR

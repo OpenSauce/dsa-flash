@@ -13,6 +13,7 @@ interface TokenResponse {
 export const useAuth = () => {
   const user = useState<UserInfo | null>('user', () => null)
   const tokenCookie = useCookie<string | null>('token')
+  const authReady = useState<boolean>('authReady', () => false)
 
   const { public: { apiBase } } = useRuntimeConfig()
 
@@ -35,6 +36,7 @@ export const useAuth = () => {
         user.value = null
       }
     }
+    authReady.value = true
   })
 
   const login = async (username: string, password: string): Promise<void> => {
@@ -69,5 +71,5 @@ export const useAuth = () => {
     )
   }
 
-  return { user, isLoggedIn, login, signup, logout }
+  return { user, isLoggedIn, login, signup, logout, authReady, tokenCookie }
 }

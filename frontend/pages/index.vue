@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useCookie, definePageMeta, useRuntimeConfig } from '#imports'
+import { ref, watch } from 'vue'
+import { useCookie, useRuntimeConfig } from '#imports'
+import { useAuth } from '@/composables/useAuth'
 
 interface Category {
   name: string
@@ -21,8 +22,9 @@ const categories = ref<Category[]>([
 const { public: { apiBase } } = useRuntimeConfig()
 const token = useCookie('token')
 
-onMounted(async () => {
+const { isLoggedIn, authReady } = useAuth()
 
+const fetchStats = async () => {
   const headers = token.value
     ? { Authorization: `Bearer ${token.value}` }
     : undefined
@@ -41,7 +43,17 @@ onMounted(async () => {
       }
     }),
   )
-})
+}
+
+watch(
+  [authReady, isLoggedIn],
+  async ([ready, loggedIn]) => {
+    if (ready && loggedIn) {
+      await fetchStats()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
