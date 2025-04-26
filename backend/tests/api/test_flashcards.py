@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 
 # Import the router and dependencies
-from app.api.flashcards import router as flashcard_router
+from app.api.flashcards import router as flashcard_router, err_no_cards_found
 from app.api.users import router as user_router, User
 from app.database import get_session
 from app.api.users import get_current_user, get_password_hash
@@ -99,16 +99,16 @@ def create_flashcard(session, **kwargs):
     return card
 
 
-def create_user(session, **kwargs):
-    user = User(username="alice", hashed_password=get_password_hash("secret"))
+def create_user(session, username: str, password: str):
+    user = User(username=username, hashed_password=get_password_hash(password))
     session.add(user)
     session.commit()
     session.refresh(user)
     return user
 
 
-def get_token(client) -> str:
-    response = client.post("/token", data={"username": "alice", "password": "secret"})
+def get_token(client, username, password) -> str:
+    response = client.post("/token", data={"username": username, "password": password})
     assert response.status_code == 200
     return response.json()["access_token"]
 
@@ -116,18 +116,14 @@ def get_token(client) -> str:
 # Tests
 def test_list_cards_empty(client):
     response = client.get("/flashcards")
-    assert response.status_code == 200
-    assert response.json() == []
-
-
-def test_list_cards_page_out_of_range(client):
-    response = client.get("/flashcards?page=2")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Page out of range"
+    assert response.json()["detail"] == err_no_cards_found
 
 
 def test_list_cards_filters_and_pagination(client, session):
-    # Add sample cards
+    _ = create_user(session, "user", "password")
+    token = get_token(client, "user", "password")
+
     for i in range(5):
         create_flashcard(
             session,
@@ -147,35 +143,29 @@ def test_list_cards_filters_and_pagination(client, session):
             tags=["t2"],
         )
 
-    # Filter by category
-    r = client.get("/flashcards?category=cat1")
+    r = client.get(
+        "/flashcards?category=cat1", headers={"Authorization": f"Bearer {token}"}
+    )
     assert r.status_code == 200
     assert len(r.json()) == 5
 
-    # Filter by language
-    r = client.get("/flashcards?language=lang2")
+    r = client.get(
+        "/flashcards?language=lang2", headers={"Authorization": f"Bearer {token}"}
+    )
     assert r.status_code == 200
     assert len(r.json()) == 3
 
     # Filter by tag
-    r = client.get("/flashcards?tag=t1")
+    r = client.get("/flashcards?tag=t1", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
     assert len(r.json()) == 5
 
-    # Test pagination
-    r = client.get("/flashcards?page=1&page_size=2")
-    assert r.status_code == 200
-    assert len(r.json()) == 2
-    r2 = client.get("/flashcards?page=2&page_size=2")
-    assert r2.status_code == 200
-    assert len(r2.json()) == 2
-
 
 def test_review_card_creates_new_userflashcard(client, session):
-    user = create_user(session)
+    user = create_user(session, "user", "password")
     card = create_flashcard(session, front="Q", back="A")
 
-    token = get_token(client)
+    token = get_token(client, "user", "password")
 
     review_resp = client.post(
         f"/flashcards/{card.id}/review",
@@ -198,9 +188,11 @@ def test_review_card_not_found(client):
 
 
 def test_due_cards(client, session):
-    user = create_user(session)
-    token = get_token(client)
+    user = create_user(session, "user", "password")
+    token = get_token(client, "user", "password")
 
+    user2 = create_user(session, "user2", "password")
+    token2 = get_token(client, "user2", "password")
     _ = create_flashcard(session, id=999, front="Past", back="A1")
     _ = create_flashcard(session, front="Future", back="A2")
     now = datetime.now(timezone.utc)
@@ -221,8 +213,8 @@ def test_due_cards(client, session):
 
 
 def test_card_stats(client, session):
-    user = create_user(session)
-    token = get_token(client)
+    user = create_user(session, "user", "password")
+    token = get_token(client, "user", "password")
 
     card_due = create_flashcard(session, front="Due", back="A")
     _ = create_flashcard(session, front="New1", back="B")

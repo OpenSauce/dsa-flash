@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select, col, or_, and_
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
@@ -14,6 +14,8 @@ from ..spaced import sm2
 from ..database import get_session
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
+
+err_no_cards_found: str = "No cards found"
 
 
 class ReviewIn(BaseModel):
@@ -31,28 +33,38 @@ def list_cards(
     category: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
     tag: Optional[str] = Query(None),
+    user: User = Depends(get_current_user),
     random: bool = Query(False, description="Shuffle the cards"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
 ):
-    stmt = select(Flashcard)
+    stmt = (
+        select(Flashcard)
+        .join(
+            UserFlashcard,
+            and_(
+                col(UserFlashcard.flashcard_id) == col(Flashcard.id),
+                col(UserFlashcard.user_id) == user.id,
+            ),
+            isouter=True,
+        )
+        .where(
+            or_(
+                col(UserFlashcard.user_id).is_(None),
+                col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+            )
+        )
+    )
     if category:
         stmt = stmt.where(Flashcard.category == category)
     if language:
         stmt = stmt.where(Flashcard.language == language)
     if random:
         stmt = stmt.order_by(func.random())
-
-    offset = (page - 1) * page_size
-    stmt = stmt.offset(offset).limit(page_size)
-
+    if tag:
+        stmt = stmt.where(col(Flashcard.tags).contains([tag]))
     cards = session.exec(stmt).all()
 
-    if tag is not None:
-        cards = [c for c in cards if tag in c.tags]
-
-    if not cards and page > 1:
-        raise HTTPException(404, "Page out of range")
+    if not cards:
+        raise HTTPException(404, err_no_cards_found)
     return JSONResponse(content=jsonable_encoder(cards))
 
 
@@ -72,7 +84,6 @@ def review_card(
     if uf is None:
         uf = UserFlashcard(user_id=user.id, flashcard_id=card_id)
         session.add(uf)
-
     sm2(uf, body.quality)
     session.commit()
 
