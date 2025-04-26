@@ -12,10 +12,10 @@ interface Category {
 }
 
 const categories = ref<Category[]>([
-  { name: 'Data Structures', slug: 'data structures', description: 'Arrays, stacks, trees, and more.', emoji: '📦' },
+  { name: 'Data Structures', slug: 'data-structures', description: 'Arrays, stacks, trees, and more.', emoji: '📦' },
   { name: 'Algorithms', slug: 'algorithms', description: 'Sorting, searching, traversal…', emoji: '⚙️' },
-  { name: 'Advanced DSA', slug: 'advanced data structures', description: 'Fenwick trees, tries, unions…', emoji: '🚀' },
-  { name: 'Big O Notation', slug: 'big o', description: 'Complexity analysis essentials.', emoji: '🧠' },
+  { name: 'Advanced DSA', slug: 'advanced-data-structures', description: 'Fenwick trees, tries, unions…', emoji: '🚀' },
+  { name: 'Big O Notation', slug: 'big-o-notation', description: 'Complexity analysis essentials.', emoji: '🧠' },
 ])
 
 const { public: { apiBase } } = useRuntimeConfig()

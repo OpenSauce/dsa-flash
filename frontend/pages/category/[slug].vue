@@ -8,20 +8,11 @@ const route = useRoute()
 const apiBase = useRuntimeConfig().public.apiBase
 const md = new MarkdownIt({ breaks: true })
 
-
-/* ─── category mapping from slug → DB name ───────────────────── */
-const slug = route.params.slug as string
-const categoryMap: Record<string, string> = {
-  'data-structures': 'data structures',
-  'algorithms': 'algorithms',
-  'advanced-data-structures': 'advanced data structures',
-  'big-o': 'big o notation',
-}
-const category = categoryMap[slug]
+const category = route.params.slug as string
 if (!category) throw createError({ statusCode: 404, statusMessage: 'Category not found' })
 
 /* ─── reactive state ─────────────────────────────────────────── */
-const categoryHasLang = computed(() => category !== 'big o notation')
+const categoryHasLang = computed(() => category !== 'big-o-notation')
 const language = ref(categoryHasLang.value ? 'go' : null)
 const page = ref(1)
 const pageSize = 20
@@ -50,7 +41,6 @@ const fetchKey = computed(() =>
 
 const token = useCookie('token')
 
-/* fetch cards */
 const { data: cards, pending, error, refresh } = await useFetch<Flashcard[]>(url, {
   key: fetchKey.value,      // plain string
   server: true,
@@ -126,7 +116,7 @@ async function recordResponse(grade: 'easy' | 'good' | 'again') {
 
     <!-- Title + language selector -->
     <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
-      <h1 class="text-3xl font-bold capitalize">{{ slug.replace(/-/g, ' ') }}</h1>
+      <h1 class="text-3xl font-bold capitalize">{{ category.replace(/-/g, ' ') }}</h1>
 
       <select v-if="categoryHasLang" v-model="language" class="border rounded py-1 px-2 bg-white text-sm">
         <option value="go">Go</option>

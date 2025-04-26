@@ -43,6 +43,8 @@ def load_yaml_flashcards() -> None:
     with Session(engine) as session:
         for file in yaml_paths:
             category, language = _dir_metadata(file)
+            if category is not None:
+                category = category.replace(" ", "-")
             data = yaml.safe_load(file.read_text()) or []
             if not isinstance(data, list):
                 raise ValueError(f"{file} must contain a YAML list, not {type(data)}")
@@ -58,4 +60,3 @@ def load_yaml_flashcards() -> None:
                 )
                 upsert_flashcard(card, session)
         session.commit()
-
