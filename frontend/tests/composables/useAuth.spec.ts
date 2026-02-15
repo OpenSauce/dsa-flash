@@ -56,12 +56,25 @@ describe('useAuth composable', () => {
     expect(user.value).toBe(null)
   })
 
-  it('logout clears both cookie and user', () => {
+  it('logout clears both cookie and user', async () => {
+    mockFetch.mockResolvedValue(undefined)
     userRef.value = { name: 'carol' }
     cookieRef.value = 'tokenXYZ'
 
     const { logout } = useAuth()
-    logout()
+    await logout()
+
+    expect(userRef.value).toBe(null)
+    expect(cookieRef.value).toBe(null)
+  })
+
+  it('logout clears state even when the API call fails', async () => {
+    mockFetch.mockRejectedValue(new Error('401 Unauthorized'))
+    userRef.value = { name: 'carol' }
+    cookieRef.value = 'tokenXYZ'
+
+    const { logout } = useAuth()
+    await logout()
 
     expect(userRef.value).toBe(null)
     expect(cookieRef.value).toBe(null)
