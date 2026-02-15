@@ -1,5 +1,6 @@
 # app/api/users.py
 
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -13,7 +14,7 @@ from ..models import Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 
-SECRET_KEY = "CHANGE_THIS_TO_A_RANDOM_SECRET"  # override from env in prod
+SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
