@@ -3,11 +3,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.api.analytics import router as events_router, summary_router
-from app.api.users import router as user_router, get_password_hash
+from app.api.analytics import router as events_router
+from app.api.analytics import summary_router
+from app.api.users import get_password_hash
+from app.api.users import router as user_router
 from app.database import get_session
-from app.api.users import get_current_user, get_optional_user
-from app.models import User, Event
+from app.models import Event, User
 
 
 def create_user(session, username="user", password="password"):
@@ -106,7 +107,7 @@ def test_anonymous_events_have_null_user_id(client, session):
 
 
 def test_summary_no_events(client, session):
-    user = create_user(session)
+    create_user(session)
     token = get_token(client, "user", "password")
 
     resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})

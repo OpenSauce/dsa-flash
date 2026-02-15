@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.api.flashcards import router as flashcard_router, err_no_cards_found
+from app.api.flashcards import err_no_cards_found
+from app.api.flashcards import router as flashcard_router
 from app.api.users import User, get_current_user, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
