@@ -48,16 +48,33 @@ const { data: cards, pending, error, refresh } = await useFetch<
 const card = computed(() => cards.value?.[0] ?? null)
 
 // Analytics
-const { track } = useAnalytics()
+const { track, flushBeacon } = useAnalytics()
 const frontShownAt = ref(Date.now())
 const flipTime = ref(0)
 const sessionStartTime = Date.now()
 const cardsReviewedInSession = ref(0)
 let sessionEndEmitted = false
 
+function emitSessionEnd(reason: string) {
+  if (sessionEndEmitted) return
+  sessionEndEmitted = true
+  track('session_end', {
+    category,
+    reason,
+    cards_reviewed: cardsReviewedInSession.value,
+    duration_ms: Date.now() - sessionStartTime,
+  })
+}
+
+function handleBeforeUnload() {
+  emitSessionEnd('navigated_away')
+  flushBeacon()
+}
+
 onMounted(() => {
   track('page_view', { page: `/category/${category}`, referrer: document.referrer })
   track('session_start', { category })
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 // Reveal state
@@ -79,27 +96,14 @@ function flipCard() {
 watch(card, (newCard) => {
   revealed.value = false
   frontShownAt.value = Date.now()
-  if (!newCard && !sessionEndEmitted) {
-    sessionEndEmitted = true
-    track('session_end', {
-      category,
-      reason: 'completed',
-      cards_reviewed: cardsReviewedInSession.value,
-      duration_ms: Date.now() - sessionStartTime,
-    })
+  if (!newCard) {
+    emitSessionEnd('completed')
   }
 })
 
 onBeforeUnmount(() => {
-  if (!sessionEndEmitted) {
-    sessionEndEmitted = true
-    track('session_end', {
-      category,
-      reason: 'navigated_away',
-      cards_reviewed: cardsReviewedInSession.value,
-      duration_ms: Date.now() - sessionStartTime,
-    })
-  }
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  emitSessionEnd('navigated_away')
 })
 
 // SM-2 grading map
