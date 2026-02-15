@@ -8,7 +8,7 @@ interface AnalyticsEvent {
 
 export const useAnalytics = () => {
   const sessionId = useCookie('session_id', {
-    default: () => globalThis.crypto?.randomUUID() ?? Math.random().toString(36).slice(2),
+    default: () => crypto.randomUUID(),
     maxAge: 60 * 60 * 24 * 365,
   })
   const { public: { apiBase } } = useRuntimeConfig()
