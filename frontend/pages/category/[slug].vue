@@ -276,10 +276,10 @@ async function recordResponse(grade: keyof typeof qualityMap) {
         <div class="w-full bg-gray-200 rounded-full h-2">
           <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300"
                role="progressbar"
-               :aria-valuenow="progressPercent"
+               :aria-valuenow="cardsReviewedInBatch"
                aria-valuemin="0"
-               aria-valuemax="100"
-               aria-label="Session progress"
+               :aria-valuemax="currentBatchSize"
+               :aria-label="`Card ${cardsReviewedInBatch} of ${currentBatchSize} reviewed`"
                :style="{ width: progressPercent + '%' }" />
         </div>
       </div>
