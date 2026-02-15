@@ -1,5 +1,7 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
 from .api import api_router
 from .database import init_db
 from .loader import load_yaml_flashcards

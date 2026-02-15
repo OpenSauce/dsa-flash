@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from .users import router as users_router
-from .flashcards import router as flashcards_router
+
 from .analytics import router as events_router, summary_router as analytics_router
+from .flashcards import router as flashcards_router
+from .users import router as users_router
 
 api_router = APIRouter()
 

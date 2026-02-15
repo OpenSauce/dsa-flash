@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import Column, String, JSON
-from sqlalchemy.dialects.postgresql import ARRAY
-from sqlmodel import SQLModel, Field
+
 from pydantic import BaseModel
+from sqlalchemy import JSON, Column, String
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlmodel import Field, SQLModel
 
 
 class Flashcard(SQLModel, table=True):
@@ -38,7 +39,7 @@ class Token(BaseModel):
 
 class UserFlashcard(SQLModel, table=True):
     """
-    Link-table that stores the user’s personal learning state for one card.
+    Link-table that stores the user's personal learning state for one card.
 
     Implements the SuperMemo-2 algorithm (interval, easiness, repetitions).
     The composite PK prevents duplicates.
@@ -50,7 +51,7 @@ class UserFlashcard(SQLModel, table=True):
     repetitions: int = 0  # number of successful reviews so far
     interval: int = 0  # days until next review
     easiness: float = 2.5  # SM-2 easiness factor
-    next_review: Optional[datetime] = None  # when it becomes “due”
+    next_review: Optional[datetime] = None  # when it becomes "due"
     last_reviewed: Optional[datetime] = None  # most-recent review
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
