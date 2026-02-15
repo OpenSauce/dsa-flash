@@ -53,10 +53,11 @@ export const useAuth = () => {
   const logout = async () => {
     tokenCookie.value = null
     user.value = null
-    await $fetch(
-      `${apiBase}/auth/logout`,
-      { method: 'POST' }
-    )
+    try {
+      await $fetch(`${apiBase}/auth/logout`, { method: 'POST' })
+    } catch {
+      // best-effort — token may already be invalid
+    }
   }
 
   return { user, isLoggedIn, isAdmin, login, signup, logout, authReady, tokenCookie }

@@ -2,15 +2,13 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
-import { useCookie } from '#imports'
 import { useAnalytics } from '@/composables/useAnalytics'
 
 // Routing + auth
 const route = useRoute()
 const category = route.params.slug as string
 const apiBase = useRuntimeConfig().public.apiBase
-const token = useCookie('token')
-const isLoggedIn = computed(() => !!token.value)
+const { isLoggedIn, tokenCookie, logout } = useAuth()
 const md: MarkdownIt = new MarkdownIt({
   breaks: true,
   highlight: (str: string, lang: string) => {
@@ -36,13 +34,13 @@ const url = computed(() => {
   return `${apiBase}/flashcards?${qs.toString()}`
 })
 
-// Fetch cards
+// Fetch cards (headers as getter so refresh() picks up token changes)
 const { data: cards, pending, error, refresh } = await useFetch<
   { id: number; front: string; back: string }[]
 >(url, {
-  headers: token.value
-    ? { Authorization: `Bearer ${token.value}` }
-    : {}
+  headers: () => tokenCookie.value
+    ? { Authorization: `Bearer ${tokenCookie.value}` }
+    : {},
 })
 
 // Card navigation — anonymous users browse by index, logged-in users use SM-2 refresh
@@ -205,7 +203,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token.value && { Authorization: `Bearer ${token.value}` }),
+        ...(tokenCookie.value && { Authorization: `Bearer ${tokenCookie.value}` }),
       },
       body: { quality: qualityMap[grade] },
     })
@@ -215,8 +213,13 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       sessionFinished.value = true
     }
     await refresh()
-  } catch (err) {
-    console.error('review failed', err)
+  } catch (err: any) {
+    if (err?.response?.status === 401 || err?.status === 401 || err?.statusCode === 401) {
+      await logout()
+      await refresh()
+    } else {
+      console.error('review failed', err)
+    }
   } finally {
     isSubmitting.value = false
   }
