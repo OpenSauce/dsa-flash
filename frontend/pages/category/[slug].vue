@@ -185,9 +185,11 @@ function endSession() {
 
 // SM-2 grading map
 const qualityMap = { easy: 5, good: 3, again: 1 } as const
+const isSubmitting = ref(false)
 
 async function recordResponse(grade: keyof typeof qualityMap) {
-  if (!card.value) return
+  if (!card.value || isSubmitting.value) return
+  isSubmitting.value = true
 
   const now = Date.now()
   track('card_review', {
@@ -218,6 +220,8 @@ async function recordResponse(grade: keyof typeof qualityMap) {
     await refresh()
   } catch (err) {
     console.error('review failed', err)
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
