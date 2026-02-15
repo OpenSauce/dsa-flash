@@ -229,7 +229,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 <template>
   <div class="max-w-4xl mx-auto p-6">
     <button v-if="card" @click="endSession()" class="text-blue-600 hover:underline mb-4 inline-block">
-      End session
+      Stop reviewing
     </button>
 
     <!-- error -->
@@ -240,7 +240,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
     <!-- completion / empty state -->
     <div v-else-if="sessionFinished || !card" class="text-center py-16">
       <template v-if="cardsReviewedInSession > 0">
-        <h2 class="text-2xl font-bold mb-2 font-heading">Session complete!</h2>
+        <h2 class="text-2xl font-bold mb-2 font-heading">Batch complete!</h2>
         <p class="text-gray-600 mb-2">You reviewed {{ cardsReviewedInSession }} cards</p>
         <p v-if="remainingCards > 0" class="text-gray-500 text-sm mb-8">{{ remainingCards }} cards remaining in this category</p>
         <p v-else-if="isLoggedIn" class="text-gray-500 text-sm mb-8">Come back tomorrow for your next review</p>
