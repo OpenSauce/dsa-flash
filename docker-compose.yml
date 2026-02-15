@@ -1,6 +1,7 @@
 services:
   backend:
     profiles: ["prod", "dev"]
+    image: ghcr.io/opensauce/dsa-flash-backend:latest
     build:
       context: ./backend
     ports:
@@ -14,6 +15,7 @@ services:
 
   frontend:
     profiles: ["prod"]
+    image: ghcr.io/opensauce/dsa-flash-frontend:latest
     build:
       context: ./frontend
     environment:
