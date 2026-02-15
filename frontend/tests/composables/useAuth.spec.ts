@@ -32,13 +32,15 @@ describe('useAuth composable', () => {
   })
 
   it('login sets token cookie and user state', async () => {
-    mockFetch.mockResolvedValue({ access_token: 'token123' })
+    mockFetch
+      .mockResolvedValueOnce({ access_token: 'token123' })
+      .mockResolvedValueOnce({ name: 'alice', is_admin: false })
     const { login } = useAuth()
 
     await login('alice', 'secret')
 
     expect(cookieRef.value).toBe('token123')
-    expect(userRef.value).toEqual({ name: 'alice' })
+    expect(userRef.value).toEqual({ name: 'alice', is_admin: false })
   })
 
   it('signup calls the signup endpoint without logging in', async () => {

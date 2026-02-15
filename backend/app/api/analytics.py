@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from ..database import get_session
 from ..models import Event, EventBatchIn, EventIn, User
-from .users import get_current_user, get_optional_user
+from .users import get_current_admin, get_optional_user
 
 router = APIRouter(prefix="/events", tags=["events"])
 summary_router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -73,7 +73,7 @@ def create_events_batch(
 @summary_router.get("/summary")
 def analytics_summary(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin),
 ):
     row = session.exec(
         text("""
