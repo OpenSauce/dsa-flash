@@ -2,7 +2,8 @@ import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { ref } from 'vue'
 
 const mockUseCookie = vi.fn()
-vi.mock('#imports', () => ({ useCookie: mockUseCookie }))
+const mockUseRuntimeConfig = vi.fn(() => ({ public: { apiBase: '/api' } }))
+vi.mock('#imports', () => ({ useCookie: mockUseCookie, useRuntimeConfig: mockUseRuntimeConfig }))
 
 const mockUseState = vi.fn()
 const mockFetch = vi.fn()
