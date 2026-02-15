@@ -30,7 +30,7 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
-    '/api/**': { proxy: { to: 'http://backend:8000/**' } },
+    '/api/**': { proxy: { to: `${process.env.API_BASE || 'http://backend:8000'}/**` } },
   },
   modules: [
     '@nuxtjs/tailwindcss',

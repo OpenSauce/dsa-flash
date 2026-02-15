@@ -11,8 +11,8 @@ from app.database import get_session
 from app.models import Event, User
 
 
-def create_user(session, username="user", password="password"):
-    user = User(username=username, hashed_password=get_password_hash(password))
+def create_user(session, username="user", password="password", is_admin=False):
+    user = User(username=username, hashed_password=get_password_hash(password), is_admin=is_admin)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -106,8 +106,28 @@ def test_anonymous_events_have_null_user_id(client, session):
     assert event.user_id is None
 
 
+def test_summary_requires_auth(client):
+    resp = client.get("/analytics/summary")
+    assert resp.status_code == 401
+
+
+def test_summary_requires_admin(client, session):
+    create_user(session, is_admin=False)
+    token = get_token(client, "user", "password")
+    resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "Admin access required"
+
+
+def test_summary_allowed_for_admin(client, session):
+    create_user(session, is_admin=True)
+    token = get_token(client, "user", "password")
+    resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+
 def test_summary_no_events(client, session):
-    create_user(session)
+    create_user(session, is_admin=True)
     token = get_token(client, "user", "password")
 
     resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
@@ -121,7 +141,7 @@ def test_summary_no_events(client, session):
 
 
 def test_summary_with_seeded_events(client, session):
-    user = create_user(session)
+    user = create_user(session, is_admin=True)
     token = get_token(client, "user", "password")
 
     # Seed events: 2 sessions - one anonymous, one authenticated
@@ -155,3 +175,23 @@ def test_summary_with_seeded_events(client, session):
     assert data["conversion_rate"] == 0.5
     # drop-off: anon-1 has 2 reviews (bucket "1-3"), auth-1 has 1 review (bucket "1-3")
     assert data["drop_off_distribution"]["1-3"] == 2
+
+
+def test_users_me_returns_is_admin_false(client, session):
+    create_user(session, is_admin=False)
+    token = get_token(client, "user", "password")
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["name"] == "user"
+    assert data["is_admin"] is False
+
+
+def test_users_me_returns_is_admin_true(client, session):
+    create_user(session, username="admin", is_admin=True)
+    token = get_token(client, "admin", "password")
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["name"] == "admin"
+    assert data["is_admin"] is True

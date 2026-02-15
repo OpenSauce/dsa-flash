@@ -12,9 +12,7 @@ engine = create_engine(DB_URL, echo=True)
 
 
 def init_db() -> None:
-    """Create tables if they don't exist. In dev mode, drop everything first."""
-    if os.getenv("DEV_MODE", "").lower() in ("1", "true"):
-        SQLModel.metadata.drop_all(engine)
+    """Create tables if they don't exist."""
     SQLModel.metadata.create_all(engine)
 
 

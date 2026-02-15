@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { definePageMeta, useHead } from '#imports'
 
-const { isLoggedIn, logout, authReady } = useAuth()
+const { isLoggedIn, isAdmin, logout, authReady } = useAuth()
 
 </script>
 
@@ -42,6 +42,7 @@ const { isLoggedIn, logout, authReady } = useAuth()
               </div>
               <div v-else class="flex items-center gap-3">
                 <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
+                <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
                 <button @click="logout()" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
               </div>
             </div>

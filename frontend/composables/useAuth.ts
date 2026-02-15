@@ -4,6 +4,7 @@ import { useCookie, useRuntimeConfig } from '#imports'
 
 interface UserInfo {
   name: string
+  is_admin: boolean
 }
 
 interface TokenResponse {
@@ -22,6 +23,7 @@ export const useAuth = () => {
   const { public: { apiBase } } = useRuntimeConfig()
 
   const isLoggedIn = computed(() => !!user.value)
+  const isAdmin = computed(() => !!user.value?.is_admin)
 
   const login = async (username: string, password: string): Promise<void> => {
     const form = new URLSearchParams({ username, password })
@@ -33,7 +35,9 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    user.value = { name: username }
+    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
   }
 
   const signup = async (username: string, password: string): Promise<void> => {
@@ -55,5 +59,5 @@ export const useAuth = () => {
     )
   }
 
-  return { user, isLoggedIn, login, signup, logout, authReady, tokenCookie }
+  return { user, isLoggedIn, isAdmin, login, signup, logout, authReady, tokenCookie }
 }
