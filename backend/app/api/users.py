@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -71,6 +71,28 @@ async def get_current_user(
     return user
 
 
+async def get_optional_user(
+    request: Request,
+    session: Session = Depends(get_session),
+) -> Optional[User]:
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.removeprefix("Bearer ").strip()
+    if not token:
+        token = request.cookies.get("token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            return None
+    except JWTError:
+        return None
+    return get_user(session, username)
+
+
 @router.post(
     "/signup",
     status_code=status.HTTP_201_CREATED,
@@ -129,7 +151,7 @@ def logout(response: Response):
 
 
 class UserRead(SQLModel):
-    username: str = Field(..., alias="name")
+    name: str = Field(validation_alias="username")
 
 
 @router.get(

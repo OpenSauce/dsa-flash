@@ -1,12 +1,9 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine, select
-from testcontainers.postgres import PostgresContainer
+from sqlmodel import Session, select
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import text
 
-# Import the router and dependencies
 from app.api.flashcards import router as flashcard_router, err_no_cards_found
 from app.api.users import router as user_router, User
 from app.database import get_session
@@ -14,46 +11,9 @@ from app.api.users import get_current_user, get_password_hash
 from app.models import Flashcard, UserFlashcard
 
 
-@pytest.fixture(scope="session")
-def postgres_container():
-    """
-    Start a PostgreSQL test container for the duration of the test session.
-    """
-    with PostgresContainer("postgres:14-alpine") as postgres:
-        # Optionally set a database name, user, password:
-        # postgres.with_database_name("testdb").with_username("test").with_password("test")
-        yield postgres
-
-
-@pytest.fixture(scope="session")
-def engine(postgres_container):
-    """
-    Create a SQLModel Engine pointing at the testcontainer Postgres.
-    Create all tables once at session start.
-    """
-    engine = create_engine(postgres_container.get_connection_url(), echo=True)
-    SQLModel.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture(name="session")
-def session_fixture(engine):
-    """
-    Provide a transactional session for each test, rolling back at teardown.
-    """
-    with Session(engine) as session:
-        yield session
-
-
 @pytest.fixture(name="app")
 def app_fixture(session):
-    """
-    Override FastAPI dependencies to use our test Session & a fake user.
-    """
-
     def get_test_session():
-        # create a fresh Session for each request
         with Session(session.get_bind()) as s:
             yield s
 
@@ -66,22 +26,6 @@ def app_fixture(session):
     app.dependency_overrides[get_session] = get_test_session
     app.dependency_overrides[get_current_user] = lambda: FakeUser()
     return app
-
-
-@pytest.fixture(autouse=True)
-def clear_db(engine):
-    """
-    After each test, truncate all our tables and reset their SERIAL sequences.
-    """
-    yield
-    # run after each test
-    with engine.begin() as conn:
-        # Truncate tables in the correct order (userflashcard references flashcard & user)
-        conn.execute(
-            text(
-                'TRUNCATE TABLE userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
-            )
-        )
 
 
 @pytest.fixture(name="client")

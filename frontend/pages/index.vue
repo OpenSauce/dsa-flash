@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
 import { useAuth } from '@/composables/useAuth'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 interface Category {
   name: string
@@ -23,6 +24,11 @@ const { public: { apiBase } } = useRuntimeConfig()
 const token = useCookie('token')
 
 const { isLoggedIn, authReady } = useAuth()
+const { track } = useAnalytics()
+
+onMounted(() => {
+  track('page_view', { page: '/', referrer: document.referrer })
+})
 
 const fetchStats = async () => {
   const headers = token.value
