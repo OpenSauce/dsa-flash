@@ -72,7 +72,9 @@ export const useAnalytics = () => {
     }
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('beforeunload', onBeforeUnload)
-    flush()
+    // Defer flush so other onBeforeUnmount hooks (e.g. session_end tracking)
+    // can add events to the buffer before we send them
+    queueMicrotask(() => flushBeacon())
   })
 
   return { track, flush, flushBeacon, sessionId }

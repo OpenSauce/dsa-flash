@@ -85,19 +85,18 @@ def analytics_summary(
                     AVG(cards) FILTER (WHERE cards > 0), 0
                 )                                                AS avg_cards_per_session,
                 COALESCE(
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY dur_ms)
-                    FILTER (WHERE dur_ms IS NOT NULL), 0
+                    (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (
+                        ORDER BY (payload->>'duration_ms')::bigint
+                    )
+                    FROM event
+                    WHERE event_type = 'session_end'
+                      AND payload->>'duration_ms' IS NOT NULL), 0
                 )                                                AS median_session_duration_ms
             FROM (
                 SELECT
                     session_id,
                     BOOL_OR(user_id IS NOT NULL)                 AS has_authed_event,
-                    COUNT(*) FILTER (WHERE event_type = 'card_review') AS cards,
-                    MAX(
-                        CASE WHEN event_type = 'session_end'
-                             THEN (payload->>'duration_ms')::bigint
-                        END
-                    ) AS dur_ms
+                    COUNT(*) FILTER (WHERE event_type = 'card_review') AS cards
                 FROM event
                 GROUP BY session_id
             ) sub
