@@ -16,7 +16,10 @@ from ..models import Token, User, UserCreate
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY environment variable is not set or empty")
+    if os.getenv("DEV_MODE", "").lower() in ("1", "true"):
+        SECRET_KEY = "dev-only-not-for-production"
+    else:
+        raise RuntimeError("SECRET_KEY environment variable is not set or empty")
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
