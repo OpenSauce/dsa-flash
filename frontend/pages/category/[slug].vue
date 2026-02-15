@@ -77,13 +77,6 @@ const card = computed(() => {
   return cards.value?.[cardIndex.value] ?? null
 })
 
-// Signup CTA for anonymous users
-const flipCount = ref(0)
-const ctaDismissed = ref(false)
-const showSignupCta = computed(
-  () => !isLoggedIn.value && flipCount.value >= 5 && !ctaDismissed.value
-)
-
 // Analytics
 const { track, flushBeacon } = useAnalytics()
 const frontShownAt = ref(Date.now())
@@ -121,7 +114,6 @@ function flipCard() {
   revealed.value = !revealed.value
   if (revealed.value) {
     flipTime.value = Date.now()
-    flipCount.value++
     track('card_flip', {
       card_id: card.value?.id,
       category,
@@ -216,7 +208,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
   } catch (err: any) {
     if (err?.response?.status === 401 || err?.status === 401 || err?.statusCode === 401) {
       await logout()
-      await refresh()
+      navigateTo('/')
     } else {
       console.error('review failed', err)
     }
@@ -271,6 +263,13 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 
     <!-- card UI -->
     <div v-else>
+      <!-- Anonymous: progress not saved notice -->
+      <div v-if="!isLoggedIn"
+           class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        Your progress won't be saved.
+        <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink> to track your learning.
+      </div>
+
       <!-- Progress bar -->
       <div class="mb-4">
         <div class="flex justify-between text-sm text-gray-500 mb-1">
@@ -284,31 +283,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
                :aria-valuemax="currentBatchSize"
                :aria-label="`Card ${cardsReviewedInBatch} of ${currentBatchSize} reviewed`"
                :style="{ width: progressPercent + '%' }" />
-        </div>
-      </div>
-
-      <!-- Signup CTA for anonymous users -->
-      <div
-        v-if="showSignupCta"
-        class="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 flex items-center justify-between"
-      >
-        <p class="text-sm text-blue-800">
-          Sign up to save your progress and track what you've learned.
-        </p>
-        <div class="flex items-center gap-2 ml-4 shrink-0">
-          <NuxtLink
-            to="/signup"
-            class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-          >
-            Sign up
-          </NuxtLink>
-          <button
-            @click="ctaDismissed = true"
-            class="text-blue-400 hover:text-blue-600 text-lg leading-none"
-            aria-label="Dismiss"
-          >
-            &times;
-          </button>
         </div>
       </div>
 
