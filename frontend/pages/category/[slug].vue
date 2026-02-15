@@ -47,7 +47,34 @@ const { data: cards, pending, error, refresh } = await useFetch<
 
 // Card navigation — anonymous users browse by index, logged-in users use SM-2 refresh
 const cardIndex = ref(0)
+
+// Batch session state
+const BATCH_SIZE = 10
+const cardsReviewedInBatch = ref(0)
+const sessionFinished = ref(false)
+const currentBatchSize = ref(0)
+
+watch(cards, (newCards) => {
+  if (newCards && currentBatchSize.value === 0) {
+    currentBatchSize.value = Math.min(BATCH_SIZE, newCards.length)
+  }
+}, { immediate: true })
+
+const progressPercent = computed(() =>
+  currentBatchSize.value > 0
+    ? (cardsReviewedInBatch.value / currentBatchSize.value) * 100
+    : 0
+)
+
+const remainingCards = computed(() => {
+  if (isLoggedIn.value) return cards.value?.length ?? 0
+  return (cards.value?.length ?? 0) - cardIndex.value
+})
+
+const hasMoreCards = computed(() => remainingCards.value > 0)
+
 const card = computed(() => {
+  if (sessionFinished.value) return null
   if (isLoggedIn.value) return cards.value?.[0] ?? null
   return cards.value?.[cardIndex.value] ?? null
 })
@@ -108,9 +135,13 @@ function flipCard() {
 // Anonymous: advance to next card without review
 function nextCard() {
   cardsReviewedInSession.value++
+  cardsReviewedInBatch.value++
   cardIndex.value++
   revealed.value = false
   frontShownAt.value = Date.now()
+  if (cardsReviewedInBatch.value >= currentBatchSize.value) {
+    sessionFinished.value = true
+  }
   if (!cards.value?.[cardIndex.value]) {
     emitSessionEnd('completed')
   }
@@ -122,7 +153,8 @@ watch(card, (newCard) => {
     revealed.value = false
     frontShownAt.value = Date.now()
   }
-  if (!newCard) {
+  if (!newCard && !sessionFinished.value) {
+    sessionFinished.value = true
     emitSessionEnd('completed')
   }
 })
@@ -132,11 +164,32 @@ onBeforeUnmount(() => {
   emitSessionEnd('navigated_away')
 })
 
+function keepGoing() {
+  track('keep_going', { category, cards_reviewed: cardsReviewedInSession.value })
+  cardsReviewedInBatch.value = 0
+  sessionFinished.value = false
+  if (isLoggedIn.value) {
+    currentBatchSize.value = Math.min(BATCH_SIZE, cards.value?.length ?? 0)
+  } else {
+    const remaining = (cards.value?.length ?? 0) - cardIndex.value
+    currentBatchSize.value = Math.min(BATCH_SIZE, remaining)
+  }
+  revealed.value = false
+  frontShownAt.value = Date.now()
+}
+
+function endSession() {
+  sessionFinished.value = true
+  emitSessionEnd('user_ended')
+}
+
 // SM-2 grading map
 const qualityMap = { easy: 5, good: 3, again: 1 } as const
+const isSubmitting = ref(false)
 
 async function recordResponse(grade: keyof typeof qualityMap) {
-  if (!card.value) return
+  if (!card.value || isSubmitting.value) return
+  isSubmitting.value = true
 
   const now = Date.now()
   track('card_review', {
@@ -147,8 +200,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
     time_on_back_ms: now - flipTime.value,
     time_total_ms: now - frontShownAt.value,
   })
-  cardsReviewedInSession.value++
-
   try {
     await $fetch(`${apiBase}/flashcards/${card.value.id}/review`, {
       method: 'POST',
@@ -158,31 +209,81 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       },
       body: { quality: qualityMap[grade] },
     })
+    cardsReviewedInSession.value++
+    cardsReviewedInBatch.value++
+    if (cardsReviewedInBatch.value >= currentBatchSize.value) {
+      sessionFinished.value = true
+    }
     await refresh()
   } catch (err) {
     console.error('review failed', err)
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto p-6">
-    <NuxtLink to="/" class="text-blue-600 hover:underline mb-4 inline-block">
-      &larr; Back to categories
-    </NuxtLink>
+    <button v-if="card" @click="endSession()" class="text-blue-600 hover:underline mb-4 inline-block">
+      Stop reviewing
+    </button>
 
     <!-- error -->
     <div v-if="error" class="text-red-500">
       {{ error.data?.detail || error }}
     </div>
 
-    <!-- no card available -->
-    <div v-else-if="!card" class="text-center py-12">
-      No cards due right now.
+    <!-- completion / empty state -->
+    <div v-else-if="sessionFinished || !card" class="text-center py-16">
+      <template v-if="cardsReviewedInSession > 0">
+        <h2 class="text-2xl font-bold mb-2 font-heading">Batch complete!</h2>
+        <p class="text-gray-600 mb-2">You reviewed {{ cardsReviewedInSession }} cards</p>
+        <p v-if="remainingCards > 0" class="text-gray-500 text-sm mb-8">{{ remainingCards }} cards remaining in this category</p>
+        <p v-else-if="isLoggedIn" class="text-gray-500 text-sm mb-8">Come back tomorrow for your next review</p>
+        <p v-else class="text-gray-500 text-sm mb-8">You've seen all the cards in this category!</p>
+        <div class="flex justify-center gap-4">
+          <button v-if="hasMoreCards" @click="keepGoing()"
+                  class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+            Keep going
+          </button>
+          <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
+            &larr; Back to categories
+          </NuxtLink>
+        </div>
+      </template>
+      <template v-else-if="sessionFinished">
+        <p class="text-gray-500 mb-8">No cards reviewed.</p>
+        <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
+          &larr; Back to categories
+        </NuxtLink>
+      </template>
+      <template v-else>
+        <p class="text-gray-500">No cards due right now.</p>
+        <NuxtLink to="/" class="text-blue-600 hover:underline mt-4 inline-block">
+          &larr; Back to categories
+        </NuxtLink>
+      </template>
     </div>
 
     <!-- card UI -->
     <div v-else>
+      <!-- Progress bar -->
+      <div class="mb-4">
+        <div class="flex justify-between text-sm text-gray-500 mb-1">
+          <span>Card {{ cardsReviewedInBatch + 1 }} of {{ currentBatchSize }}</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300"
+               role="progressbar"
+               :aria-valuenow="cardsReviewedInBatch"
+               aria-valuemin="0"
+               :aria-valuemax="currentBatchSize"
+               :aria-label="`Card ${cardsReviewedInBatch} of ${currentBatchSize} reviewed`"
+               :style="{ width: progressPercent + '%' }" />
+        </div>
+      </div>
+
       <!-- Signup CTA for anonymous users -->
       <div
         v-if="showSignupCta"
