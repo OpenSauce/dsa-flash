@@ -165,6 +165,7 @@ onBeforeUnmount(() => {
 })
 
 function keepGoing() {
+  track('keep_going', { category, cards_reviewed: cardsReviewedInSession.value })
   cardsReviewedInBatch.value = 0
   sessionFinished.value = false
   if (isLoggedIn.value) {
@@ -211,10 +212,10 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       },
       body: { quality: qualityMap[grade] },
     })
-    await refresh()
     if (batchDone) {
       sessionFinished.value = true
     }
+    await refresh()
   } catch (err) {
     console.error('review failed', err)
   }
@@ -238,7 +239,8 @@ async function recordResponse(grade: keyof typeof qualityMap) {
         <h2 class="text-2xl font-bold mb-2 font-heading">Session complete!</h2>
         <p class="text-gray-600 mb-2">You reviewed {{ cardsReviewedInSession }} cards</p>
         <p v-if="remainingCards > 0" class="text-gray-500 text-sm mb-8">{{ remainingCards }} cards remaining in this category</p>
-        <p v-else class="text-gray-500 text-sm mb-8">Come back tomorrow for your next review</p>
+        <p v-else-if="isLoggedIn" class="text-gray-500 text-sm mb-8">Come back tomorrow for your next review</p>
+        <p v-else class="text-gray-500 text-sm mb-8">You've seen all the cards in this category!</p>
         <div class="flex justify-center gap-4">
           <button v-if="hasMoreCards" @click="keepGoing()"
                   class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
@@ -266,6 +268,11 @@ async function recordResponse(grade: keyof typeof qualityMap) {
         </div>
         <div class="w-full bg-gray-200 rounded-full h-2">
           <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300"
+               role="progressbar"
+               :aria-valuenow="progressPercent"
+               aria-valuemin="0"
+               aria-valuemax="100"
+               aria-label="Session progress"
                :style="{ width: progressPercent + '%' }" />
         </div>
       </div>
