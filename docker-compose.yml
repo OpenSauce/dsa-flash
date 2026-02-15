@@ -10,6 +10,7 @@ services:
       - db
     environment:
       DEV_MODE: "${DEV_MODE:-}"
+      SECRET_KEY: "${SECRET_KEY}"
     volumes:
       - ./dsa-flash-cards:/data/flashcards
 

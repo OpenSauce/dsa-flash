@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("SECRET_KEY", "test-secret")
+
 import pytest
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine

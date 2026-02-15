@@ -28,6 +28,8 @@ jobs:
 
       - name: Test
         run: pytest backend/tests/
+        env:
+          SECRET_KEY: ci-test-secret
 
   frontend:
     runs-on: ubuntu-latest
