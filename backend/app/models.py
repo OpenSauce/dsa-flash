@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, JSON
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import SQLModel, Field
 from pydantic import BaseModel
@@ -53,3 +53,21 @@ class UserFlashcard(SQLModel, table=True):
     next_review: Optional[datetime] = None  # when it becomes “due”
     last_reviewed: Optional[datetime] = None  # most-recent review
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class Event(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: str = Field(index=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", nullable=True)
+    event_type: str = Field(index=True)
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False, server_default="{}"))
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+
+
+class EventIn(BaseModel):
+    event_type: str
+    payload: dict = {}
+
+
+class EventBatchIn(BaseModel):
+    events: list[EventIn]

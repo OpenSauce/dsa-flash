@@ -2,7 +2,7 @@
 
 dev:
 	docker compose --profile prod down --remove-orphans
-	docker compose --profile dev up --build
+	DEV_MODE=1 docker compose --profile dev up --build
 
 prod:
 	docker compose --profile prod up --build -d

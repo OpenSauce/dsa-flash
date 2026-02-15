@@ -1,5 +1,5 @@
 // composables/useAuth.ts
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
 
 interface UserInfo {
@@ -12,32 +12,16 @@ interface TokenResponse {
 
 export const useAuth = () => {
   const user = useState<UserInfo | null>('user', () => null)
-  const tokenCookie = useCookie<string | null>('token')
+  const tokenCookie = useCookie<string | null>('token', {
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: '/',
+    sameSite: 'lax' as const,
+  })
   const authReady = useState<boolean>('authReady', () => false)
 
   const { public: { apiBase } } = useRuntimeConfig()
 
   const isLoggedIn = computed(() => !!user.value)
-
-  onMounted(async () => {
-    if (tokenCookie.value && !user.value) {
-      try {
-        const me = await $fetch<UserInfo>(
-          `${apiBase}/users/me`,
-          {
-            headers: {
-              Authorization: `Bearer ${tokenCookie.value}`,
-            },
-          }
-        )
-        user.value = me
-      } catch {
-        tokenCookie.value = null
-        user.value = null
-      }
-    }
-    authReady.value = true
-  })
 
   const login = async (username: string, password: string): Promise<void> => {
     const form = new URLSearchParams({ username, password })

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import { useCookie } from '#imports'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 // Routing + auth
 const route = useRoute()
@@ -46,12 +47,59 @@ const { data: cards, pending, error, refresh } = await useFetch<
 // Single card
 const card = computed(() => cards.value?.[0] ?? null)
 
+// Analytics
+const { track } = useAnalytics()
+const frontShownAt = ref(Date.now())
+const flipTime = ref(0)
+const sessionStartTime = Date.now()
+const cardsReviewedInSession = ref(0)
+let sessionEndEmitted = false
+
+onMounted(() => {
+  track('page_view', { page: `/category/${category}`, referrer: document.referrer })
+  track('session_start', { category })
+})
+
 // Reveal state
 const revealed = ref(false)
 
-// Reset “revealed” whenever a new card arrives
-watch(card, () => {
+function flipCard() {
+  revealed.value = !revealed.value
+  if (revealed.value) {
+    flipTime.value = Date.now()
+    track('card_flip', {
+      card_id: card.value?.id,
+      category,
+      time_on_front_ms: Date.now() - frontShownAt.value,
+    })
+  }
+}
+
+// Reset "revealed" whenever a new card arrives
+watch(card, (newCard) => {
   revealed.value = false
+  frontShownAt.value = Date.now()
+  if (!newCard && !sessionEndEmitted) {
+    sessionEndEmitted = true
+    track('session_end', {
+      category,
+      reason: 'completed',
+      cards_reviewed: cardsReviewedInSession.value,
+      duration_ms: Date.now() - sessionStartTime,
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (!sessionEndEmitted) {
+    sessionEndEmitted = true
+    track('session_end', {
+      category,
+      reason: 'navigated_away',
+      cards_reviewed: cardsReviewedInSession.value,
+      duration_ms: Date.now() - sessionStartTime,
+    })
+  }
 })
 
 // SM-2 grading map
@@ -59,6 +107,17 @@ const qualityMap = { easy: 5, good: 3, again: 1 } as const
 
 async function recordResponse(grade: keyof typeof qualityMap) {
   if (!card.value) return
+
+  const now = Date.now()
+  track('card_review', {
+    card_id: card.value.id,
+    category,
+    grade,
+    quality: qualityMap[grade],
+    time_on_back_ms: now - flipTime.value,
+    time_total_ms: now - frontShownAt.value,
+  })
+  cardsReviewedInSession.value++
 
   try {
     await $fetch(`${apiBase}/flashcards/${card.value.id}/review`, {
@@ -69,7 +128,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       },
       body: { quality: qualityMap[grade] },
     })
-    // wait for the new next-card to load
     await refresh()
   } catch (err) {
     console.error('review failed', err)
@@ -95,7 +153,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 
     <!-- card UI -->
     <div v-else>
-      <div @click="revealed = !revealed"
+      <div @click="flipCard()"
         class="border rounded-xl p-8 shadow-sm mb-6 cursor-pointer select-none transition duration-300 ease-in-out prose mx-auto"
         :class="{
           'bg-white hover:bg-gray-50': !revealed,
