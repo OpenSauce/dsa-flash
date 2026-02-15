@@ -14,7 +14,9 @@ from ..models import Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.environ["SECRET_KEY"]
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is not set or empty")
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
