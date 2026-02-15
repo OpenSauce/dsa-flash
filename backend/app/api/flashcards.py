@@ -11,7 +11,7 @@ from sqlmodel import Session, and_, col, or_, select
 from ..database import get_session
 from ..models import Flashcard, User, UserFlashcard
 from ..spaced import sm2
-from .users import get_current_user
+from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
 
@@ -33,26 +33,32 @@ def list_cards(
     category: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
     tag: Optional[str] = Query(None),
-    user: User = Depends(get_current_user),
+    user: Optional[User] = Depends(get_optional_user),
     random: bool = Query(False, description="Shuffle the cards"),
 ):
-    stmt = (
-        select(Flashcard)
-        .join(
-            UserFlashcard,
-            and_(
-                col(UserFlashcard.flashcard_id) == col(Flashcard.id),
-                col(UserFlashcard.user_id) == user.id,
-            ),
-            isouter=True,
-        )
-        .where(
-            or_(
-                col(UserFlashcard.user_id).is_(None),
-                col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+    if user:
+        # Authenticated: SM-2 filtered (due or new cards only)
+        stmt = (
+            select(Flashcard)
+            .join(
+                UserFlashcard,
+                and_(
+                    col(UserFlashcard.flashcard_id) == col(Flashcard.id),
+                    col(UserFlashcard.user_id) == user.id,
+                ),
+                isouter=True,
+            )
+            .where(
+                or_(
+                    col(UserFlashcard.user_id).is_(None),
+                    col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+                )
             )
         )
-    )
+    else:
+        # Anonymous: all cards, no SM-2 filtering
+        stmt = select(Flashcard)
+
     if category:
         stmt = stmt.where(Flashcard.category == category)
     if language:
