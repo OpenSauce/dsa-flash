@@ -200,11 +200,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
     time_on_back_ms: now - flipTime.value,
     time_total_ms: now - frontShownAt.value,
   })
-  cardsReviewedInSession.value++
-  cardsReviewedInBatch.value++
-
-  const batchDone = cardsReviewedInBatch.value >= currentBatchSize.value
-
   try {
     await $fetch(`${apiBase}/flashcards/${card.value.id}/review`, {
       method: 'POST',
@@ -214,7 +209,9 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       },
       body: { quality: qualityMap[grade] },
     })
-    if (batchDone) {
+    cardsReviewedInSession.value++
+    cardsReviewedInBatch.value++
+    if (cardsReviewedInBatch.value >= currentBatchSize.value) {
       sessionFinished.value = true
     }
     await refresh()
@@ -254,6 +251,12 @@ async function recordResponse(grade: keyof typeof qualityMap) {
             &larr; Back to categories
           </NuxtLink>
         </div>
+      </template>
+      <template v-else-if="sessionFinished">
+        <p class="text-gray-500 mb-8">No cards reviewed.</p>
+        <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
+          &larr; Back to categories
+        </NuxtLink>
       </template>
       <template v-else>
         <p class="text-gray-500">No cards due right now.</p>
