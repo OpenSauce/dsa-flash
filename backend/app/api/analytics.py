@@ -1,13 +1,13 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Response, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import text
 from sqlmodel import Session
 
 from ..database import get_session
-from ..models import Event, EventIn, EventBatchIn, User
-from .users import get_optional_user, get_current_user
+from ..models import Event, EventBatchIn, EventIn, User
+from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/events", tags=["events"])
 summary_router = APIRouter(prefix="/analytics", tags=["analytics"])

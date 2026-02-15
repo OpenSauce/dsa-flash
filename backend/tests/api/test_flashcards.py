@@ -1,13 +1,15 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
-from datetime import datetime, timedelta, timezone
 
-from app.api.flashcards import router as flashcard_router, err_no_cards_found
-from app.api.users import router as user_router, User
+from app.api.flashcards import err_no_cards_found
+from app.api.flashcards import router as flashcard_router
+from app.api.users import User, get_current_user, get_password_hash
+from app.api.users import router as user_router
 from app.database import get_session
-from app.api.users import get_current_user, get_password_hash
 from app.models import Flashcard, UserFlashcard
 
 
@@ -135,8 +137,8 @@ def test_due_cards(client, session):
     user = create_user(session, "user", "password")
     token = get_token(client, "user", "password")
 
-    user2 = create_user(session, "user2", "password")
-    token2 = get_token(client, "user2", "password")
+    create_user(session, "user2", "password")
+    get_token(client, "user2", "password")
     _ = create_flashcard(session, id=999, front="Past", back="A1")
     _ = create_flashcard(session, front="Future", back="A2")
     now = datetime.now(timezone.utc)

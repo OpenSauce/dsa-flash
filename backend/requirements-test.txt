@@ -1,0 +1,4 @@
+ruff
+pytest
+testcontainers[postgres]
+httpx

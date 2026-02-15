@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlmodel import SQLModel, Field, Session, select
+from sqlmodel import Field, Session, SQLModel, select
 
 from ..database import get_session
-from ..models import User, UserCreate, Token
+from ..models import Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 

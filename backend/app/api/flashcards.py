@@ -1,17 +1,17 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from sqlalchemy import func
-from sqlmodel import Session, select, col, or_, and_
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from sqlalchemy import func
+from sqlmodel import Session, and_, col, or_, select
 
-from ..models import Flashcard, UserFlashcard, User
-from .users import get_current_user
-from ..spaced import sm2
 from ..database import get_session
+from ..models import Flashcard, User, UserFlashcard
+from ..spaced import sm2
+from .users import get_current_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
 
