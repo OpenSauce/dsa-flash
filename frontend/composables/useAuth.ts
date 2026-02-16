@@ -41,13 +41,17 @@ export const useAuth = () => {
   }
 
   const signup = async (username: string, password: string): Promise<void> => {
-    await $fetch(
+    const { access_token } = await $fetch<TokenResponse>(
       `${apiBase}/signup`,
       {
         method: 'POST',
         body: { username, password },
       }
     )
+    tokenCookie.value = access_token
+    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
   }
 
   const logout = async () => {
