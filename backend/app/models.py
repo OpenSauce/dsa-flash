@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey, Integer, JSON, Column, String
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 
