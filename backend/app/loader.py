@@ -23,7 +23,7 @@ def _dir_metadata(path: Path) -> tuple[str | None, str | None]:
 
 def upsert_flashcard(card: Flashcard, session: Session) -> None:
     """
-    Insert if (title, category, language) combo doesn't exist.
+    Insert or update by (title, category, language) composite key.
     """
     stmt = select(Flashcard).where(
         Flashcard.title == card.title,
@@ -31,7 +31,12 @@ def upsert_flashcard(card: Flashcard, session: Session) -> None:
         Flashcard.language == card.language,
     )
     exists = session.exec(stmt).first()
-    if not exists:
+    if exists:
+        exists.front = card.front
+        exists.back = card.back
+        exists.difficulty = card.difficulty
+        exists.tags = card.tags
+    else:
         session.add(card)
 
 
