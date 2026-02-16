@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.api.flashcards import err_no_cards_found
 from app.api.flashcards import router as flashcard_router
 from app.api.users import User, get_current_user, get_password_hash
 from app.api.users import router as user_router
@@ -81,8 +80,8 @@ def get_token(client, username, password) -> str:
 # Tests
 def test_list_cards_empty(client):
     response = client.get("/flashcards")
-    assert response.status_code == 404
-    assert response.json()["detail"] == err_no_cards_found
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_list_cards_filters_and_pagination(client, session):
