@@ -9,7 +9,7 @@ DB_URL = os.getenv(
     "postgresql://user:password@db:5432/flashcards",
 )
 
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=os.getenv("DEV_MODE", "").lower() in ("1", "true"))
 
 
 def init_db() -> None:

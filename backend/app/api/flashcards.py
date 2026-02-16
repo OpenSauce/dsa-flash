@@ -15,8 +15,6 @@ from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
 
-err_no_cards_found: str = "No cards found"
-
 
 class ReviewIn(BaseModel):
     quality: int
@@ -69,8 +67,6 @@ def list_cards(
         stmt = stmt.where(col(Flashcard.tags).contains([tag]))
     cards = session.exec(stmt).all()
 
-    if not cards:
-        raise HTTPException(404, err_no_cards_found)
     return JSONResponse(content=jsonable_encoder(cards))
 
 
@@ -83,9 +79,7 @@ def review_card(
 ):
     card = session.get(Flashcard, card_id)
     if not card:
-        raise HTTPException(404, "Card not found")
-    if user.id is None:
-        raise Exception(401, "User not authenticated")
+        raise HTTPException(status_code=404, detail="Card not found")
     uf = session.get(UserFlashcard, (user.id, card_id))
     if uf is None:
         uf = UserFlashcard(user_id=user.id, flashcard_id=card_id)

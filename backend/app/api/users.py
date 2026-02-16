@@ -181,4 +181,4 @@ class UserRead(SQLModel):
 def read_current_user(
     current_user: User = Depends(get_current_user),
 ):
-    return UserRead.from_orm(current_user)
+    return UserRead.model_validate(current_user)

@@ -76,7 +76,7 @@ def load_yaml_flashcards() -> None:
                     front=raw["Front"],
                     back=raw["Back"],
                     difficulty=raw.get("difficulty"),
-                    tags=raw.get("tags"),
+                    tags=raw.get("tags") or [],
                     category=category,
                     language=language,
                 )
