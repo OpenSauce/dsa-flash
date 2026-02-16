@@ -185,12 +185,7 @@ watch(card, (newCard) => {
     frontShownAt.value = Date.now()
   }
   if (!newCard && !sessionFinished.value) {
-    emitSessionEnd('completed')
-    if (cardsReviewedInSession.value === 0) {
-      navigateTo('/')
-      return
-    }
-    sessionFinished.value = true
+    finishSession('completed')
   }
 })
 
@@ -200,6 +195,15 @@ onBeforeUnmount(() => {
   if (buttonsTimer) clearTimeout(buttonsTimer)
   emitSessionEnd('navigated_away')
 })
+
+function finishSession(reason: 'completed' | 'user_ended') {
+  emitSessionEnd(reason)
+  if (cardsReviewedInSession.value === 0) {
+    navigateTo('/')
+    return
+  }
+  sessionFinished.value = true
+}
 
 function keepGoing() {
   track('keep_going', { category, cards_reviewed: cardsReviewedInSession.value })
@@ -215,14 +219,6 @@ function keepGoing() {
   frontShownAt.value = Date.now()
 }
 
-function endSession() {
-  emitSessionEnd('user_ended')
-  if (cardsReviewedInSession.value === 0) {
-    navigateTo('/')
-    return
-  }
-  sessionFinished.value = true
-}
 
 // SM-2 grading map
 const qualityMap = { easy: 5, good: 3, again: 1 } as const
@@ -271,7 +267,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 
 <template>
   <div class="max-w-4xl mx-auto p-6">
-    <button v-if="card" @click="endSession()" class="text-blue-600 hover:underline mb-4 inline-block">
+    <button v-if="card" @click="finishSession('user_ended')" class="text-blue-600 hover:underline mb-4 inline-block">
       Stop reviewing
     </button>
 
