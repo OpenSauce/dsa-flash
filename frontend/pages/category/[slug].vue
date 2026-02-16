@@ -105,10 +105,13 @@ onMounted(() => {
   track('page_view', { page: `/category/${category}`, referrer: document.referrer })
   track('session_start', { category })
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('keydown', handleKeydown)
 })
 
 // Reveal state
 const revealed = ref(false)
+const buttonsEnabled = ref(false)
+let buttonsTimer: ReturnType<typeof setTimeout> | null = null
 
 function flipCard() {
   revealed.value = !revealed.value
@@ -119,6 +122,42 @@ function flipCard() {
       category,
       time_on_front_ms: Date.now() - frontShownAt.value,
     })
+    // 400ms delay before buttons become clickable
+    buttonsEnabled.value = false
+    buttonsTimer = setTimeout(() => {
+      buttonsEnabled.value = true
+    }, 400)
+  } else {
+    buttonsEnabled.value = false
+    if (buttonsTimer) {
+      clearTimeout(buttonsTimer)
+      buttonsTimer = null
+    }
+  }
+}
+
+// Keyboard shortcuts
+function handleKeydown(e: KeyboardEvent) {
+  // Ignore if user is typing in an input/textarea
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  if (!card.value || sessionFinished.value) return
+
+  if (!revealed.value) {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault()
+      flipCard()
+    }
+  } else {
+    if (isLoggedIn.value) {
+      if (e.key === '1') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('again') }
+      else if (e.key === '2') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('good') }
+      else if (e.key === '3') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('easy') }
+    } else {
+      if (e.key === '1' || e.key === '2' || e.key === '3' || e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault()
+        nextCard()
+      }
+    }
   }
 }
 
@@ -141,6 +180,8 @@ function nextCard() {
 watch(card, (newCard) => {
   if (isLoggedIn.value) {
     revealed.value = false
+    buttonsEnabled.value = false
+    if (buttonsTimer) { clearTimeout(buttonsTimer); buttonsTimer = null }
     frontShownAt.value = Date.now()
   }
   if (!newCard && !sessionFinished.value) {
@@ -151,6 +192,8 @@ watch(card, (newCard) => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('keydown', handleKeydown)
+  if (buttonsTimer) clearTimeout(buttonsTimer)
   emitSessionEnd('navigated_away')
 })
 
@@ -294,16 +337,28 @@ async function recordResponse(grade: keyof typeof qualityMap) {
         }" v-html="revealed ? md.render(card.back) : md.render(card.front)" />
 
       <!-- Logged-in: review buttons -->
-      <div v-if="revealed && isLoggedIn" class="flex justify-center gap-4">
-        <button @click="recordResponse('easy')" class="px-4 py-2 bg-green-600 text-white rounded">
-          I know it
-        </button>
-        <button @click="recordResponse('good')" class="px-4 py-2 bg-yellow-500 text-white rounded">
-          Almost
-        </button>
-        <button @click="recordResponse('again')" class="px-4 py-2 bg-red-600 text-white rounded">
-          Forgotten
-        </button>
+      <div v-if="revealed && isLoggedIn" class="text-center">
+        <div class="flex justify-center gap-4 rating-buttons" :class="{ 'rating-buttons--visible': buttonsEnabled }">
+          <button @click="buttonsEnabled && recordResponse('again')"
+                  :disabled="!buttonsEnabled"
+                  class="px-5 py-3 bg-red-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
+            <span class="font-semibold">Again</span>
+            <span class="block text-xs opacity-80 mt-0.5">Show again today</span>
+          </button>
+          <button @click="buttonsEnabled && recordResponse('good')"
+                  :disabled="!buttonsEnabled"
+                  class="px-5 py-3 bg-yellow-500 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
+            <span class="font-semibold">Almost</span>
+            <span class="block text-xs opacity-80 mt-0.5">Review tomorrow</span>
+          </button>
+          <button @click="buttonsEnabled && recordResponse('easy')"
+                  :disabled="!buttonsEnabled"
+                  class="px-5 py-3 bg-green-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
+            <span class="font-semibold">I know it</span>
+            <span class="block text-xs opacity-80 mt-0.5">I could explain this</span>
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">Press 1, 2, or 3</p>
       </div>
 
       <!-- Anonymous: next card button -->
@@ -315,3 +370,13 @@ async function recordResponse(grade: keyof typeof qualityMap) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.rating-buttons {
+  opacity: 0;
+  transition: opacity 400ms ease-in;
+}
+.rating-buttons--visible {
+  opacity: 1;
+}
+</style>
