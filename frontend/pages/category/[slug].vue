@@ -138,6 +138,7 @@ function flipCard() {
 
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return
   if (!(e.target instanceof Element)) return
   if (e.target.closest('button,a,input,textarea,select,[role="button"],[contenteditable]')) return
   if (!card.value || sessionFinished.value) return
@@ -285,13 +286,13 @@ async function recordResponse(grade: keyof typeof qualityMap) {
         <p v-else-if="isLoggedIn" class="text-gray-500 text-sm mb-8">Come back tomorrow for your next review</p>
         <p v-else class="text-gray-500 text-sm mb-8">You've seen all the cards in this category!</p>
         <div class="flex justify-center gap-4">
+          <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
+            &larr; Back to categories
+          </NuxtLink>
           <button v-if="hasMoreCards" @click="keepGoing()"
                   class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
             Keep going
           </button>
-          <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
-            &larr; Back to categories
-          </NuxtLink>
         </div>
       </template>
       <template v-else>
@@ -341,13 +342,13 @@ async function recordResponse(grade: keyof typeof qualityMap) {
                   :disabled="!buttonsEnabled"
                   class="px-5 py-3 bg-red-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
             <span class="font-semibold">Again</span>
-            <span class="block text-xs opacity-80 mt-0.5">Show again today</span>
+            <span class="block text-xs opacity-80 mt-0.5">Review again soon</span>
           </button>
           <button @click="buttonsEnabled && recordResponse('good')"
                   :disabled="!buttonsEnabled"
                   class="px-5 py-3 bg-yellow-500 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
             <span class="font-semibold">Almost</span>
-            <span class="block text-xs opacity-80 mt-0.5">Review tomorrow</span>
+            <span class="block text-xs opacity-80 mt-0.5">Review later</span>
           </button>
           <button @click="buttonsEnabled && recordResponse('easy')"
                   :disabled="!buttonsEnabled"
@@ -372,7 +373,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 <style scoped>
 .rating-buttons {
   opacity: 0;
-  transition: opacity 400ms ease-in;
+  transition: opacity 400ms ease-out;
 }
 .rating-buttons--visible {
   opacity: 1;
