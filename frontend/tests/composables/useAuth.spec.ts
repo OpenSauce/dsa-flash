@@ -43,9 +43,11 @@ describe('useAuth composable', () => {
     expect(userRef.value).toEqual({ name: 'alice', is_admin: false })
   })
 
-  it('signup calls the signup endpoint without logging in', async () => {
-    mockFetch.mockResolvedValue(undefined)
-    const { signup, user } = useAuth()
+  it('signup sets token cookie and user state', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ access_token: 'signup-token' })
+      .mockResolvedValueOnce({ name: 'bob', is_admin: false })
+    const { signup } = useAuth()
 
     await signup('bob', 'hunter2')
 
@@ -53,7 +55,8 @@ describe('useAuth composable', () => {
       '/api/signup',
       { method: 'POST', body: { username: 'bob', password: 'hunter2' } }
     )
-    expect(user.value).toBe(null)
+    expect(cookieRef.value).toBe('signup-token')
+    expect(userRef.value).toEqual({ name: 'bob', is_admin: false })
   })
 
   it('logout clears both cookie and user', async () => {

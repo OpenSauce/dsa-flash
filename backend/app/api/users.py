@@ -131,7 +131,8 @@ def signup(
     )
     session.add(user)
     session.commit()
-    return {"msg": "User created"}
+    access_token = create_access_token({"sub": data.username})
+    return {"access_token": access_token}
 
 
 @router.post(

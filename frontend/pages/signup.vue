@@ -14,7 +14,7 @@ async function onSignup() {
   errorMsg.value = null
   try {
     await signup(username.value, password.value)
-    router.push('/login')
+    router.push('/')
   } catch (err: any) {
     console.error('Signup error:', err)
     errorMsg.value = err.data?.detail || err.message || 'Signup failed'
