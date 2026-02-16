@@ -185,8 +185,12 @@ watch(card, (newCard) => {
     frontShownAt.value = Date.now()
   }
   if (!newCard && !sessionFinished.value) {
-    sessionFinished.value = true
     emitSessionEnd('completed')
+    if (cardsReviewedInSession.value === 0) {
+      navigateTo('/')
+      return
+    }
+    sessionFinished.value = true
   }
 })
 
@@ -212,8 +216,12 @@ function keepGoing() {
 }
 
 function endSession() {
-  sessionFinished.value = true
   emitSessionEnd('user_ended')
+  if (cardsReviewedInSession.value === 0) {
+    navigateTo('/')
+    return
+  }
+  sessionFinished.value = true
 }
 
 // SM-2 grading map
@@ -289,12 +297,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
             &larr; Back to categories
           </NuxtLink>
         </div>
-      </template>
-      <template v-else-if="sessionFinished">
-        <p class="text-gray-500 mb-8">No cards reviewed.</p>
-        <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
-          &larr; Back to categories
-        </NuxtLink>
       </template>
       <template v-else>
         <p class="text-gray-500">No cards due right now.</p>
