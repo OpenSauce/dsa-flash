@@ -44,8 +44,12 @@ def load_yaml_flashcards() -> None:
     """
     Walk every *.yml / *.yaml under ROOT and upsert cards.
     Skips .github/ directory and .yamllint.yml file.
+    After upserting, removes any DB cards no longer present in YAML.
     """
     yaml_paths = list(ROOT.rglob("*.yml")) + list(ROOT.rglob("*.yaml"))
+
+    # Track all (title, category, language) tuples from YAML
+    yaml_keys: set[tuple[str, str | None, str | None]] = set()
 
     with Session(engine) as session:
         for file in yaml_paths:
@@ -74,4 +78,13 @@ def load_yaml_flashcards() -> None:
                     language=language,
                 )
                 upsert_flashcard(card, session)
+                yaml_keys.add((raw["title"], category, language))
+
+        # Remove cards from DB that are no longer in YAML
+        all_db_cards = session.exec(select(Flashcard)).all()
+        for db_card in all_db_cards:
+            if (db_card.title, db_card.category, db_card.language) not in yaml_keys:
+                print(f"Removing orphaned card: {db_card.title} ({db_card.category}/{db_card.language})")
+                session.delete(db_card)
+
         session.commit()
