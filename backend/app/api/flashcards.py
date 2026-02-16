@@ -108,8 +108,8 @@ def due_cards(
             & (UserFlashcard.flashcard_id == Flashcard.id),
         )
         .where(
-            UserFlashcard.next_review is not None
-            and UserFlashcard.next_review <= datetime.now(timezone.utc),
+            col(UserFlashcard.next_review).is_not(None),
+            col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
         )
         .limit(limit)
     )
