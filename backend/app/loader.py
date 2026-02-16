@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import yaml
@@ -5,6 +6,8 @@ from sqlmodel import Session, select
 
 from .database import engine
 from .models import Flashcard
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path("/data/flashcards")  # mounted via compose
 
@@ -65,7 +68,7 @@ def load_yaml_flashcards() -> None:
                 category = category.replace(" ", "-")
             data = yaml.safe_load(file.read_text()) or []
             if not isinstance(data, list):
-                print(f"Skipping {file}: root is {type(data).__name__}, not list")
+                logger.warning("Skipping %s: root is %s, not list", file, type(data).__name__)
                 continue
             for raw in data:
                 card = Flashcard(
@@ -84,7 +87,7 @@ def load_yaml_flashcards() -> None:
         all_db_cards = session.exec(select(Flashcard)).all()
         for db_card in all_db_cards:
             if (db_card.title, db_card.category, db_card.language) not in yaml_keys:
-                print(f"Removing orphaned card: {db_card.title} ({db_card.category}/{db_card.language})")
+                logger.info("Removing orphaned card: %s (%s/%s)", db_card.title, db_card.category, db_card.language)
                 session.delete(db_card)
 
         session.commit()
