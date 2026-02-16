@@ -138,8 +138,8 @@ function flipCard() {
 
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
-  // Ignore if user is typing in an input/textarea
-  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  if (!(e.target instanceof Element)) return
+  if (e.target.closest('button,a,input,textarea,select,[role="button"],[contenteditable]')) return
   if (!card.value || sessionFinished.value) return
 
   if (!revealed.value) {
