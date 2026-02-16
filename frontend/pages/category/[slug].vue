@@ -138,7 +138,7 @@ function flipCard() {
 
 // Keyboard shortcuts
 function handleKeydown(e: KeyboardEvent) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
   if (!(e.target instanceof Element)) return
   if (e.target.closest('button,a,input,textarea,select,[role="button"],[contenteditable]')) return
   if (!card.value || sessionFinished.value) return
