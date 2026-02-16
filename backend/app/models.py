@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, String
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 
@@ -47,7 +47,13 @@ class UserFlashcard(SQLModel, table=True):
     """
 
     user_id: Optional[int] = Field(foreign_key="user.id", primary_key=True)
-    flashcard_id: int = Field(foreign_key="flashcard.id", primary_key=True)
+    flashcard_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("flashcard.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
 
     repetitions: int = 0  # number of successful reviews so far
     interval: int = 0  # days until next review
