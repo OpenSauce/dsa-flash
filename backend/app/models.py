@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ class Flashcard(SQLModel, table=True):
     )
     category: Optional[str] = None
     language: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
 
 class User(SQLModel, table=True):
@@ -60,7 +60,7 @@ class UserFlashcard(SQLModel, table=True):
     easiness: float = 2.5  # SM-2 easiness factor
     next_review: Optional[datetime] = None  # when it becomes "due"
     last_reviewed: Optional[datetime] = None  # most-recent review
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
 
 class Event(SQLModel, table=True):
@@ -69,7 +69,7 @@ class Event(SQLModel, table=True):
     user_id: Optional[int] = Field(default=None, foreign_key="user.id", nullable=True)
     event_type: str = Field(index=True)
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False, server_default="{}"))
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
 
 class EventIn(BaseModel):
