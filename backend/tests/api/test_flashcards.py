@@ -177,6 +177,32 @@ def test_due_cards(client, session):
     session.delete(user)
 
 
+def test_due_cards_excludes_null_next_review(client, session):
+    user = create_user(session, "user", "password")
+    token = get_token(client, "user", "password")
+
+    card_due = create_flashcard(session, front="Due", back="A1")
+    card_null = create_flashcard(session, front="NullReview", back="A2")
+
+    now = datetime.now(timezone.utc)
+    uf_due = UserFlashcard(
+        user_id=user.id, flashcard_id=card_due.id, next_review=now - timedelta(days=1)
+    )
+    uf_null = UserFlashcard(
+        user_id=user.id, flashcard_id=card_null.id, next_review=None
+    )
+    session.add_all([uf_due, uf_null])
+    session.commit()
+
+    r = client.get("/flashcards/due", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["front"] == "Due"
+
+    session.delete(user)
+
+
 def test_card_stats(client, session):
     user = create_user(session, "user", "password")
     token = get_token(client, "user", "password")
