@@ -185,8 +185,7 @@ watch(card, (newCard) => {
     frontShownAt.value = Date.now()
   }
   if (!newCard && !sessionFinished.value) {
-    sessionFinished.value = true
-    emitSessionEnd('completed')
+    finishSession('completed')
   }
 })
 
@@ -196,6 +195,15 @@ onBeforeUnmount(() => {
   if (buttonsTimer) clearTimeout(buttonsTimer)
   emitSessionEnd('navigated_away')
 })
+
+function finishSession(reason: 'completed' | 'user_ended') {
+  emitSessionEnd(reason)
+  if (cardsReviewedInSession.value === 0) {
+    navigateTo('/')
+    return
+  }
+  sessionFinished.value = true
+}
 
 function keepGoing() {
   track('keep_going', { category, cards_reviewed: cardsReviewedInSession.value })
@@ -211,10 +219,6 @@ function keepGoing() {
   frontShownAt.value = Date.now()
 }
 
-function endSession() {
-  sessionFinished.value = true
-  emitSessionEnd('user_ended')
-}
 
 // SM-2 grading map
 const qualityMap = { easy: 5, good: 3, again: 1 } as const
@@ -263,7 +267,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
 
 <template>
   <div class="max-w-4xl mx-auto p-6">
-    <button v-if="card" @click="endSession()" class="text-blue-600 hover:underline mb-4 inline-block">
+    <button v-if="card" @click="finishSession('user_ended')" class="text-blue-600 hover:underline mb-4 inline-block">
       Stop reviewing
     </button>
 
@@ -289,12 +293,6 @@ async function recordResponse(grade: keyof typeof qualityMap) {
             &larr; Back to categories
           </NuxtLink>
         </div>
-      </template>
-      <template v-else-if="sessionFinished">
-        <p class="text-gray-500 mb-8">No cards reviewed.</p>
-        <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
-          &larr; Back to categories
-        </NuxtLink>
       </template>
       <template v-else>
         <p class="text-gray-500">No cards due right now.</p>
