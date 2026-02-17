@@ -102,5 +102,6 @@ class CategoryOut(BaseModel):
     slug: str
     name: str
     total: int
+    has_language: bool
     due: Optional[int] = None
     new: Optional[int] = None

@@ -318,8 +318,8 @@ def test_review_quality_out_of_range_returns_422(client, session):
 
 
 def test_categories_anonymous(anon_client, session):
-    create_flashcard(session, front="Q1", back="A1", category="cat1")
-    create_flashcard(session, front="Q2", back="A2", category="cat1")
+    create_flashcard(session, front="Q1", back="A1", category="cat1", language="go")
+    create_flashcard(session, front="Q2", back="A2", category="cat1", language="go")
     create_flashcard(session, front="Q3", back="A3", category="cat2")
 
     r = anon_client.get("/categories")
@@ -332,9 +332,11 @@ def test_categories_anonymous(anon_client, session):
     assert cat1["name"] == "Cat1"
     assert cat1["due"] is None
     assert cat1["new"] is None
+    assert cat1["has_language"] is True
 
     cat2 = next(c for c in data if c["slug"] == "cat2")
     assert cat2["total"] == 1
+    assert cat2["has_language"] is False
 
 
 def test_categories_authenticated(anon_client, session):
@@ -363,6 +365,7 @@ def test_categories_authenticated(anon_client, session):
     assert cat["total"] == 3
     assert cat["due"] == 1
     assert cat["new"] == 1
+    assert cat["has_language"] is False
 
 
 def test_categories_empty(anon_client):
@@ -380,3 +383,20 @@ def test_categories_excludes_null_category(anon_client, session):
     data = r.json()
     assert len(data) == 1
     assert data[0]["slug"] == "cat1"
+    assert data[0]["has_language"] is False
+
+
+def test_categories_has_language(anon_client, session):
+    """has_language is True only for categories with non-null language cards."""
+    create_flashcard(session, front="Q1", back="A1", category="data-structures", language="go")
+    create_flashcard(session, front="Q2", back="A2", category="system-design", language=None)
+
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    data = r.json()
+
+    ds = next(c for c in data if c["slug"] == "data-structures")
+    assert ds["has_language"] is True
+
+    sd = next(c for c in data if c["slug"] == "system-design")
+    assert sd["has_language"] is False

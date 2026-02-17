@@ -31,6 +31,16 @@ def list_categories(
     )
     rows = session.exec(totals_stmt).all()
 
+    lang_stmt = (
+        select(Flashcard.category)
+        .where(
+            col(Flashcard.category).is_not(None),
+            col(Flashcard.language).is_not(None),
+        )
+        .group_by(Flashcard.category)
+    )
+    lang_categories = {row for row in session.exec(lang_stmt).all()}
+
     due_map: dict[str, int] = {}
     new_map: dict[str, int] = {}
 
@@ -73,6 +83,7 @@ def list_categories(
             slug=row.category,
             name=row.category.replace("-", " ").title(),
             total=row.total,
+            has_language=row.category in lang_categories,
             due=due_map.get(row.category, 0) if user else None,
             new=new_map.get(row.category, 0) if user else None,
         )

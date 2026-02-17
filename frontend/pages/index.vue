@@ -18,13 +18,13 @@ interface CategoryDisplay extends CategoryFromAPI {
   section: string
 }
 
-const CATEGORY_META: Record<string, { emoji: string; description: string; section: string }> = {
+const CATEGORY_META: Record<string, { emoji: string; description: string; section: string; displayName?: string }> = {
   'data-structures': { emoji: '📦', description: 'Arrays, stacks, trees, and more.', section: 'Coding' },
   'algorithms': { emoji: '⚙️', description: 'Sorting, searching, traversal...', section: 'Coding' },
   'advanced-data-structures': { emoji: '🚀', description: 'Fenwick trees, tries, unions...', section: 'Coding' },
   'big-o-notation': { emoji: '🧠', description: 'Complexity analysis essentials.', section: 'Coding' },
   'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
-  'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design' },
+  'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design', displayName: 'AWS' },
 }
 
 const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
@@ -47,7 +47,7 @@ const fetchCategories = async () => {
     const data = await $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, { headers })
     categories.value = data.map(cat => {
       const meta = CATEGORY_META[cat.slug] || DEFAULT_META
-      return { ...cat, ...meta }
+      return { ...cat, ...meta, name: meta.displayName || cat.name }
     })
   } catch (err) {
     console.error('categories fetch', err)
