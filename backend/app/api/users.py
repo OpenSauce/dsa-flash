@@ -188,20 +188,12 @@ def read_current_user(
     return UserRead.model_validate(current_user)
 
 
-@router.get(
-    "/users/streak",
-    response_model=StreakOut,
-    tags=["users"],
-)
-def get_streak(
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
+def compute_streak(session: Session, user_id: int) -> StreakOut:
     today = datetime.now(timezone.utc).date()
 
     today_row = session.exec(
         select(StudySession).where(
-            StudySession.user_id == current_user.id,
+            StudySession.user_id == user_id,
             StudySession.study_date == today,
         )
     ).first()
@@ -209,7 +201,7 @@ def get_streak(
 
     rows = session.exec(
         select(StudySession.study_date)
-        .where(StudySession.user_id == current_user.id)
+        .where(StudySession.user_id == user_id)
         .order_by(StudySession.study_date.desc())
     ).all()
 
@@ -250,3 +242,15 @@ def get_streak(
         longest_streak=longest_streak,
         today_reviewed=today_reviewed,
     )
+
+
+@router.get(
+    "/users/streak",
+    response_model=StreakOut,
+    tags=["users"],
+)
+def get_streak(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return compute_streak(session, current_user.id)
