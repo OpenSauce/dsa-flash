@@ -85,9 +85,31 @@ def load_yaml_flashcards() -> None:
 
         # Remove cards from DB that are no longer in YAML
         all_db_cards = session.exec(select(Flashcard)).all()
-        for db_card in all_db_cards:
-            if (db_card.title, db_card.category, db_card.language) not in yaml_keys:
-                logger.info("Removing orphaned card: %s (%s/%s)", db_card.title, db_card.category, db_card.language)
+        orphans = [
+            db_card
+            for db_card in all_db_cards
+            if (db_card.title, db_card.category, db_card.language) not in yaml_keys
+        ]
+
+        total = len(all_db_cards)
+        orphan_count = len(orphans)
+        if total > 0 and orphan_count > total * 0.5:
+            logger.warning(
+                "Orphan removal aborted: %d of %d cards would be deleted (%.0f%%). "
+                "This likely means the YAML submodule is not mounted or a directory was renamed. "
+                "Fix the mount and restart to apply removals.",
+                orphan_count,
+                total,
+                100 * orphan_count / total,
+            )
+        else:
+            for db_card in orphans:
+                logger.info(
+                    "Removing orphaned card: %s (%s/%s)",
+                    db_card.title,
+                    db_card.category,
+                    db_card.language,
+                )
                 session.delete(db_card)
 
         session.commit()
