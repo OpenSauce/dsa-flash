@@ -214,29 +214,31 @@ def get_streak(
     longest_streak = 0
 
     if rows:
+        # Current streak: walk backwards from today (or yesterday if today not studied yet)
         expected = today
         if not today_row and rows[0] == today - timedelta(days=1):
             expected = today - timedelta(days=1)
         elif not today_row:
-            rows = []
+            expected = None
 
-        for d in rows:
-            if d == expected:
-                current_streak += 1
-                expected -= timedelta(days=1)
-            elif d < expected:
-                break
+        if expected is not None:
+            for d in rows:
+                if d == expected:
+                    current_streak += 1
+                    expected -= timedelta(days=1)
+                elif d < expected:
+                    break
 
+        # Longest streak: scan all dates (never cleared)
         sorted_dates = sorted(set(rows))
-        if sorted_dates:
-            streak = 1
-            for i in range(1, len(sorted_dates)):
-                if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
-                    streak += 1
-                else:
-                    longest_streak = max(longest_streak, streak)
-                    streak = 1
-            longest_streak = max(longest_streak, streak)
+        streak = 1
+        for i in range(1, len(sorted_dates)):
+            if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
+                streak += 1
+            else:
+                longest_streak = max(longest_streak, streak)
+                streak = 1
+        longest_streak = max(longest_streak, streak)
 
     longest_streak = max(longest_streak, current_streak)
 

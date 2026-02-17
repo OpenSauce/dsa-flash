@@ -55,7 +55,7 @@ watch(
                   class="flex items-center gap-1 text-sm font-medium"
                   :title="`${streak.current_streak} day streak`"
                 >
-                  <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor">
+                  <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
                   </svg>
                   <span>{{ streak.current_streak }}</span>

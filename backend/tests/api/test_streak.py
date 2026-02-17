@@ -241,3 +241,4 @@ def test_streak_missed_yesterday_and_today(client, session):
     assert r.status_code == 200
     data = r.json()
     assert data["current_streak"] == 0
+    assert data["longest_streak"] == 1
