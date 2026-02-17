@@ -300,3 +300,12 @@ def test_authenticated_list_still_filters_by_sm2(anon_client, session):
     # Only the due card should appear (future card filtered out by SM-2)
     assert len(data) == 1
     assert data[0]["front"] == "Due"
+
+
+def test_review_quality_out_of_range_returns_422(client, session):
+    card = create_flashcard(session, front="Q", back="A")
+    r = client.post(f"/flashcards/{card.id}/review", json={"quality": 6})
+    assert r.status_code == 422
+
+    r = client.post(f"/flashcards/{card.id}/review", json={"quality": -1})
+    assert r.status_code == 422

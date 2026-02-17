@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, and_, col, or_, select
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/flashcards", tags=["flashcards"])
 
 
 class ReviewIn(BaseModel):
-    quality: int
+    quality: int = Field(ge=0, le=5)
 
 
 class StatsOut(BaseModel):
