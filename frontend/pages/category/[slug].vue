@@ -24,7 +24,8 @@ const md: MarkdownIt = new MarkdownIt({
 })
 
 // Optional language selector
-const categoryHasLang = computed(() => category !== 'big-o-notation')
+const categoriesWithoutLang = ['big-o-notation', 'system-design']
+const categoryHasLang = computed(() => !categoriesWithoutLang.includes(category))
 const language = ref<string | null>(categoryHasLang.value ? 'go' : null)
 
 // Build the "next card" endpoint URL
