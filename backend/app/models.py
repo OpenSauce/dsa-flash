@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from pydantic import BaseModel
+from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
@@ -29,8 +30,8 @@ class User(SQLModel, table=True):
 
 
 class UserCreate(BaseModel):
-    username: str
-    password: str
+    username: str = PydanticField(min_length=3, pattern=r'^[a-zA-Z0-9_]+$')
+    password: str = PydanticField(min_length=8)
 
 
 class Token(BaseModel):
