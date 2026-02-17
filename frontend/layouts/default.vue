@@ -19,11 +19,7 @@ watch(
     <!-- Header -->
     <header class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-        <NuxtLink to="/" class="
-     text-2xl sm:text-3xl 
-     font-tektur font-bold tracking-tight
-     drop-shadow-lg
-   ">
+        <NuxtLink to="/" class="text-2xl sm:text-3xl font-tektur font-bold tracking-tighter drop-shadow-lg">
           dsaflash.cards
         </NuxtLink>
 
@@ -75,7 +71,7 @@ watch(
       </div>
     </header>
 
-    <main class="flex-1" bg-gray-50>
+    <main class="flex-1 bg-gray-50">
       <div class="max-w-5xl mx-auto px-4 py-10">
         <slot />
       </div>
@@ -84,8 +80,7 @@ watch(
     <footer class="border-t text-center py-4 text-sm text-gray-600">
       © {{ new Date().getFullYear() }}
       <br class="block sm:hidden" />
-      <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">Master DSA
-        with Flashcards</span>
+      <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">Technical knowledge that sticks</span>
     </footer>
   </div>
 </template>

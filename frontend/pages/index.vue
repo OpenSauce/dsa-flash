@@ -82,12 +82,12 @@ watch(
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-6 py-10">
-    <h1 class="font-headline text-5xl sm:text-6xl mb-6 text-center leading-tight">
+  <div class="max-w-4xl mx-auto px-6 py-6">
+    <h1 class="font-headline text-3xl sm:text-4xl mb-3 text-center leading-tight">
       📚 dsaflash.cards
     </h1>
-    <p class="text-center text-gray-600 mb-10">
-      Select a category to start learning with flashcards.
+    <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-10">
+      Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
 
     <template v-for="(section, index) in sections" :key="section.name">
