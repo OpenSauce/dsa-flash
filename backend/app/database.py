@@ -1,11 +1,10 @@
 import os
 from typing import Generator
 
+from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
-
-from alembic import command
 
 DB_URL = os.getenv(
     "DATABASE_URL",
