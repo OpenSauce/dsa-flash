@@ -26,8 +26,11 @@ services:
     environment:
       DEV_MODE: "${DEV_MODE:-}"
       SECRET_KEY: "${SECRET_KEY:-}"
+      RESET_DB: "${RESET_DB:-}"
     volumes:
       - ./backend/app:/usr/src/app/app
+      - ./backend/alembic:/usr/src/app/alembic
+      - ./backend/alembic.ini:/usr/src/app/alembic.ini
       - ./dsa-flash-cards:/data/flashcards
 
   frontend:
