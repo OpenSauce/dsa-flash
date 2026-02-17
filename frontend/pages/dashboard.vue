@@ -174,7 +174,7 @@ function colorForPct(pct: number): string {
         <h1 class="font-headline text-4xl sm:text-5xl font-bold leading-tight text-gray-900">
           You know
           <span class="text-indigo-600">{{ dashboard.knowledge_summary.total_concepts_learned }}</span>
-          tech concepts
+          {{ dashboard.knowledge_summary.total_concepts_learned === 1 ? 'tech concept' : 'tech concepts' }}
         </h1>
         <p class="text-gray-600 mt-2 text-xl">
           across
@@ -195,7 +195,7 @@ function colorForPct(pct: number): string {
             </svg>
             <div>
               <div class="text-3xl font-bold text-gray-900">{{ dashboard.streak.current }}</div>
-              <div class="text-sm text-gray-500">day streak</div>
+              <div class="text-sm text-gray-500">{{ dashboard.streak.current === 1 ? 'day' : 'days' }} streak</div>
             </div>
           </div>
           <div class="w-px h-12 bg-gray-200" />
