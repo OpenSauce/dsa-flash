@@ -1,6 +1,6 @@
+import jwt
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import jwt
 from sqlmodel import Session
 
 from app.api.users import ALGORITHM, SECRET_KEY, User, get_password_hash

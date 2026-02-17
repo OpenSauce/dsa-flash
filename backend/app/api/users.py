@@ -4,9 +4,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import jwt
+from jwt.exceptions import PyJWTError
 from passlib.context import CryptContext
 from sqlmodel import Field, Session, SQLModel, select
 
@@ -71,7 +72,7 @@ def get_current_user(
         username: Optional[str] = payload.get("sub")
         if username is None:
             raise cred_exc
-    except jwt.PyJWTError:
+    except PyJWTError:
         raise cred_exc
 
     user = get_user(session, username)
@@ -108,7 +109,7 @@ def get_optional_user(
         username = payload.get("sub")
         if not username:
             return None
-    except jwt.PyJWTError:
+    except PyJWTError:
         return None
     return get_user(session, username)
 
