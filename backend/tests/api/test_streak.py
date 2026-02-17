@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi import FastAPI
@@ -86,7 +86,7 @@ def test_streak_new_user_returns_zeros(client, session):
 
 
 def test_streak_after_one_review_today(client, session):
-    user = create_user(session)
+    create_user(session)
     token = get_token(client, "streakuser", "password")
     card = create_flashcard(session, front="Q", back="A")
 
