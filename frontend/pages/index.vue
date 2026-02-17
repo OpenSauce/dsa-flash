@@ -37,10 +37,8 @@ const { isLoggedIn, authReady } = useAuth()
 const { track } = useAnalytics()
 
 const categories = ref<CategoryDisplay[]>([])
-const loading = ref(true)
 
 const fetchCategories = async () => {
-  loading.value = true
   try {
     const headers = token.value
       ? { Authorization: `Bearer ${token.value}` }
@@ -52,8 +50,6 @@ const fetchCategories = async () => {
     })
   } catch (err) {
     console.error('categories fetch', err)
-  } finally {
-    loading.value = false
   }
 }
 
@@ -71,9 +67,6 @@ const sections = computed(() => {
 
 onMounted(() => {
   track('page_view', { page: '/', referrer: document.referrer })
-  if (!isLoggedIn.value) {
-    fetchCategories()
-  }
 })
 
 watch(
