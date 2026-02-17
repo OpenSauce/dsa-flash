@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.api.flashcards import categories_router
 from app.api.flashcards import router as flashcard_router
 from app.api.users import User, get_current_user, get_password_hash
 from app.api.users import router as user_router
@@ -27,6 +28,7 @@ def app_fixture(session):
 
     app = FastAPI()
     app.include_router(flashcard_router)
+    app.include_router(categories_router)
     app.include_router(user_router)
     app.dependency_overrides[get_session] = _get_test_session(session)
     app.dependency_overrides[get_current_user] = lambda: FakeUser()
@@ -43,6 +45,7 @@ def anon_app_fixture(session):
     """App without get_current_user override — uses real auth."""
     app = FastAPI()
     app.include_router(flashcard_router)
+    app.include_router(categories_router)
     app.include_router(user_router)
     app.dependency_overrides[get_session] = _get_test_session(session)
     return app
@@ -309,3 +312,71 @@ def test_review_quality_out_of_range_returns_422(client, session):
 
     r = client.post(f"/flashcards/{card.id}/review", json={"quality": -1})
     assert r.status_code == 422
+
+
+# ── Categories endpoint tests ────────────────────────────────────────────
+
+
+def test_categories_anonymous(anon_client, session):
+    create_flashcard(session, front="Q1", back="A1", category="cat1")
+    create_flashcard(session, front="Q2", back="A2", category="cat1")
+    create_flashcard(session, front="Q3", back="A3", category="cat2")
+
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 2
+
+    cat1 = next(c for c in data if c["slug"] == "cat1")
+    assert cat1["total"] == 2
+    assert cat1["name"] == "Cat1"
+    assert cat1["due"] is None
+    assert cat1["new"] is None
+
+    cat2 = next(c for c in data if c["slug"] == "cat2")
+    assert cat2["total"] == 1
+
+
+def test_categories_authenticated(anon_client, session):
+    user = create_user(session, "user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+    card3 = create_flashcard(session, front="Q3", back="A3", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, next_review=now - timedelta(hours=1))
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, next_review=now + timedelta(days=5))
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    _ = card3
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+
+    cat = data[0]
+    assert cat["slug"] == "cat1"
+    assert cat["total"] == 3
+    assert cat["due"] == 1
+    assert cat["new"] == 1
+
+
+def test_categories_empty(anon_client):
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_categories_excludes_null_category(anon_client, session):
+    create_flashcard(session, front="Q1", back="A1", category="cat1")
+    create_flashcard(session, front="Q2", back="A2", category=None)
+
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["slug"] == "cat1"
