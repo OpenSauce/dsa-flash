@@ -4,9 +4,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from jwt.exceptions import PyJWTError
 from passlib.context import CryptContext
 from sqlmodel import Field, Session, SQLModel, select
 
@@ -52,7 +53,9 @@ def authenticate_user(session: Session, username: str, password: str) -> Optiona
 
 
 def create_access_token(data: dict) -> str:
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    payload = data.copy()
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(days=7)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def get_current_user(
@@ -69,7 +72,7 @@ def get_current_user(
         username: Optional[str] = payload.get("sub")
         if username is None:
             raise cred_exc
-    except JWTError:
+    except PyJWTError:
         raise cred_exc
 
     user = get_user(session, username)
@@ -106,7 +109,7 @@ def get_optional_user(
         username = payload.get("sub")
         if not username:
             return None
-    except JWTError:
+    except PyJWTError:
         return None
     return get_user(session, username)
 
