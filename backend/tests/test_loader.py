@@ -153,6 +153,29 @@ def test_orphan_removal_normal(tmp_path, engine):
 # ---------------------------------------------------------------------------
 
 
+def test_orphan_removal_boundary_50_percent(tmp_path, engine):
+    """Cards are still removed when exactly 50% of cards are orphans."""
+    all_card_data = [
+        {"title": f"Card {i}", "Front": f"Q{i}", "Back": f"A{i}"} for i in range(4)
+    ]
+    with Session(engine) as session:
+        _seed_db(session, all_card_data, "cat", "go")
+
+    # YAML contains exactly 2 of the 4 cards (2 orphans = 50% -> at threshold, not above)
+    yaml_card_data = all_card_data[:2]
+    _write_yaml(tmp_path / "cat" / "go" / "cards.yaml", yaml_card_data)
+
+    with patch("app.loader.ROOT", tmp_path), patch("app.loader.engine", engine):
+        load_yaml_flashcards()
+
+    with Session(engine) as session:
+        remaining = session.exec(select(Flashcard)).all()
+
+    assert len(remaining) == 2
+    titles = {c.title for c in remaining}
+    assert titles == {c["title"] for c in yaml_card_data}
+
+
 def test_orphan_removal_safety_threshold(tmp_path, engine, caplog):
     """Orphan removal aborts when orphan count > 50% of total cards."""
     all_card_data = [
