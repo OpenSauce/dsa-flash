@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, ForeignKey, Integer, String
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 
@@ -70,6 +70,22 @@ class Event(SQLModel, table=True):
     event_type: str = Field(index=True)
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False, server_default="{}"))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+
+class StudySession(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("user_id", "study_date", name="uq_studysession_user_date"),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    study_date: date
+    cards_reviewed: int = Field(default=0)
+
+
+class StreakOut(BaseModel):
+    current_streak: int
+    longest_streak: int
+    today_reviewed: int
 
 
 class EventIn(BaseModel):

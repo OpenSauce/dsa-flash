@@ -1,6 +1,7 @@
 # app/api/users.py
 
 import os
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -10,7 +11,7 @@ from passlib.context import CryptContext
 from sqlmodel import Field, Session, SQLModel, select
 
 from ..database import get_session
-from ..models import Token, User, UserCreate
+from ..models import StreakOut, StudySession, Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 
@@ -182,3 +183,67 @@ def read_current_user(
     current_user: User = Depends(get_current_user),
 ):
     return UserRead.model_validate(current_user)
+
+
+@router.get(
+    "/users/streak",
+    response_model=StreakOut,
+    tags=["users"],
+)
+def get_streak(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    today = datetime.now(timezone.utc).date()
+
+    today_row = session.exec(
+        select(StudySession).where(
+            StudySession.user_id == current_user.id,
+            StudySession.study_date == today,
+        )
+    ).first()
+    today_reviewed = today_row.cards_reviewed if today_row else 0
+
+    rows = session.exec(
+        select(StudySession.study_date)
+        .where(StudySession.user_id == current_user.id)
+        .order_by(StudySession.study_date.desc())
+    ).all()
+
+    current_streak = 0
+    longest_streak = 0
+
+    if rows:
+        # Current streak: walk backwards from today (or yesterday if today not studied yet)
+        expected = today
+        if not today_row and rows[0] == today - timedelta(days=1):
+            expected = today - timedelta(days=1)
+        elif not today_row:
+            expected = None
+
+        if expected is not None:
+            for d in rows:
+                if d == expected:
+                    current_streak += 1
+                    expected -= timedelta(days=1)
+                elif d < expected:
+                    break
+
+        # Longest streak: scan all dates (never cleared)
+        sorted_dates = sorted(set(rows))
+        streak = 1
+        for i in range(1, len(sorted_dates)):
+            if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
+                streak += 1
+            else:
+                longest_streak = max(longest_streak, streak)
+                streak = 1
+        longest_streak = max(longest_streak, streak)
+
+    longest_streak = max(longest_streak, current_streak)
+
+    return StreakOut(
+        current_streak=current_streak,
+        longest_streak=longest_streak,
+        today_reviewed=today_reviewed,
+    )
