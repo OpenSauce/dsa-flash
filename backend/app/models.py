@@ -96,3 +96,11 @@ class EventIn(BaseModel):
 
 class EventBatchIn(BaseModel):
     events: list[EventIn]
+
+
+class CategoryOut(BaseModel):
+    slug: str
+    name: str
+    total: int
+    due: Optional[int] = None
+    new: Optional[int] = None

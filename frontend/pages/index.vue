@@ -4,27 +4,31 @@ import { useCookie, useRuntimeConfig } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
 
-interface Category {
-  name: string
+interface CategoryFromAPI {
   slug: string
-  description: string
-  emoji: string
-  due?: number
-  unlearnt?: number
+  name: string
+  total: number
+  due: number | null
+  new: number | null
 }
 
-const codingCategories = ref<Category[]>([
-  { name: 'Data Structures', slug: 'data-structures', description: 'Arrays, stacks, trees, and more.', emoji: '📦' },
-  { name: 'Algorithms', slug: 'algorithms', description: 'Sorting, searching, traversal…', emoji: '⚙️' },
-  { name: 'Advanced DSA', slug: 'advanced-data-structures', description: 'Fenwick trees, tries, unions…', emoji: '🚀' },
-  { name: 'Big O Notation', slug: 'big-o-notation', description: 'Complexity analysis essentials.', emoji: '🧠' },
-])
+interface CategoryDisplay extends CategoryFromAPI {
+  emoji: string
+  description: string
+  section: string
+}
 
-const systemDesignCategories = ref<Category[]>([
-  { name: 'System Design', slug: 'system-design', description: 'Load balancing, caching, scaling…', emoji: '🏗️' },
-])
+const CATEGORY_META: Record<string, { emoji: string; description: string; section: string }> = {
+  'data-structures': { emoji: '📦', description: 'Arrays, stacks, trees, and more.', section: 'Coding' },
+  'algorithms': { emoji: '⚙️', description: 'Sorting, searching, traversal...', section: 'Coding' },
+  'advanced-data-structures': { emoji: '🚀', description: 'Fenwick trees, tries, unions...', section: 'Coding' },
+  'big-o-notation': { emoji: '🧠', description: 'Complexity analysis essentials.', section: 'Coding' },
+  'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
+}
 
-const categories = computed(() => [...codingCategories.value, ...systemDesignCategories.value])
+const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
+
+const SECTION_ORDER = ['Coding', 'System Design', 'Other']
 
 const { public: { apiBase } } = useRuntimeConfig()
 const token = useCookie('token')
@@ -32,36 +36,44 @@ const token = useCookie('token')
 const { isLoggedIn, authReady } = useAuth()
 const { track } = useAnalytics()
 
+const categories = ref<CategoryDisplay[]>([])
+
+const fetchCategories = async () => {
+  try {
+    const headers = token.value
+      ? { Authorization: `Bearer ${token.value}` }
+      : undefined
+    const data = await $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, { headers })
+    categories.value = data.map(cat => {
+      const meta = CATEGORY_META[cat.slug] || DEFAULT_META
+      return { ...cat, ...meta }
+    })
+  } catch (err) {
+    console.error('categories fetch', err)
+  }
+}
+
+const sections = computed(() => {
+  const grouped: Record<string, CategoryDisplay[]> = {}
+  for (const cat of categories.value) {
+    const section = cat.section
+    if (!grouped[section]) grouped[section] = []
+    grouped[section].push(cat)
+  }
+  return SECTION_ORDER
+    .filter(s => grouped[s]?.length)
+    .map(s => ({ name: s, categories: grouped[s] }))
+})
+
 onMounted(() => {
   track('page_view', { page: '/', referrer: document.referrer })
 })
 
-const fetchStats = async () => {
-  const headers = token.value
-    ? { Authorization: `Bearer ${token.value}` }
-    : undefined
-  await Promise.all(
-    categories.value.map(async (cat) => {
-      try {
-        const qs = new URLSearchParams({ category: cat.slug })
-        const stats = await $fetch<{ due: number; new: number }>(
-          `${apiBase}/flashcards/stats?${qs}`,
-          { headers },
-        )
-        cat.due = stats.due
-        cat.unlearnt = stats.new
-      } catch (err) {
-        console.error('stats fetch', cat.slug, err)
-      }
-    }),
-  )
-}
-
 watch(
   [authReady, isLoggedIn],
-  async ([ready, loggedIn]) => {
-    if (ready && loggedIn) {
-      await fetchStats()
+  async ([ready]) => {
+    if (ready) {
+      await fetchCategories()
     }
   },
   { immediate: true }
@@ -77,32 +89,25 @@ watch(
       Select a category to start learning with flashcards.
     </p>
 
-    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Coding</h3>
-    <div class="grid sm:grid-cols-2 gap-6">
-      <NuxtLink v-for="cat in codingCategories" :key="cat.slug" :to="`/category/${cat.slug}`"
-        class="border p-6 rounded-xl shadow hover:shadow-lg transition">
-        <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-        <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
-        <p class="text-gray-500">{{ cat.description }}</p>
-        <p v-if="cat.due !== undefined" class="text-sm text-gray-600 mt-2">
-          <span class="font-medium">{{ cat.due }}</span> due &nbsp;·&nbsp;
-          <span class="font-medium">{{ cat.unlearnt }}</span> new
-        </p>
-      </NuxtLink>
-    </div>
-
-    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mt-10 mb-4">System Design</h3>
-    <div class="grid sm:grid-cols-2 gap-6">
-      <NuxtLink v-for="cat in systemDesignCategories" :key="cat.slug" :to="`/category/${cat.slug}`"
-        class="border p-6 rounded-xl shadow hover:shadow-lg transition">
-        <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-        <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
-        <p class="text-gray-500">{{ cat.description }}</p>
-        <p v-if="cat.due !== undefined" class="text-sm text-gray-600 mt-2">
-          <span class="font-medium">{{ cat.due }}</span> due &nbsp;·&nbsp;
-          <span class="font-medium">{{ cat.unlearnt }}</span> new
-        </p>
-      </NuxtLink>
-    </div>
+    <template v-for="(section, index) in sections" :key="section.name">
+      <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
+        {{ section.name }}
+      </h3>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="`/category/${cat.slug}`"
+          class="border p-6 rounded-xl shadow hover:shadow-lg transition">
+          <div class="text-3xl mb-2">{{ cat.emoji }}</div>
+          <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
+          <p class="text-gray-500">{{ cat.description }}</p>
+          <p v-if="cat.due !== null" class="text-sm text-gray-600 mt-2">
+            <span class="font-medium">{{ cat.due }}</span> due &nbsp;·&nbsp;
+            <span class="font-medium">{{ cat.new }}</span> new
+          </p>
+          <p v-else class="text-sm text-gray-600 mt-2">
+            <span class="font-medium">{{ cat.total }}</span> cards
+          </p>
+        </NuxtLink>
+      </div>
+    </template>
   </div>
 </template>

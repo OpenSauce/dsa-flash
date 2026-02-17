@@ -10,11 +10,73 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, and_, col, or_, select
 
 from ..database import get_session
-from ..models import Flashcard, StudySession, User, UserFlashcard
+from ..models import CategoryOut, Flashcard, StudySession, User, UserFlashcard
 from ..spaced import sm2
 from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
+categories_router = APIRouter(prefix="/categories", tags=["categories"])
+
+
+@categories_router.get("", response_model=list[CategoryOut])
+def list_categories(
+    session: Session = Depends(get_session),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    totals_stmt = (
+        select(Flashcard.category, func.count().label("total"))
+        .where(col(Flashcard.category).is_not(None))
+        .group_by(Flashcard.category)
+        .order_by(Flashcard.category)
+    )
+    rows = session.exec(totals_stmt).all()
+
+    due_map: dict[str, int] = {}
+    new_map: dict[str, int] = {}
+
+    if user:
+        now = datetime.now(timezone.utc)
+        due_stmt = (
+            select(Flashcard.category, func.count().label("due"))
+            .join(
+                UserFlashcard,
+                and_(
+                    col(UserFlashcard.flashcard_id) == col(Flashcard.id),
+                    col(UserFlashcard.user_id) == user.id,
+                ),
+            )
+            .where(
+                col(Flashcard.category).is_not(None),
+                col(UserFlashcard.next_review) <= now,
+            )
+            .group_by(Flashcard.category)
+        )
+        due_map = {row.category: row.due for row in session.exec(due_stmt).all()}
+
+        exists_q = select(1).where(
+            UserFlashcard.user_id == user.id,
+            UserFlashcard.flashcard_id == Flashcard.id,
+        )
+        new_stmt = (
+            select(Flashcard.category, func.count().label("new_count"))
+            .where(
+                col(Flashcard.category).is_not(None),
+                ~exists_q.exists(),
+            )
+            .group_by(Flashcard.category)
+        )
+        new_map = {row.category: row.new_count for row in session.exec(new_stmt).all()}
+
+    return [
+        CategoryOut(
+            slug=row.category,
+            name=row.category.replace("-", " ").title(),
+            total=row.total,
+            due=due_map.get(row.category, 0) if user else None,
+            new=new_map.get(row.category, 0) if user else None,
+        )
+        for row in rows
+    ]
 
 
 class ReviewIn(BaseModel):
