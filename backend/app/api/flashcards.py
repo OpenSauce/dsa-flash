@@ -59,6 +59,7 @@ def list_categories(
         )
         new_stmt = (
             select(Flashcard.category, func.count().label("new_count"))
+            .select_from(Flashcard)
             .where(
                 col(Flashcard.category).is_not(None),
                 ~exists_q.exists(),
