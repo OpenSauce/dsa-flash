@@ -6,10 +6,11 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, and_, col, or_, select
 
 from ..database import get_session
-from ..models import Flashcard, User, UserFlashcard
+from ..models import Flashcard, StudySession, User, UserFlashcard
 from ..spaced import sm2
 from .users import get_current_user, get_optional_user
 
@@ -85,6 +86,18 @@ def review_card(
         uf = UserFlashcard(user_id=user.id, flashcard_id=card_id)
         session.add(uf)
     sm2(uf, body.quality)
+
+    today = datetime.now(timezone.utc).date()
+    stmt = pg_insert(StudySession).values(
+        user_id=user.id,
+        study_date=today,
+        cards_reviewed=1,
+    ).on_conflict_do_update(
+        constraint="uq_studysession_user_date",
+        set_={"cards_reviewed": StudySession.__table__.c.cards_reviewed + 1},
+    )
+    session.execute(stmt)
+
     session.commit()
 
 

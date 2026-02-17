@@ -37,6 +37,6 @@ def clear_db(engine):
     with engine.begin() as conn:
         conn.execute(
             text(
-                'TRUNCATE TABLE event, userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
+                'TRUNCATE TABLE studysession, event, userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
