@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { definePageMeta, useHead } from '#imports'
+import { definePageMeta, useHead, watch } from '#imports'
 
 const { isLoggedIn, isAdmin, logout, authReady } = useAuth()
+const { streak, fetchStreak } = useStreak()
 
+watch(
+  [authReady, isLoggedIn],
+  async ([ready, loggedIn]) => {
+    if (ready && loggedIn) await fetchStreak()
+    else streak.value = null
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -41,6 +50,16 @@ const { isLoggedIn, isAdmin, logout, authReady } = useAuth()
                 </NuxtLink>
               </div>
               <div v-else class="flex items-center gap-3">
+                <span
+                  v-if="streak && streak.current_streak > 0"
+                  class="flex items-center gap-1 text-sm font-medium"
+                  :title="`${streak.current_streak} day streak`"
+                >
+                  <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
+                  </svg>
+                  <span>{{ streak.current_streak }}</span>
+                </span>
                 <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
                 <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
                 <button @click="logout().then(() => navigateTo('/'))" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
