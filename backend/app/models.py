@@ -105,3 +105,46 @@ class CategoryOut(BaseModel):
     has_language: bool
     due: Optional[int] = None
     new: Optional[int] = None
+
+
+class DashboardKnowledgeSummary(BaseModel):
+    total_concepts_learned: int
+    concepts_mastered: int
+    domains_explored: int
+
+
+class DashboardDomain(BaseModel):
+    name: str
+    slug: str
+    total: int
+    learned: int
+    mastered: int
+    mastery_pct: int
+
+
+class DashboardStreak(BaseModel):
+    current: int
+    longest: int
+    today_reviewed: int
+
+
+class DashboardWeek(BaseModel):
+    concepts_learned: int
+    domains_studied: list[str]
+    study_days: int
+
+
+class DashboardWeakCard(BaseModel):
+    id: int
+    title: str
+    category: str
+    easiness: float
+
+
+class DashboardOut(BaseModel):
+    knowledge_summary: DashboardKnowledgeSummary
+    domains: list[DashboardDomain]
+    streak: DashboardStreak
+    this_week: DashboardWeek
+    weakest_cards: list[DashboardWeakCard]
+    study_calendar: list[str]
