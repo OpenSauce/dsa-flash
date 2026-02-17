@@ -16,7 +16,7 @@ def _dir_metadata(path: Path) -> tuple[str | None, str | None]:
     """
     Derive (category, language) from .../category/(language/)?file.yaml
     """
-    parts = path.relative_to(ROOT).parts
+    parts = path.parent.relative_to(ROOT).parts
     if len(parts) == 1:
         return parts[0], None
     if len(parts) >= 2:

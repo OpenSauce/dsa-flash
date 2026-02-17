@@ -14,19 +14,19 @@ from app.models import Flashcard
 
 
 def test_dir_metadata_1_part(tmp_path):
-    """file.yaml directly under ROOT -> (filename_as_category, None)"""
+    """file.yaml directly under ROOT -> (None, None) -- no category directory"""
     file = tmp_path / "file.yaml"
     file.touch()
 
     with patch("app.loader.ROOT", tmp_path):
         category, language = _dir_metadata(file)
 
-    assert category == "file.yaml"
+    assert category is None
     assert language is None
 
 
 def test_dir_metadata_2_parts(tmp_path):
-    """category/file.yaml -> (category, file.yaml)"""
+    """category/file.yaml -> (category, None) -- flat category, no language"""
     file = tmp_path / "aws" / "compute.yaml"
     file.parent.mkdir(parents=True)
     file.touch()
@@ -35,7 +35,7 @@ def test_dir_metadata_2_parts(tmp_path):
         category, language = _dir_metadata(file)
 
     assert category == "aws"
-    assert language == "compute.yaml"
+    assert language is None
 
 
 def test_dir_metadata_3_parts(tmp_path):
