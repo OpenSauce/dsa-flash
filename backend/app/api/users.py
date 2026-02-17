@@ -55,7 +55,7 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def get_current_user(
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     session: Session = Depends(get_session),
 ) -> User:
@@ -89,7 +89,7 @@ async def get_current_admin(
     return current_user
 
 
-async def get_optional_user(
+def get_optional_user(
     request: Request,
     session: Session = Depends(get_session),
 ) -> Optional[User]:
