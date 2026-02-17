@@ -25,6 +25,7 @@ const CATEGORY_META: Record<string, { emoji: string; description: string; sectio
   'big-o-notation': { emoji: '🧠', description: 'Complexity analysis essentials.', section: 'Coding' },
   'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
   'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design', displayName: 'AWS' },
+  'kubernetes': { emoji: '☸️', description: 'Pods, Deployments, Services, networking...', section: 'System Design' },
 }
 
 const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
