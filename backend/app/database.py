@@ -1,8 +1,11 @@
 import os
 from typing import Generator
 
+from alembic.config import Config
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
+
+from alembic import command
 
 DB_URL = os.getenv(
     "DATABASE_URL",
@@ -12,19 +15,17 @@ DB_URL = os.getenv(
 engine = create_engine(DB_URL, echo=os.getenv("DEV_MODE", "").lower() in ("1", "true"))
 
 
-def init_db() -> None:
-    """Create tables if they don't exist, then ensure FK cascades."""
-    SQLModel.metadata.create_all(engine)
+def run_migrations() -> None:
+    """Run Alembic migrations to bring DB schema to head."""
+    alembic_cfg = Config("alembic.ini")
 
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                "ALTER TABLE userflashcard "
-                "DROP CONSTRAINT IF EXISTS userflashcard_flashcard_id_fkey, "
-                "ADD CONSTRAINT userflashcard_flashcard_id_fkey "
-                "FOREIGN KEY (flashcard_id) REFERENCES flashcard(id) ON DELETE CASCADE;"
-            )
-        )
+    if os.getenv("RESET_DB", "").lower() == "true":
+        SQLModel.metadata.drop_all(engine)
+        with engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS alembic_version"))
+            conn.commit()
+
+    command.upgrade(alembic_cfg, "head")
 
 
 def get_session() -> Generator[Session, None, None]:

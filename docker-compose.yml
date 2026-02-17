@@ -28,6 +28,8 @@ services:
       SECRET_KEY: "${SECRET_KEY:-}"
     volumes:
       - ./backend/app:/usr/src/app/app
+      - ./backend/alembic:/usr/src/app/alembic
+      - ./backend/alembic.ini:/usr/src/app/alembic.ini
       - ./dsa-flash-cards:/data/flashcards
 
   frontend:
