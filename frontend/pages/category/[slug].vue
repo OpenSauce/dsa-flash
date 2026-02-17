@@ -9,6 +9,7 @@ const route = useRoute()
 const category = route.params.slug as string
 const apiBase = useRuntimeConfig().public.apiBase
 const { isLoggedIn, tokenCookie, logout } = useAuth()
+const { refreshStreak } = useStreak()
 const md: MarkdownIt = new MarkdownIt({
   breaks: true,
   highlight: (str: string, lang: string) => {
@@ -254,6 +255,7 @@ async function recordResponse(grade: keyof typeof qualityMap) {
       sessionFinished.value = true
     }
     await refresh()
+    refreshStreak()
   } catch (err: any) {
     if (err?.response?.status === 401 || err?.status === 401 || err?.statusCode === 401) {
       await logout()
