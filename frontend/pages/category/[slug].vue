@@ -25,7 +25,6 @@ const md: MarkdownIt = new MarkdownIt({
 }).disable('html_inline').disable('html_block')
 
 // Optional language selector — determined from categories API
-const categoryHasLang = ref(false)
 const language = ref<string | null>(null)
 
 const { data: categoriesData } = await useFetch<{ slug: string; has_language: boolean }[]>(
@@ -34,7 +33,6 @@ const { data: categoriesData } = await useFetch<{ slug: string; has_language: bo
 if (categoriesData.value) {
   const match = categoriesData.value.find(c => c.slug === category)
   if (match) {
-    categoryHasLang.value = match.has_language
     language.value = match.has_language ? 'go' : null
   }
 }
