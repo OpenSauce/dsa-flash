@@ -22,12 +22,22 @@ const md: MarkdownIt = new MarkdownIt({
       hljs.highlightAuto(str).value +
       `</code></pre>`;
   }
-})
+}).disable('html_inline').disable('html_block')
 
-// Optional language selector
-const categoriesWithoutLang = ['big-o-notation', 'system-design', 'aws']
-const categoryHasLang = computed(() => !categoriesWithoutLang.includes(category))
-const language = ref<string | null>(categoryHasLang.value ? 'go' : null)
+// Optional language selector — determined from categories API
+const categoryHasLang = ref(false)
+const language = ref<string | null>(null)
+
+const { data: categoriesData } = await useFetch<{ slug: string; has_language: boolean }[]>(
+  `${apiBase}/categories`
+)
+if (categoriesData.value) {
+  const match = categoriesData.value.find(c => c.slug === category)
+  if (match) {
+    categoryHasLang.value = match.has_language
+    language.value = match.has_language ? 'go' : null
+  }
+}
 
 // Build the "next card" endpoint URL
 const url = computed(() => {
