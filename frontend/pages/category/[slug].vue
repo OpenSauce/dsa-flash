@@ -25,7 +25,7 @@ const md: MarkdownIt = new MarkdownIt({
 })
 
 // Optional language selector
-const categoriesWithoutLang = ['big-o-notation', 'system-design']
+const categoriesWithoutLang = ['big-o-notation', 'system-design', 'aws']
 const categoryHasLang = computed(() => !categoriesWithoutLang.includes(category))
 const language = ref<string | null>(categoryHasLang.value ? 'go' : null)
 
