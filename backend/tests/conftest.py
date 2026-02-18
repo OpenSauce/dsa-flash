@@ -9,6 +9,8 @@ from testcontainers.postgres import PostgresContainer
 
 # Import all models so SQLModel.metadata knows about every table
 import app.models  # noqa: F401
+from app.api.users import User, get_password_hash
+from app.models import Flashcard
 
 
 @pytest.fixture(scope="session")
@@ -40,3 +42,42 @@ def clear_db(engine):
                 'TRUNCATE TABLE studysession, event, userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
+
+
+@pytest.fixture
+def create_user(session):
+    def _create(username="user", password="password", is_admin=False):
+        user = User(username=username, hashed_password=get_password_hash(password), is_admin=is_admin)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+    return _create
+
+
+@pytest.fixture
+def create_flashcard(session):
+    def _create(**kwargs):
+        kwargs.setdefault("back", "Answer")
+        if "title" not in kwargs:
+            kwargs["title"] = kwargs.get("front") or "Untitled"
+        if "front" not in kwargs:
+            kwargs["front"] = kwargs["title"]
+        card = Flashcard(**kwargs)
+        session.add(card)
+        session.commit()
+        session.refresh(card)
+        return card
+
+    return _create
+
+
+@pytest.fixture
+def get_token():
+    def _get_token(client, username, password) -> str:
+        response = client.post("/token", data={"username": username, "password": password})
+        assert response.status_code == 200
+        return response.json()["access_token"]
+
+    return _get_token
