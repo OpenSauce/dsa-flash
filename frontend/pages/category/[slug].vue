@@ -63,6 +63,9 @@ async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
   // Wait for the refetch triggered by mode change to complete before
   // showing the study UI, so no stale card flashes during transition.
+  // Use nextTick first to ensure the reactive URL change has propagated
+  // and useFetch has initiated the refetch (pending flips to true).
+  await nextTick()
   if (pending.value) {
     await new Promise<void>((resolve) => {
       const stop = watch(pending, (isPending) => {
