@@ -11,6 +11,7 @@ const props = defineProps<{
   remainingCards: number
   hasMoreCards: boolean
   isLoggedIn: boolean
+  mode: string
 }>()
 
 defineEmits<{
@@ -51,10 +52,18 @@ const encouragement = computed(() => {
       <h2 class="text-2xl font-bold mb-3 font-heading">{{ heading }}</h2>
 
       <p class="text-lg text-gray-700 mb-2">
-        You studied <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        <template v-if="mode === 'new'">
+          You learned <span class="font-semibold">{{ cardsReviewed }}</span> new {{ categoryName }} concepts.
+        </template>
+        <template v-else-if="mode === 'due'">
+          You reviewed <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        </template>
+        <template v-else>
+          You studied <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        </template>
       </p>
 
-      <p v-if="isLoggedIn && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
+      <p v-if="isLoggedIn && mode === 'all' && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
         <span class="font-medium text-indigo-600">{{ newConcepts }}</span> new
         &nbsp;&middot;&nbsp;
         <span class="font-medium">{{ reviewedConcepts }}</span> reviewed
