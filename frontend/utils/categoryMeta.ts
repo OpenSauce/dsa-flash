@@ -6,13 +6,14 @@ export const CATEGORY_META: Record<string, { emoji: string; description: string;
   'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
   'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design', displayName: 'AWS' },
   'kubernetes': { emoji: '☸️', description: 'Pods, Deployments, Services, networking...', section: 'System Design' },
-  'docker-linux': { emoji: '🐳', description: 'Containers, Dockerfiles, Linux fundamentals...', section: 'System Design' },
+  'docker': { emoji: '🐳', description: 'Containers, images, Dockerfiles, networking, volumes...', section: 'Infrastructure' },
+  'linux': { emoji: '🐧', description: 'Processes, permissions, filesystem, shell commands...', section: 'Infrastructure' },
   'networking': { emoji: '🌐', description: 'TCP/IP, DNS, TLS, HTTP, proxies...', section: 'System Design' },
 }
 
 export const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
 
-export const SECTION_ORDER = ['Coding', 'System Design', 'Other']
+export const SECTION_ORDER = ['Coding', 'System Design', 'Infrastructure', 'Other']
 
 export function getCategoryDisplayName(slug: string): string {
   const meta = CATEGORY_META[slug]
