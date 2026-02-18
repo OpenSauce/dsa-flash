@@ -3,15 +3,15 @@ export default defineNuxtConfig({
     head: {
       title: 'Learn DSA with Flashcards – dsaflash.cards',
       meta: [
-        { name: 'description', content: 'Master data structures, algorithms, and Big O notation through efficient flashcards. Built for DSA learners and coding interview preparation.' },
+        { name: 'description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, networking, and Big O — concepts that stick.' },
         // open-graph
         { property: 'og:title', content: 'Learn DSA with Flashcards' },
-        { property: 'og:description', content: 'Boost your DSA skills with beautifully crafted flashcards covering data structures, algorithms, and Big O concepts.' },
+        { property: 'og:description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, networking, and Big O.' },
         { property: 'og:image', content: 'https://dsaflash.cards/social-preview.png' },
         { property: 'og:url', content: 'https://dsaflash.cards' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'Learn DSA with Flashcards' },
-        { name: 'twitter:description', content: 'Master data structures, algorithms, and Big O notation through efficient flashcards.' },
+        { name: 'twitter:description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, and networking.' },
         { name: 'twitter:image', content: 'https://dsaflash.cards/social-preview.png' }
       ],
       link: [
