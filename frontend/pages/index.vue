@@ -73,10 +73,7 @@ watch(
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-6 pt-4 pb-6">
-    <h1 class="font-headline text-4xl sm:text-5xl mb-2 text-center leading-tight">
-      📚 dsaflash.cards
-    </h1>
+  <div class="max-w-4xl mx-auto px-6 pb-6">
     <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-6">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
@@ -87,7 +84,8 @@ watch(
       </h3>
       <div class="grid sm:grid-cols-2 gap-6">
         <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="`/category/${cat.slug}`"
-          class="border p-6 rounded-xl shadow hover:shadow-lg transition">
+          class="border p-6 rounded-xl shadow hover:shadow-lg transition"
+          :class="cat.due !== null && cat.due === 0 && cat.new === 0 ? 'bg-gray-100/80 opacity-60' : 'bg-white'">
           <div class="flex items-start justify-between">
             <div class="text-3xl mb-2">{{ cat.emoji }}</div>
             <div v-if="cat.mastery_pct !== null" class="flex-shrink-0">

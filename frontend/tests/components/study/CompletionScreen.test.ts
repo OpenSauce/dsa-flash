@@ -14,6 +14,8 @@ const NuxtLinkStub = defineComponent({
 
 const defaultProps = {
   categoryName: 'System Design',
+  categoryEmoji: '🏗️',
+  categorySlug: 'system-design',
   cardsReviewed: 7,
   newConcepts: 4,
   reviewedConcepts: 3,
@@ -88,16 +90,8 @@ describe('CompletionScreen', () => {
     expect(homeLink!.text()).toContain('Try another domain')
   })
 
-  it('"Back to dashboard" shown for auth users', () => {
+  it('no dashboard link in completion screen', () => {
     const wrapper = mountScreen({ isLoggedIn: true })
-    const links = wrapper.findAll('a')
-    const dashLink = links.find(l => l.attributes('href') === '/dashboard')
-    expect(dashLink).toBeDefined()
-    expect(dashLink!.text()).toContain('Back to dashboard')
-  })
-
-  it('"Back to dashboard" hidden for anon users', () => {
-    const wrapper = mountScreen({ isLoggedIn: false, runningTotal: null })
     const links = wrapper.findAll('a')
     const dashLink = links.find(l => l.attributes('href') === '/dashboard')
     expect(dashLink).toBeUndefined()
@@ -142,6 +136,51 @@ describe('CompletionScreen', () => {
     const links = wrapper.findAll('a')
     const homeLink = links.find(l => l.attributes('href') === '/')
     expect(homeLink).toBeDefined()
+  })
+
+  it('shows category-complete celebration when all concepts learned', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      runningTotal: 60,
+      categoryTotal: 60,
+      cardsReviewed: 5,
+    })
+    expect(wrapper.text()).toContain('System Design complete!')
+    expect(wrapper.text()).toContain('60 / 60 learned')
+    expect(wrapper.text()).toContain("You've learned all")
+  })
+
+  it('does not show celebration when category is not complete', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      runningTotal: 42,
+      categoryTotal: 60,
+    })
+    expect(wrapper.text()).not.toContain('complete!')
+    expect(wrapper.text()).not.toContain('/ 60 learned')
+  })
+
+  it('emits switch-mode when "Learn new concepts" is clicked in due mode', async () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      mode: 'due',
+      hasMoreCards: false,
+    })
+    const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))
+    expect(switchBtn).toBeDefined()
+    await switchBtn!.trigger('click')
+    expect(wrapper.emitted('switch-mode')).toBeTruthy()
+    expect(wrapper.emitted('switch-mode')![0]).toEqual(['new'])
+  })
+
+  it('does not show "Learn new concepts" button in new mode', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      mode: 'new',
+      hasMoreCards: false,
+    })
+    const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))
+    expect(switchBtn).toBeUndefined()
   })
 
   it('encouragement message is non-empty and varies — mount multiple times', () => {

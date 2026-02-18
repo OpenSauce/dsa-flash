@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, getCurrentInstance, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
@@ -63,6 +63,10 @@ interface UseStudySessionReturn {
 export async function useStudySession(options: UseStudySessionOptions): Promise<UseStudySessionReturn> {
   const { category, apiBase, isLoggedIn, tokenCookie, track, flushBeacon, refreshStreak, logout, mode } = options
 
+  // Save the component instance BEFORE any await — lifecycle hooks like
+  // onMounted/onBeforeUnmount lose the instance after async boundaries.
+  const instance = getCurrentInstance()
+
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)
 
@@ -124,18 +128,19 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     }
   }, { immediate: true })
 
-  // Reset batch state when mode changes
+  // Reset batch state when mode changes (don't clear cards — useFetch
+  // refetches automatically when the computed URL updates, and clearing
+  // cards here races with the card watcher which navigates home on null)
   watch(mode, () => {
     cardsReviewedInBatch.value = 0
     currentBatchSize.value = 0
     sessionFinished.value = false
     cardIndex.value = 0
-    cards.value = []
   })
 
   const progressPercent = computed(() =>
     currentBatchSize.value > 0
-      ? (cardsReviewedInBatch.value / currentBatchSize.value) * 100
+      ? Math.min(100, ((cardsReviewedInBatch.value + 1) / currentBatchSize.value) * 100)
       : 0
   )
 
@@ -206,7 +211,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
       buttonsEnabled.value = false
       buttonsTimer = setTimeout(() => {
         buttonsEnabled.value = true
-      }, 400)
+      }, 200)
     } else {
       buttonsEnabled.value = false
       if (buttonsTimer) {
@@ -241,12 +246,14 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     }
   }
 
+  // Use the saved instance to register lifecycle hooks — the component
+  // instance is lost after await useFetch() so we pass it explicitly.
   onMounted(() => {
     track('page_view', { page: `/category/${category}`, referrer: document.referrer })
     track('session_start', { category })
     window.addEventListener('beforeunload', handleBeforeUnload)
     window.addEventListener('keydown', handleKeydown)
-  })
+  }, instance)
 
   function nextCard() {
     cardsReviewedInSession.value++
@@ -270,7 +277,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
       if (buttonsTimer) { clearTimeout(buttonsTimer); buttonsTimer = null }
       frontShownAt.value = Date.now()
     }
-    if (!newCard && !sessionFinished.value) {
+    if (!newCard && !sessionFinished.value && !pending.value) {
       finishSession('completed')
     }
   })
@@ -280,7 +287,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     window.removeEventListener('keydown', handleKeydown)
     if (buttonsTimer) clearTimeout(buttonsTimer)
     emitSessionEnd('navigated_away')
-  })
+  }, instance)
 
   function finishSession(reason: 'completed' | 'user_ended') {
     emitSessionEnd(reason)
