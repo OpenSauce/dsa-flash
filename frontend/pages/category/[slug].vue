@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useAnalytics } from '@/composables/useAnalytics'
+import { CATEGORY_META, DEFAULT_META } from '@/utils/categoryMeta'
 import type { StudyMode } from '@/composables/useStudySession'
 
 const route = useRoute()
 const category = route.params.slug as string
+const categoryEmoji = (CATEGORY_META[category] || DEFAULT_META).emoji
 const apiBase = useRuntimeConfig().public.apiBase
 const { isLoggedIn, authReady, tokenCookie, logout } = useAuth()
 const { refreshStreak } = useStreak()
@@ -85,7 +87,8 @@ async function startSession(selectedMode: StudyMode) {
 
     <!-- Mode selector (logged-in users only, before session starts) -->
     <div v-if="!sessionStarted && isLoggedIn" class="text-center py-16">
-      <h2 class="text-2xl font-bold mb-6 font-heading">{{ categoryDisplayName }}</h2>
+      <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
+      <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
       <div v-if="stats.due === 0 && stats.new === 0" class="text-gray-500">
         <p class="mb-4">No cards due and no new cards. Come back tomorrow!</p>
@@ -94,17 +97,25 @@ async function startSession(selectedMode: StudyMode) {
 
       <div v-else class="flex flex-col gap-3 max-w-sm mx-auto">
         <button v-if="stats.due > 0" @click="startSession('due')"
-                class="px-6 py-4 border-2 border-indigo-600 rounded-xl text-left hover:bg-indigo-50 transition">
-          <span class="block font-semibold text-indigo-700">Review due ({{ stats.due }})</span>
-          <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
+                class="flex items-center gap-4 px-6 py-4 border-2 border-indigo-600 rounded-xl text-left hover:bg-indigo-50 transition">
+          <span class="text-2xl flex-shrink-0">💧</span>
+          <div>
+            <span class="block font-semibold text-indigo-700">Review due ({{ stats.due }})</span>
+            <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
+          </div>
         </button>
         <button v-if="stats.new > 0" @click="startSession('new')"
-                class="px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
-          <span class="block font-semibold text-green-700">
-            Learn new ({{ stats.new > 10 ? 10 : stats.new }})
-          </span>
-          <span class="block text-sm text-gray-500 mt-0.5">Concepts you haven't seen</span>
+                class="flex items-center gap-4 px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
+          <span class="text-2xl flex-shrink-0">🌱</span>
+          <div>
+            <span class="block font-semibold text-green-700">
+              Learn new ({{ stats.new > 10 ? 10 : stats.new }})
+            </span>
+            <span class="block text-sm text-gray-500 mt-0.5">Concepts you haven't seen</span>
+          </div>
         </button>
+
+        <NuxtLink to="/" class="text-sm text-gray-400 hover:text-gray-600 mt-4">&larr; Back to categories</NuxtLink>
       </div>
     </div>
 
@@ -122,6 +133,8 @@ async function startSession(selectedMode: StudyMode) {
       <StudyCompletionScreen
         v-else-if="sessionFinished || !card"
         :category-name="categoryDisplayName"
+        :category-emoji="categoryEmoji"
+        :category-slug="category"
         :cards-reviewed="cardsReviewedInSession"
         :new-concepts="newConceptsInSession"
         :reviewed-concepts="reviewedConceptsInSession"
@@ -132,6 +145,7 @@ async function startSession(selectedMode: StudyMode) {
         :is-logged-in="isLoggedIn"
         :mode="mode"
         @keep-going="keepGoing"
+        @switch-mode="startSession"
       />
 
       <div v-else>
@@ -145,6 +159,7 @@ async function startSession(selectedMode: StudyMode) {
           :current="cardsReviewedInBatch"
           :total="currentBatchSize"
           :percent="progressPercent"
+          :mode="mode"
         />
 
         <StudyCard

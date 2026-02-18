@@ -8,9 +8,20 @@ defineProps<{
   revealed: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'flip'): void
 }>()
+
+// Only flip on clean clicks — ignore if the user dragged to select text
+let pointerDownAt = 0
+function onPointerDown() {
+  pointerDownAt = Date.now()
+}
+function onClickCard() {
+  const elapsed = Date.now() - pointerDownAt
+  if (elapsed > 300 || window.getSelection()?.toString()) return
+  emit('flip')
+}
 
 const md: MarkdownIt = new MarkdownIt({
   breaks: true,
@@ -28,8 +39,8 @@ const md: MarkdownIt = new MarkdownIt({
 </script>
 
 <template>
-  <div @click="$emit('flip')"
-    class="border rounded-xl p-8 shadow-sm mb-6 cursor-pointer select-none transition duration-300 ease-in-out prose mx-auto"
+  <div @pointerdown="onPointerDown" @click="onClickCard"
+    class="border rounded-xl p-8 shadow-sm mb-6 cursor-pointer transition duration-300 ease-in-out prose mx-auto"
     :class="{
       'bg-white hover:bg-gray-50': !revealed,
       'bg-amber-50 ring-2 ring-amber-400': revealed,

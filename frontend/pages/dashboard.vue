@@ -152,7 +152,7 @@ const weekSummaryText = computed(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 pt-4 pb-8">
+  <div class="max-w-4xl mx-auto px-4 pb-8">
     <div v-if="loading" class="flex justify-center py-20">
       <div class="text-gray-400 text-lg">Loading your knowledge portfolio...</div>
     </div>
@@ -323,6 +323,15 @@ const weekSummaryText = computed(() => {
           </div>
         </div>
       </section>
+
+      <div class="mt-10 flex flex-wrap items-center gap-4">
+        <NuxtLink
+          to="/"
+          class="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Start studying
+        </NuxtLink>
+      </div>
     </template>
   </div>
 </template>

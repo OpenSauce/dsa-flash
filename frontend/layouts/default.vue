@@ -20,7 +20,7 @@ watch(
     <header class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <NuxtLink to="/" class="text-2xl sm:text-3xl font-tektur font-bold tracking-tighter drop-shadow-lg">
-          dsaflash.cards
+          📚 dsaflash.cards
         </NuxtLink>
 
         <!-- Right‑side nav -->
@@ -58,7 +58,7 @@ watch(
                 </span>
                 <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
                 <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
-                <button @click="logout().then(() => navigateTo('/'))" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
+                <button @click="logout().then(() => window.location.href = '/')" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
               </div>
             </div>
             <div v-else class="flex items-center gap-3 min-h-[36px]">
@@ -72,7 +72,7 @@ watch(
     </header>
 
     <main class="flex-1 bg-gray-50">
-      <div class="max-w-5xl mx-auto px-4 py-10">
+      <div class="max-w-5xl mx-auto px-4 pt-6 pb-10">
         <slot />
       </div>
     </main>

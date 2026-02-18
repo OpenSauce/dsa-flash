@@ -64,7 +64,7 @@ const dropOffBuckets = computed(() => {
 
 <template>
   <div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-tektur font-bold mb-8">Analytics Dashboard</h1>
+    <h1 class="text-3xl font-bold mb-8">Analytics Dashboard</h1>
 
     <div v-if="loading" class="text-gray-500">Loading analytics...</div>
     <div v-else-if="error" class="text-red-600">{{ error }}</div>
