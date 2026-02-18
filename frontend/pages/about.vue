@@ -58,7 +58,7 @@
     <section class="mb-8">
       <h2 class="text-2xl font-tektur font-bold mb-3">What's covered</h2>
       <p class="text-gray-700 leading-relaxed mb-4">
-        The current library spans eight topic areas:
+        The current library spans nine topic areas:
       </p>
       <ul class="list-disc list-inside space-y-1 text-gray-700 mb-4">
         <li><strong>Data structures</strong> — arrays, hash maps, trees, heaps, linked lists, stacks, queues</li>
@@ -69,6 +69,7 @@
         <li><strong>Kubernetes</strong> — pods, deployments, services, config, networking, autoscaling</li>
         <li><strong>Docker and Linux</strong> — Dockerfile instructions, volumes, networking, Linux permissions, processes</li>
         <li><strong>Networking</strong> — TCP/IP, DNS, TLS, HTTP, proxies, WebSockets</li>
+        <li><strong>Advanced data structures</strong> — tries, segment trees, bloom filters, LRU caches, union-find</li>
       </ul>
       <p class="text-gray-700 leading-relaxed">
         New categories are added based on what engineers actually need to recall. The content
