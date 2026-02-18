@@ -158,7 +158,7 @@ function colorForPct(pct: number): string {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-8">
+  <div class="max-w-4xl mx-auto px-4 pt-4 pb-8">
     <div v-if="loading" class="flex justify-center py-20">
       <div class="text-gray-400 text-lg">Loading your knowledge portfolio...</div>
     </div>
