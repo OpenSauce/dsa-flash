@@ -95,9 +95,9 @@ const allCats = [...mockCats, anonCat]
       </div>
     </section>
 
-    <!-- Option B: Emoji top-left, ring top-right (CURRENT CHOICE) -->
+    <!-- Option B: Emoji top-left, ring top-right -->
     <section>
-      <h2 class="text-xl font-semibold text-gray-700 mb-4">Option B — emoji top-left, ring top-right (current choice)</h2>
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Option B — emoji top-left, ring top-right</h2>
       <div class="grid sm:grid-cols-2 gap-6">
         <div v-for="cat in allCats" :key="cat.slug"
           class="border p-6 rounded-xl shadow">
@@ -140,45 +140,53 @@ const allCats = [...mockCats, anonCat]
       </div>
     </section>
 
-    <!-- Option C: Emoji stays, small ring below description -->
+    <!-- Option C: Hybrid — ring left, small emoji inline with name (CURRENT CHOICE) -->
     <section>
-      <h2 class="text-xl font-semibold text-gray-700 mb-4">Option C — emoji stays, small ring below description</h2>
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Option C — ring left, small emoji inline with name (current choice)</h2>
       <div class="grid sm:grid-cols-2 gap-6">
         <div v-for="cat in allCats" :key="cat.slug"
           class="border p-6 rounded-xl shadow">
-          <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-          <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
-          <p class="text-gray-500">{{ cat.description }}</p>
-          <div v-if="cat.mastery_pct !== null" class="flex items-center gap-3 mt-2">
-            <svg viewBox="0 0 36 36" class="w-8 h-8 flex-shrink-0"
-              :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
-            >
-              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
-              <circle
-                cx="18" cy="18" r="15.9155" fill="none"
-                :stroke="colorForPct(cat.mastery_pct)"
-                stroke-width="3"
-                stroke-dasharray="100"
-                :stroke-dashoffset="100 - cat.mastery_pct"
-                stroke-linecap="round"
-                transform="rotate(-90 18 18)"
-              />
-              <text v-if="cat.mastery_pct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
-              <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
-                {{ cat.mastery_pct }}%
-              </text>
-            </svg>
-            <p class="text-sm text-gray-600">
-              <span class="font-medium">{{ cat.mastered }}</span> of {{ cat.total }} mastered
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium">{{ cat.learned }}</span> learned
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium">{{ cat.due }}</span> due
+          <div v-if="cat.mastery_pct !== null" class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+              <svg viewBox="0 0 36 36" class="w-14 h-14"
+                :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
+              >
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
+                <circle
+                  cx="18" cy="18" r="15.9155" fill="none"
+                  :stroke="colorForPct(cat.mastery_pct)"
+                  stroke-width="3"
+                  stroke-dasharray="100"
+                  :stroke-dashoffset="100 - cat.mastery_pct"
+                  stroke-linecap="round"
+                  transform="rotate(-90 18 18)"
+                />
+                <text v-if="cat.mastery_pct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
+                <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
+                  {{ cat.mastery_pct }}%
+                </text>
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-xl font-semibold">{{ cat.emoji }} {{ cat.name }}</h2>
+              <p class="text-gray-500">{{ cat.description }}</p>
+              <p class="text-sm text-gray-600 mt-2">
+                <span class="font-medium">{{ cat.mastered }}</span> of {{ cat.total }} mastered
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium">{{ cat.learned }}</span> learned
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium">{{ cat.due }}</span> due
+              </p>
+            </div>
+          </div>
+          <div v-else>
+            <div class="text-3xl mb-2">{{ cat.emoji }}</div>
+            <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
+            <p class="text-gray-500">{{ cat.description }}</p>
+            <p class="text-sm text-gray-600 mt-2">
+              <span class="font-medium">{{ cat.total }}</span> concepts
             </p>
           </div>
-          <p v-else class="text-sm text-gray-600 mt-2">
-            <span class="font-medium">{{ cat.total }}</span> concepts
-          </p>
         </div>
       </div>
     </section>
