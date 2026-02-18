@@ -211,7 +211,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
       buttonsEnabled.value = false
       buttonsTimer = setTimeout(() => {
         buttonsEnabled.value = true
-      }, 400)
+      }, 200)
     } else {
       buttonsEnabled.value = false
       if (buttonsTimer) {
