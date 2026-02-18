@@ -22,6 +22,7 @@ const defaultProps = {
   remainingCards: 3,
   hasMoreCards: true,
   isLoggedIn: true,
+  mode: 'all',
 }
 
 function mountScreen(props: Partial<typeof defaultProps> = {}) {
