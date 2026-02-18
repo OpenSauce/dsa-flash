@@ -17,7 +17,7 @@ defineProps<{
            :aria-valuenow="current"
            aria-valuemin="0"
            :aria-valuemax="total"
-           :aria-label="`Card ${current} of ${total} reviewed`"
+           :aria-label="`Card ${current + 1} of ${total} reviewed`"
            :style="{ width: percent + '%' }" />
     </div>
   </div>
