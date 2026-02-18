@@ -7,6 +7,8 @@ from sqlalchemy import JSON, Column, ForeignKey, Integer, String, UniqueConstrai
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 
+MASTERY_INTERVAL_DAYS = 21
+
 
 class Flashcard(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -105,6 +107,9 @@ class CategoryOut(BaseModel):
     has_language: bool
     due: Optional[int] = None
     new: Optional[int] = None
+    learned: Optional[int] = None
+    mastered: Optional[int] = None
+    mastery_pct: Optional[int] = None
 
 
 class DashboardKnowledgeSummary(BaseModel):
