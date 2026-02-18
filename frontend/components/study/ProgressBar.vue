@@ -1,0 +1,24 @@
+<script setup lang="ts">
+defineProps<{
+  current: number
+  total: number
+  percent: number
+}>()
+</script>
+
+<template>
+  <div class="mb-4">
+    <div class="flex justify-between text-sm text-gray-500 mb-1">
+      <span>Card {{ current + 1 }} of {{ total }}</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="bg-indigo-500 h-2 rounded-full transition-all duration-300"
+           role="progressbar"
+           :aria-valuenow="current"
+           aria-valuemin="0"
+           :aria-valuemax="total"
+           :aria-label="`Card ${current} of ${total} reviewed`"
+           :style="{ width: percent + '%' }" />
+    </div>
+  </div>
+</template>
