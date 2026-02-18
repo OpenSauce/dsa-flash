@@ -22,6 +22,7 @@ const defaultProps = {
   remainingCards: 3,
   hasMoreCards: true,
   isLoggedIn: true,
+  mode: 'all',
 }
 
 function mountScreen(props: Partial<typeof defaultProps> = {}) {
@@ -125,7 +126,7 @@ describe('CompletionScreen', () => {
       runningTotal: 0,
       hasMoreCards: false,
     })
-    expect(wrapper.text()).toContain('No concepts due right now')
+    expect(wrapper.text()).toContain('No concepts available right now')
     // no "You studied" text
     expect(wrapper.text()).not.toContain('You studied')
   })

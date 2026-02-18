@@ -118,7 +118,9 @@ watch(
             &nbsp;&middot;&nbsp;
             <span class="font-medium">{{ cat.learned }}</span> learned
             &nbsp;&middot;&nbsp;
-            <span class="font-medium">{{ cat.due }}</span> due
+            <span :class="cat.due && cat.due > 0 ? 'font-semibold text-indigo-600' : 'font-medium'">
+              {{ cat.due }} due
+            </span>
           </p>
           <p v-else class="text-sm text-gray-600 mt-2">
             <span class="font-medium">{{ cat.total }}</span> concepts

@@ -457,3 +457,172 @@ def test_categories_zero_mastery(anon_client, session, create_user, create_flash
     cat = next(c for c in data if c["slug"] == "cat1")
     assert cat["mastered"] == 0
     assert cat["mastery_pct"] == 0
+
+
+# ── Mode parameter tests ─────────────────────────────────────────────────
+
+
+def test_list_cards_mode_due(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=due returns only cards with next_review <= now."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card_due = create_flashcard(front="Due", back="A1", category="cat1")
+    card_future = create_flashcard(front="Future", back="A2", category="cat1")
+    _card_new = create_flashcard(front="New", back="A3", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf_due = UserFlashcard(user_id=user.id, flashcard_id=card_due.id, next_review=now - timedelta(hours=1))
+    uf_future = UserFlashcard(user_id=user.id, flashcard_id=card_future.id, next_review=now + timedelta(days=5))
+    session.add_all([uf_due, uf_future])
+    session.commit()
+
+    r = anon_client.get("/flashcards?mode=due", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["front"] == "Due"
+
+
+def test_list_cards_mode_new(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=new returns only cards with no UserFlashcard row for this user."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card_reviewed = create_flashcard(front="Reviewed", back="A1", category="cat1")
+    _card_new1 = create_flashcard(front="New1", back="A2", category="cat1")
+    _card_new2 = create_flashcard(front="New2", back="A3", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf = UserFlashcard(user_id=user.id, flashcard_id=card_reviewed.id, next_review=now + timedelta(days=1))
+    session.add(uf)
+    session.commit()
+
+    r = anon_client.get("/flashcards?mode=new", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    fronts = {c["front"] for c in data}
+    assert "Reviewed" not in fronts
+    assert "New1" in fronts
+    assert "New2" in fronts
+
+
+def test_list_cards_mode_new_default_limit(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=new without explicit limit defaults to 10 cards."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    for i in range(15):
+        create_flashcard(front=f"Card{i}", back="A", category="cat1")
+
+    r = anon_client.get("/flashcards?mode=new", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert len(r.json()) == 10
+
+
+def test_list_cards_mode_new_custom_limit(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=new with explicit limit respects that limit."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    for i in range(15):
+        create_flashcard(front=f"Card{i}", back="A", category="cat1")
+
+    r = anon_client.get("/flashcards?mode=new&limit=5", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert len(r.json()) == 5
+
+
+def test_list_cards_mode_due_no_limit(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=due without explicit limit returns all due cards."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    now = datetime.now(timezone.utc)
+    for i in range(15):
+        card = create_flashcard(front=f"Due{i}", back="A", category="cat1")
+        uf = UserFlashcard(user_id=user.id, flashcard_id=card.id, next_review=now - timedelta(hours=1))
+        session.add(uf)
+    session.commit()
+
+    r = anon_client.get("/flashcards?mode=due", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert len(r.json()) == 15
+
+
+def test_list_cards_mode_all(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=all returns the same as default (due + new)."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card_due = create_flashcard(front="Due", back="A1", category="cat1")
+    _card_new = create_flashcard(front="New", back="A2", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf = UserFlashcard(user_id=user.id, flashcard_id=card_due.id, next_review=now - timedelta(hours=1))
+    session.add(uf)
+    session.commit()
+
+    r_default = anon_client.get("/flashcards?category=cat1", headers={"Authorization": f"Bearer {token}"})
+    r_all = anon_client.get("/flashcards?category=cat1&mode=all", headers={"Authorization": f"Bearer {token}"})
+
+    assert r_default.status_code == 200
+    assert r_all.status_code == 200
+    assert len(r_all.json()) == len(r_default.json())
+
+
+def test_list_cards_mode_invalid_returns_422(anon_client, session, create_user, create_flashcard, get_token):
+    """Invalid mode value returns 422."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    r = anon_client.get("/flashcards?mode=invalid", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 422
+
+
+def test_list_cards_mode_ignored_for_anonymous(anon_client, session, create_user, create_flashcard):
+    """Anonymous users with mode=new still get all cards."""
+    user = create_user("user", "password")
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    _card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf = UserFlashcard(user_id=user.id, flashcard_id=card1.id, next_review=now + timedelta(days=5))
+    session.add(uf)
+    session.commit()
+
+    r = anon_client.get("/flashcards?category=cat1&mode=new")
+    assert r.status_code == 200
+    # Anonymous: all 2 cards returned regardless of mode
+    assert len(r.json()) == 2
+
+
+def test_anonymous_invalid_mode_returns_200(anon_client, session, create_flashcard):
+    """Anonymous users with an invalid mode value still get 200 (mode is ignored)."""
+    create_flashcard(front="Q1", back="A1", category="cat1")
+
+    r = anon_client.get("/flashcards?category=cat1&mode=invalid")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+def test_list_cards_mode_with_category_filter(anon_client, session, create_user, create_flashcard, get_token):
+    """mode=due combined with category filter works correctly."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card_due_cat1 = create_flashcard(front="Due-Cat1", back="A1", category="cat1")
+    card_due_cat2 = create_flashcard(front="Due-Cat2", back="A2", category="cat2")
+    _card_new = create_flashcard(front="New-Cat1", back="A3", category="cat1")
+
+    now = datetime.now(timezone.utc)
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card_due_cat1.id, next_review=now - timedelta(hours=1))
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card_due_cat2.id, next_review=now - timedelta(hours=1))
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    r = anon_client.get("/flashcards?mode=due&category=cat1", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["front"] == "Due-Cat1"

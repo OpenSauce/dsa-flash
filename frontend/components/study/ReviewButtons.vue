@@ -3,6 +3,7 @@ defineProps<{
   revealed: boolean
   isLoggedIn: boolean
   buttonsEnabled: boolean
+  mode: string
 }>()
 
 defineEmits<{
@@ -18,19 +19,19 @@ defineEmits<{
       <button @click="buttonsEnabled && $emit('rate', 'again')"
               :disabled="!buttonsEnabled"
               class="px-5 py-3 bg-red-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
-        <span class="font-semibold">Again</span>
-        <span class="block text-xs opacity-80 mt-0.5">Review again soon</span>
+        <span class="font-semibold">{{ mode === 'new' ? 'Tricky' : 'Again' }}</span>
+        <span class="block text-xs opacity-80 mt-0.5">{{ mode === 'new' ? 'Review soon' : 'Review again soon' }}</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'good')"
               :disabled="!buttonsEnabled"
               class="px-5 py-3 bg-yellow-500 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
-        <span class="font-semibold">Almost</span>
+        <span class="font-semibold">{{ mode === 'new' ? 'Got it' : 'Almost' }}</span>
         <span class="block text-xs opacity-80 mt-0.5">Review later</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'easy')"
               :disabled="!buttonsEnabled"
               class="px-5 py-3 bg-green-600 text-white rounded-lg transition-opacity disabled:cursor-not-allowed">
-        <span class="font-semibold">I know it</span>
+        <span class="font-semibold">{{ mode === 'new' ? 'Easy' : 'I know it' }}</span>
         <span class="block text-xs opacity-80 mt-0.5">I could explain this</span>
       </button>
     </div>

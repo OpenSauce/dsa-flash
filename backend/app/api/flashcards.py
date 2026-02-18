@@ -138,28 +138,55 @@ def list_cards(
     tag: Optional[str] = Query(None),
     user: Optional[User] = Depends(get_optional_user),
     random: bool = Query(False, description="Shuffle the cards"),
+    mode: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None, ge=1, le=100),
 ):
+    now = datetime.now(timezone.utc)
     if user:
-        # Authenticated: SM-2 filtered (due or new cards only)
-        stmt = (
-            select(Flashcard)
-            .join(
-                UserFlashcard,
-                and_(
-                    col(UserFlashcard.flashcard_id) == col(Flashcard.id),
-                    col(UserFlashcard.user_id) == user.id,
-                ),
-                isouter=True,
-            )
-            .where(
-                or_(
-                    col(UserFlashcard.user_id).is_(None),
-                    col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+        if mode not in (None, "due", "new", "all"):
+            raise HTTPException(status_code=422, detail="Invalid mode parameter")
+        if mode == "due":
+            stmt = (
+                select(Flashcard)
+                .join(
+                    UserFlashcard,
+                    and_(
+                        col(UserFlashcard.flashcard_id) == col(Flashcard.id),
+                        col(UserFlashcard.user_id) == user.id,
+                    ),
+                )
+                .where(
+                    col(UserFlashcard.next_review).is_not(None),
+                    col(UserFlashcard.next_review) <= now,
                 )
             )
-        )
+        elif mode == "new":
+            exists_q = select(1).where(
+                UserFlashcard.user_id == user.id,
+                UserFlashcard.flashcard_id == Flashcard.id,
+            )
+            stmt = select(Flashcard).where(~exists_q.exists())
+        else:
+            # mode=all or mode=None: default SM-2 behavior (due + new)
+            stmt = (
+                select(Flashcard)
+                .join(
+                    UserFlashcard,
+                    and_(
+                        col(UserFlashcard.flashcard_id) == col(Flashcard.id),
+                        col(UserFlashcard.user_id) == user.id,
+                    ),
+                    isouter=True,
+                )
+                .where(
+                    or_(
+                        col(UserFlashcard.user_id).is_(None),
+                        col(UserFlashcard.next_review) <= now,
+                    )
+                )
+            )
     else:
-        # Anonymous: all cards, no SM-2 filtering
+        # Anonymous: all cards, no SM-2 filtering, mode ignored
         stmt = select(Flashcard)
 
     if category:
@@ -170,6 +197,14 @@ def list_cards(
         stmt = stmt.order_by(func.random())
     if tag:
         stmt = stmt.where(col(Flashcard.tags).contains([tag]))
+
+    # Apply limit: explicit limit takes priority; mode=new defaults to 10
+    effective_limit = limit
+    if effective_limit is None and mode == "new" and user:
+        effective_limit = 10
+    if effective_limit is not None:
+        stmt = stmt.limit(effective_limit)
+
     cards = session.exec(stmt).all()
 
     return JSONResponse(content=jsonable_encoder(cards))

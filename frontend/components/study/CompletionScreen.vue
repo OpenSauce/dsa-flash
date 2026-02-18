@@ -11,6 +11,7 @@ const props = defineProps<{
   remainingCards: number
   hasMoreCards: boolean
   isLoggedIn: boolean
+  mode: string
 }>()
 
 defineEmits<{
@@ -51,10 +52,18 @@ const encouragement = computed(() => {
       <h2 class="text-2xl font-bold mb-3 font-heading">{{ heading }}</h2>
 
       <p class="text-lg text-gray-700 mb-2">
-        You studied <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        <template v-if="mode === 'new'">
+          You learned <span class="font-semibold">{{ cardsReviewed }}</span> new {{ categoryName }} concepts.
+        </template>
+        <template v-else-if="mode === 'due'">
+          You reviewed <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        </template>
+        <template v-else>
+          You studied <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
+        </template>
       </p>
 
-      <p v-if="isLoggedIn && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
+      <p v-if="isLoggedIn && mode === 'all' && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
         <span class="font-medium text-indigo-600">{{ newConcepts }}</span> new
         &nbsp;&middot;&nbsp;
         <span class="font-medium">{{ reviewedConcepts }}</span> reviewed
@@ -88,7 +97,11 @@ const encouragement = computed(() => {
     </template>
 
     <template v-else>
-      <p class="text-gray-500 mb-4">No concepts due right now.</p>
+      <p class="text-gray-500 mb-4">
+        <template v-if="mode === 'new'">No new concepts to learn right now.</template>
+        <template v-else-if="mode === 'due'">No concepts due right now.</template>
+        <template v-else>No concepts available right now.</template>
+      </p>
       <div class="flex flex-wrap justify-center gap-4">
         <NuxtLink to="/" class="text-blue-600 hover:underline">
           Try another domain

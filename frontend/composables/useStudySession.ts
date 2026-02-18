@@ -2,6 +2,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
+export type StudyMode = 'all' | 'due' | 'new'
+
 interface StudyCard {
   id: number
   front: string
@@ -26,6 +28,7 @@ interface UseStudySessionOptions {
   flushBeacon: () => void
   refreshStreak: () => void
   logout: () => Promise<void>
+  mode: Ref<StudyMode>
 }
 
 interface UseStudySessionReturn {
@@ -49,6 +52,7 @@ interface UseStudySessionReturn {
   categoryTotal: Ref<number>
   newConceptsInSession: ComputedRef<number>
   reviewedConceptsInSession: ComputedRef<number>
+  mode: Ref<StudyMode>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>
@@ -57,7 +61,7 @@ interface UseStudySessionReturn {
 }
 
 export async function useStudySession(options: UseStudySessionOptions): Promise<UseStudySessionReturn> {
-  const { category, apiBase, isLoggedIn, tokenCookie, track, flushBeacon, refreshStreak, logout } = options
+  const { category, apiBase, isLoggedIn, tokenCookie, track, flushBeacon, refreshStreak, logout, mode } = options
 
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)
@@ -88,6 +92,9 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   const url = computed(() => {
     const qs = new URLSearchParams({ category })
     if (language.value) qs.append('language', language.value)
+    if (isLoggedIn.value && mode.value !== 'all') {
+      qs.append('mode', mode.value)
+    }
     return `${apiBase}/flashcards?${qs.toString()}`
   })
 
@@ -109,9 +116,22 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
 
   watch(cards, (newCards) => {
     if (newCards && currentBatchSize.value === 0) {
-      currentBatchSize.value = Math.min(BATCH_SIZE, newCards.length)
+      if (mode.value === 'due') {
+        currentBatchSize.value = newCards.length
+      } else {
+        currentBatchSize.value = Math.min(BATCH_SIZE, newCards.length)
+      }
     }
   }, { immediate: true })
+
+  // Reset batch state when mode changes
+  watch(mode, () => {
+    cardsReviewedInBatch.value = 0
+    currentBatchSize.value = 0
+    sessionFinished.value = false
+    cardIndex.value = 0
+    cards.value = []
+  })
 
   const progressPercent = computed(() =>
     currentBatchSize.value > 0
@@ -275,7 +295,9 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     track('keep_going', { category, cards_reviewed: cardsReviewedInSession.value })
     cardsReviewedInBatch.value = 0
     sessionFinished.value = false
-    if (isLoggedIn.value) {
+    if (mode.value === 'due') {
+      currentBatchSize.value = cards.value?.length ?? 0
+    } else if (isLoggedIn.value) {
       currentBatchSize.value = Math.min(BATCH_SIZE, cards.value?.length ?? 0)
     } else {
       const remaining = (cards.value?.length ?? 0) - cardIndex.value
@@ -350,6 +372,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     categoryTotal,
     newConceptsInSession,
     reviewedConceptsInSession,
+    mode,
     flipCard,
     nextCard,
     recordResponse,
