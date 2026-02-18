@@ -18,21 +18,21 @@ defineEmits<{
     <div class="flex justify-center gap-3 rating-buttons" :class="{ 'rating-buttons--visible': buttonsEnabled }">
       <button @click="buttonsEnabled && $emit('rate', 'again')"
               :disabled="!buttonsEnabled"
-              class="px-5 py-2.5 border-2 border-red-300 text-red-700 bg-red-50 rounded-xl hover:bg-red-100 transition disabled:cursor-not-allowed">
+              class="px-5 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Tricky' : 'Again' }}</span>
-        <span class="block text-xs text-red-400 mt-0.5">{{ mode === 'new' ? 'Review soon' : 'Review again soon' }}</span>
+        <span class="block text-xs text-red-100 mt-0.5">{{ mode === 'new' ? 'Review soon' : 'Review again soon' }}</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'good')"
               :disabled="!buttonsEnabled"
-              class="px-5 py-2.5 border-2 border-amber-300 text-amber-700 bg-amber-50 rounded-xl hover:bg-amber-100 transition disabled:cursor-not-allowed">
+              class="px-5 py-2.5 bg-amber-400 text-amber-900 rounded-xl hover:bg-amber-500 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Got it' : 'Almost' }}</span>
-        <span class="block text-xs text-amber-400 mt-0.5">Review later</span>
+        <span class="block text-xs text-amber-700 mt-0.5">Review later</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'easy')"
               :disabled="!buttonsEnabled"
-              class="px-5 py-2.5 border-2 border-green-300 text-green-700 bg-green-50 rounded-xl hover:bg-green-100 transition disabled:cursor-not-allowed">
+              class="px-5 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Easy' : 'I know it' }}</span>
-        <span class="block text-xs text-green-400 mt-0.5">I could explain this</span>
+        <span class="block text-xs text-emerald-100 mt-0.5">I could explain this</span>
       </button>
     </div>
     <p class="text-xs text-gray-400 mt-3">Press 1, 2, or 3</p>
