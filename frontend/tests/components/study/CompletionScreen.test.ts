@@ -14,6 +14,8 @@ const NuxtLinkStub = defineComponent({
 
 const defaultProps = {
   categoryName: 'System Design',
+  categoryEmoji: '🏗️',
+  categorySlug: 'system-design',
   cardsReviewed: 7,
   newConcepts: 4,
   reviewedConcepts: 3,
@@ -88,16 +90,8 @@ describe('CompletionScreen', () => {
     expect(homeLink!.text()).toContain('Try another domain')
   })
 
-  it('"Back to dashboard" shown for auth users', () => {
+  it('no dashboard link in completion screen', () => {
     const wrapper = mountScreen({ isLoggedIn: true })
-    const links = wrapper.findAll('a')
-    const dashLink = links.find(l => l.attributes('href') === '/dashboard')
-    expect(dashLink).toBeDefined()
-    expect(dashLink!.text()).toContain('Back to dashboard')
-  })
-
-  it('"Back to dashboard" hidden for anon users', () => {
-    const wrapper = mountScreen({ isLoggedIn: false, runningTotal: null })
     const links = wrapper.findAll('a')
     const dashLink = links.find(l => l.attributes('href') === '/dashboard')
     expect(dashLink).toBeUndefined()
