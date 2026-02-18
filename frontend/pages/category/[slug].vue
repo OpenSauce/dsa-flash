@@ -13,6 +13,8 @@ const {
   sessionFinished, cardsReviewedInBatch, cardsReviewedInSession,
   currentBatchSize, remainingCards, hasMoreCards, progressPercent,
   revealed, buttonsEnabled,
+  categoryDisplayName, categoryLearnedCount, categoryTotal,
+  newConceptsInSession, reviewedConceptsInSession,
   flipCard, nextCard, recordResponse, keepGoing, finishSession,
 } = await useStudySession({
   category, apiBase, isLoggedIn, tokenCookie,
@@ -33,7 +35,12 @@ const {
 
     <StudyCompletionScreen
       v-else-if="sessionFinished || !card"
+      :category-name="categoryDisplayName"
       :cards-reviewed="cardsReviewedInSession"
+      :new-concepts="newConceptsInSession"
+      :reviewed-concepts="reviewedConceptsInSession"
+      :running-total="isLoggedIn ? (categoryLearnedCount + newConceptsInSession) : null"
+      :category-total="categoryTotal"
       :remaining-cards="remainingCards"
       :has-more-cards="hasMoreCards"
       :is-logged-in="isLoggedIn"

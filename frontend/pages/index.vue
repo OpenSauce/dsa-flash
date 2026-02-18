@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { CATEGORY_META, DEFAULT_META, SECTION_ORDER } from '@/utils/categoryMeta'
 
 interface CategoryFromAPI {
   slug: string
@@ -20,22 +21,6 @@ interface CategoryDisplay extends CategoryFromAPI {
   description: string
   section: string
 }
-
-const CATEGORY_META: Record<string, { emoji: string; description: string; section: string; displayName?: string }> = {
-  'data-structures': { emoji: '📦', description: 'Arrays, stacks, trees, and more.', section: 'Coding' },
-  'algorithms': { emoji: '⚙️', description: 'Sorting, searching, traversal...', section: 'Coding' },
-  'advanced-data-structures': { emoji: '🚀', description: 'Fenwick trees, tries, unions...', section: 'Coding' },
-  'big-o-notation': { emoji: '🧠', description: 'Complexity analysis essentials.', section: 'Coding' },
-  'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
-  'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design', displayName: 'AWS' },
-  'kubernetes': { emoji: '☸️', description: 'Pods, Deployments, Services, networking...', section: 'System Design' },
-  'docker-linux': { emoji: '🐳', description: 'Containers, Dockerfiles, Linux fundamentals...', section: 'System Design' },
-  'networking': { emoji: '🌐', description: 'TCP/IP, DNS, TLS, HTTP, proxies...', section: 'System Design' },
-}
-
-const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
-
-const SECTION_ORDER = ['Coding', 'System Design', 'Other']
 
 const { public: { apiBase } } = useRuntimeConfig()
 const token = useCookie('token')
