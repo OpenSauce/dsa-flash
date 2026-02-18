@@ -6,10 +6,9 @@ from fastapi.testclient import TestClient
 
 from app.api.dashboard import router as dashboard_router
 from app.api.flashcards import router as flashcard_router
-from app.api.users import User, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import Flashcard, StudySession, UserFlashcard
+from app.models import StudySession, UserFlashcard
 
 
 def _get_test_session(session):
@@ -33,30 +32,6 @@ def app_fixture(session):
 @pytest.fixture(name="client")
 def client_fixture(app):
     return TestClient(app)
-
-
-def create_user(session, username="dashuser", password="password"):
-    user = User(username=username, hashed_password=get_password_hash(password))
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
-
-def get_token(client, username, password) -> str:
-    response = client.post("/token", data={"username": username, "password": password})
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
-def create_flashcard(session, category="system-design", title="Test Card", **kwargs):
-    kwargs.setdefault("front", title)
-    kwargs.setdefault("back", "Answer")
-    card = Flashcard(title=title, category=category, **kwargs)
-    session.add(card)
-    session.commit()
-    session.refresh(card)
-    return card
 
 
 def create_user_flashcard(
@@ -91,13 +66,13 @@ def test_dashboard_unauthenticated_returns_401(client):
     assert r.status_code == 401
 
 
-def test_dashboard_new_user_returns_zeros(client, session):
-    create_user(session)
+def test_dashboard_new_user_returns_zeros(client, session, create_user, create_flashcard, get_token):
+    create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     # Create some flashcards so domains list is populated
-    create_flashcard(session, category="system-design")
-    create_flashcard(session, category="aws")
+    create_flashcard(category="system-design", title="Card 1")
+    create_flashcard(category="aws", title="Card 2")
 
     r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
@@ -130,14 +105,14 @@ def test_dashboard_new_user_returns_zeros(client, session):
         assert d["mastery_pct"] == 0
 
 
-def test_dashboard_with_review_data(client, session):
-    user = create_user(session)
+def test_dashboard_with_review_data(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     # Create cards in 2 categories
-    card1 = create_flashcard(session, category="system-design", title="Load Balancing")
-    card2 = create_flashcard(session, category="system-design", title="Caching")
-    card3 = create_flashcard(session, category="aws", title="EC2 vs Lambda")
+    card1 = create_flashcard(category="system-design", title="Load Balancing")
+    card2 = create_flashcard(category="system-design", title="Caching")
+    card3 = create_flashcard(category="aws", title="EC2 vs Lambda")
 
     # Review all 3; card1 is mastered (interval > 21), card2 and card3 are not
     create_user_flashcard(session, user.id, card1.id, interval=30)
@@ -167,13 +142,13 @@ def test_dashboard_with_review_data(client, session):
     assert aws["mastery_pct"] == 0
 
 
-def test_dashboard_mastery_threshold(client, session):
-    user = create_user(session)
+def test_dashboard_mastery_threshold(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
-    card_not_mastered = create_flashcard(session, category="system-design", title="Not mastered")
-    card_mastered = create_flashcard(session, category="system-design", title="Mastered")
-    card_boundary = create_flashcard(session, category="system-design", title="Boundary")
+    card_not_mastered = create_flashcard(category="system-design", title="Not mastered")
+    card_mastered = create_flashcard(category="system-design", title="Mastered")
+    card_boundary = create_flashcard(category="system-design", title="Boundary")
 
     # interval <= 21 should NOT be mastered
     create_user_flashcard(session, user.id, card_not_mastered.id, interval=21)
@@ -189,13 +164,13 @@ def test_dashboard_mastery_threshold(client, session):
     assert data["knowledge_summary"]["concepts_mastered"] == 1
 
 
-def test_dashboard_weakest_cards_capped_at_5(client, session):
-    user = create_user(session)
+def test_dashboard_weakest_cards_capped_at_5(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     # Create 7 cards with low easiness
     for i in range(7):
-        card = create_flashcard(session, category="system-design", title=f"Weak card {i}")
+        card = create_flashcard(category="system-design", title=f"Weak card {i}")
         create_user_flashcard(session, user.id, card.id, easiness=1.3 + i * 0.05)
 
     r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
@@ -205,13 +180,13 @@ def test_dashboard_weakest_cards_capped_at_5(client, session):
     assert len(data["weakest_cards"]) == 5
 
 
-def test_dashboard_weakest_cards_threshold(client, session):
-    user = create_user(session)
+def test_dashboard_weakest_cards_threshold(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
-    card_ok = create_flashcard(session, category="system-design", title="OK card")
-    card_weak = create_flashcard(session, category="system-design", title="Weak card")
-    card_boundary = create_flashcard(session, category="system-design", title="Boundary card")
+    card_ok = create_flashcard(category="system-design", title="OK card")
+    card_weak = create_flashcard(category="system-design", title="Weak card")
+    card_boundary = create_flashcard(category="system-design", title="Boundary card")
 
     # easiness >= 2.0 should NOT appear
     create_user_flashcard(session, user.id, card_ok.id, easiness=2.5)
@@ -227,12 +202,12 @@ def test_dashboard_weakest_cards_threshold(client, session):
     assert data["weakest_cards"][0]["easiness"] == 1.9
 
 
-def test_dashboard_weakest_cards_sorted_ascending(client, session):
-    user = create_user(session)
+def test_dashboard_weakest_cards_sorted_ascending(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     for easiness in [1.8, 1.4, 1.6]:
-        card = create_flashcard(session, category="system-design", title=f"Card {easiness}")
+        card = create_flashcard(category="system-design", title=f"Card {easiness}")
         create_user_flashcard(session, user.id, card.id, easiness=easiness)
 
     r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
@@ -244,16 +219,16 @@ def test_dashboard_weakest_cards_sorted_ascending(client, session):
     assert easiness_values[0] == pytest.approx(1.4)
 
 
-def test_dashboard_this_week_boundary(client, session):
-    user = create_user(session)
+def test_dashboard_this_week_boundary(client, session, create_user, create_flashcard, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     today = datetime.now(timezone.utc).date()
     week_start_date = today - timedelta(days=today.weekday())
     week_start_dt = datetime(week_start_date.year, week_start_date.month, week_start_date.day, tzinfo=timezone.utc)
 
-    card_this_week = create_flashcard(session, category="system-design", title="This week")
-    card_last_week = create_flashcard(session, category="system-design", title="Last week")
+    card_this_week = create_flashcard(category="system-design", title="This week")
+    card_last_week = create_flashcard(category="system-design", title="Last week")
 
     # This week: created_at inside current week
     create_user_flashcard(
@@ -276,8 +251,8 @@ def test_dashboard_this_week_boundary(client, session):
     assert len(data["this_week"]["domains_studied"]) == 1
 
 
-def test_dashboard_study_calendar_current_month(client, session):
-    user = create_user(session)
+def test_dashboard_study_calendar_current_month(client, session, create_user, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     today = datetime.now(timezone.utc).date()
@@ -310,8 +285,8 @@ def test_dashboard_study_calendar_current_month(client, session):
     assert last_month.isoformat() not in calendar
 
 
-def test_dashboard_streak_data(client, session):
-    user = create_user(session)
+def test_dashboard_streak_data(client, session, create_user, get_token):
+    user = create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
     today = datetime.now(timezone.utc).date()
@@ -326,12 +301,12 @@ def test_dashboard_streak_data(client, session):
     assert data["streak"]["today_reviewed"] == 3
 
 
-def test_dashboard_domain_names_human_readable(client, session):
-    create_user(session)
+def test_dashboard_domain_names_human_readable(client, session, create_user, create_flashcard, get_token):
+    create_user("dashuser", "password")
     token = get_token(client, "dashuser", "password")
 
-    create_flashcard(session, category="system-design")
-    create_flashcard(session, category="big-o-notation")
+    create_flashcard(category="system-design", title="Card 1")
+    create_flashcard(category="big-o-notation", title="Card 2")
 
     r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200

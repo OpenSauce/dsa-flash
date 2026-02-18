@@ -7,10 +7,10 @@ from sqlmodel import Session, select
 
 from app.api.flashcards import categories_router
 from app.api.flashcards import router as flashcard_router
-from app.api.users import User, get_current_user, get_password_hash
+from app.api.users import get_current_user
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import Flashcard, UserFlashcard
+from app.models import UserFlashcard
 
 
 def _get_test_session(session):
@@ -56,30 +56,6 @@ def anon_client_fixture(anon_app):
     return TestClient(anon_app)
 
 
-# Helpers
-def create_flashcard(session, **kwargs):
-    kwargs.setdefault("title", kwargs.get("front") or "Untitled")
-    card = Flashcard(**kwargs)
-    session.add(card)
-    session.commit()
-    session.refresh(card)
-    return card
-
-
-def create_user(session, username: str, password: str):
-    user = User(username=username, hashed_password=get_password_hash(password))
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
-
-def get_token(client, username, password) -> str:
-    response = client.post("/token", data={"username": username, "password": password})
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
 # Tests
 def test_list_cards_empty(client):
     response = client.get("/flashcards")
@@ -87,13 +63,12 @@ def test_list_cards_empty(client):
     assert response.json() == []
 
 
-def test_list_cards_filters_and_pagination(client, session):
-    _ = create_user(session, "user", "password")
+def test_list_cards_filters_and_pagination(client, session, create_user, create_flashcard, get_token):
+    _ = create_user("user", "password")
     token = get_token(client, "user", "password")
 
     for i in range(5):
         create_flashcard(
-            session,
             front=f"Q{i}",
             back=f"A{i}",
             category="cat1",
@@ -102,7 +77,6 @@ def test_list_cards_filters_and_pagination(client, session):
         )
     for i in range(3):
         create_flashcard(
-            session,
             front=f"Qx{i}",
             back=f"Ax{i}",
             category="cat2",
@@ -128,9 +102,9 @@ def test_list_cards_filters_and_pagination(client, session):
     assert len(r.json()) == 5
 
 
-def test_review_card_creates_new_userflashcard(client, session):
-    user = create_user(session, "user", "password")
-    card = create_flashcard(session, front="Q", back="A")
+def test_review_card_creates_new_userflashcard(client, session, create_user, create_flashcard, get_token):
+    user = create_user("user", "password")
+    card = create_flashcard(front="Q", back="A")
 
     token = get_token(client, "user", "password")
 
@@ -154,19 +128,19 @@ def test_review_card_not_found(client):
     assert response.status_code == 404
 
 
-def test_due_cards(client, session):
-    user = create_user(session, "user", "password")
+def test_due_cards(client, session, create_user, create_flashcard, get_token):
+    user = create_user("user", "password")
     token = get_token(client, "user", "password")
 
-    create_user(session, "user2", "password")
+    create_user("user2", "password")
     get_token(client, "user2", "password")
-    _ = create_flashcard(session, id=999, front="Past", back="A1")
-    _ = create_flashcard(session, front="Future", back="A2")
+    card_past = create_flashcard(front="Past", back="A1")
+    _ = create_flashcard(front="Future", back="A2")
     now = datetime.now(timezone.utc)
     uf1 = UserFlashcard(
-        user_id=1, flashcard_id=999, next_review=now - timedelta(days=1)
+        user_id=1, flashcard_id=card_past.id, next_review=now - timedelta(days=1)
     )
-    uf2 = UserFlashcard(user_id=1, flashcard_id=1, next_review=now + timedelta(days=1))
+    uf2 = UserFlashcard(user_id=1, flashcard_id=card_past.id + 1, next_review=now + timedelta(days=1))
     session.add_all([uf1, uf2])
     session.commit()
 
@@ -179,12 +153,12 @@ def test_due_cards(client, session):
     session.delete(user)
 
 
-def test_due_cards_excludes_null_next_review(client, session):
-    user = create_user(session, "user", "password")
+def test_due_cards_excludes_null_next_review(client, session, create_user, create_flashcard, get_token):
+    user = create_user("user", "password")
     token = get_token(client, "user", "password")
 
-    card_due = create_flashcard(session, front="Due", back="A1")
-    card_null = create_flashcard(session, front="NullReview", back="A2")
+    card_due = create_flashcard(front="Due", back="A1")
+    card_null = create_flashcard(front="NullReview", back="A2")
 
     now = datetime.now(timezone.utc)
     uf_due = UserFlashcard(
@@ -205,13 +179,13 @@ def test_due_cards_excludes_null_next_review(client, session):
     session.delete(user)
 
 
-def test_card_stats(client, session):
-    user = create_user(session, "user", "password")
+def test_card_stats(client, session, create_user, create_flashcard, get_token):
+    user = create_user("user", "password")
     token = get_token(client, "user", "password")
 
-    card_due = create_flashcard(session, front="Due", back="A")
-    _ = create_flashcard(session, front="New1", back="B")
-    _ = create_flashcard(session, front="New2", back="C")
+    card_due = create_flashcard(front="Due", back="A")
+    _ = create_flashcard(front="New1", back="B")
+    _ = create_flashcard(front="New2", back="C")
 
     now = datetime.now(timezone.utc)
     assert card_due.id is not None
@@ -233,19 +207,19 @@ def test_card_stats(client, session):
 # ── Anonymous access tests ──────────────────────────────────────────────
 
 
-def test_anonymous_can_list_cards(anon_client, session):
-    create_flashcard(session, front="Q1", back="A1", category="cat1")
-    create_flashcard(session, front="Q2", back="A2", category="cat1")
+def test_anonymous_can_list_cards(anon_client, session, create_flashcard):
+    create_flashcard(front="Q1", back="A1", category="cat1")
+    create_flashcard(front="Q2", back="A2", category="cat1")
 
     r = anon_client.get("/flashcards?category=cat1")
     assert r.status_code == 200
     assert len(r.json()) == 2
 
 
-def test_anonymous_gets_all_cards_ignoring_sm2(anon_client, session):
+def test_anonymous_gets_all_cards_ignoring_sm2(anon_client, session, create_user, create_flashcard):
     """Anonymous users see all cards, even ones that would be filtered by SM-2 for a logged-in user."""
-    user = create_user(session, "user", "password")
-    card = create_flashcard(session, front="Q", back="A", category="cat1")
+    user = create_user("user", "password")
+    card = create_flashcard(front="Q", back="A", category="cat1")
 
     # Create a UserFlashcard with next_review far in the future
     # (a logged-in user would NOT see this card, but anonymous should)
@@ -262,20 +236,20 @@ def test_anonymous_gets_all_cards_ignoring_sm2(anon_client, session):
     assert len(r.json()) == 1
 
 
-def test_anonymous_review_returns_401(anon_client, session):
-    card = create_flashcard(session, front="Q", back="A")
+def test_anonymous_review_returns_401(anon_client, session, create_flashcard):
+    card = create_flashcard(front="Q", back="A")
 
     r = anon_client.post(f"/flashcards/{card.id}/review", json={"quality": 3})
     assert r.status_code == 401
 
 
-def test_authenticated_list_still_filters_by_sm2(anon_client, session):
+def test_authenticated_list_still_filters_by_sm2(anon_client, session, create_user, create_flashcard, get_token):
     """Logged-in users still get SM-2 filtered results."""
-    user = create_user(session, "user", "password")
+    user = create_user("user", "password")
     token = get_token(anon_client, "user", "password")
 
-    card_due = create_flashcard(session, front="Due", back="A", category="cat1")
-    card_future = create_flashcard(session, front="Future", back="B", category="cat1")
+    card_due = create_flashcard(front="Due", back="A", category="cat1")
+    card_future = create_flashcard(front="Future", back="B", category="cat1")
 
     now = datetime.now(timezone.utc)
     session.add(
@@ -305,8 +279,8 @@ def test_authenticated_list_still_filters_by_sm2(anon_client, session):
     assert data[0]["front"] == "Due"
 
 
-def test_review_quality_out_of_range_returns_422(client, session):
-    card = create_flashcard(session, front="Q", back="A")
+def test_review_quality_out_of_range_returns_422(client, session, create_flashcard):
+    card = create_flashcard(front="Q", back="A")
     r = client.post(f"/flashcards/{card.id}/review", json={"quality": 6})
     assert r.status_code == 422
 
@@ -317,10 +291,10 @@ def test_review_quality_out_of_range_returns_422(client, session):
 # ── Categories endpoint tests ────────────────────────────────────────────
 
 
-def test_categories_anonymous(anon_client, session):
-    create_flashcard(session, front="Q1", back="A1", category="cat1", language="go")
-    create_flashcard(session, front="Q2", back="A2", category="cat1", language="go")
-    create_flashcard(session, front="Q3", back="A3", category="cat2")
+def test_categories_anonymous(anon_client, session, create_flashcard):
+    create_flashcard(front="Q1", back="A1", category="cat1", language="go")
+    create_flashcard(front="Q2", back="A2", category="cat1", language="go")
+    create_flashcard(front="Q3", back="A3", category="cat2")
 
     r = anon_client.get("/categories")
     assert r.status_code == 200
@@ -339,13 +313,13 @@ def test_categories_anonymous(anon_client, session):
     assert cat2["has_language"] is False
 
 
-def test_categories_authenticated(anon_client, session):
-    user = create_user(session, "user", "password")
+def test_categories_authenticated(anon_client, session, create_user, create_flashcard, get_token):
+    user = create_user("user", "password")
     token = get_token(anon_client, "user", "password")
 
-    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
-    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
-    card3 = create_flashcard(session, front="Q3", back="A3", category="cat1")
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+    card3 = create_flashcard(front="Q3", back="A3", category="cat1")
 
     now = datetime.now(timezone.utc)
     uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, next_review=now - timedelta(hours=1))
@@ -376,9 +350,9 @@ def test_categories_empty(anon_client):
     assert r.json() == []
 
 
-def test_categories_excludes_null_category(anon_client, session):
-    create_flashcard(session, front="Q1", back="A1", category="cat1")
-    create_flashcard(session, front="Q2", back="A2", category=None)
+def test_categories_excludes_null_category(anon_client, session, create_flashcard):
+    create_flashcard(front="Q1", back="A1", category="cat1")
+    create_flashcard(front="Q2", back="A2", category=None)
 
     r = anon_client.get("/categories")
     assert r.status_code == 200
@@ -388,10 +362,10 @@ def test_categories_excludes_null_category(anon_client, session):
     assert data[0]["has_language"] is False
 
 
-def test_categories_has_language(anon_client, session):
+def test_categories_has_language(anon_client, session, create_flashcard):
     """has_language is True only for categories with non-null language cards."""
-    create_flashcard(session, front="Q1", back="A1", category="data-structures", language="go")
-    create_flashcard(session, front="Q2", back="A2", category="system-design", language=None)
+    create_flashcard(front="Q1", back="A1", category="data-structures", language="go")
+    create_flashcard(front="Q2", back="A2", category="system-design", language=None)
 
     r = anon_client.get("/categories")
     assert r.status_code == 200
@@ -404,14 +378,14 @@ def test_categories_has_language(anon_client, session):
     assert sd["has_language"] is False
 
 
-def test_categories_authenticated_with_mastery(anon_client, session):
+def test_categories_authenticated_with_mastery(anon_client, session, create_user, create_flashcard, get_token):
     """3 cards: 1 mastered (interval=30), 1 reviewed-not-mastered (interval=5), 1 new."""
-    user = create_user(session, "user", "password")
+    user = create_user("user", "password")
     token = get_token(anon_client, "user", "password")
 
-    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
-    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
-    card3 = create_flashcard(session, front="Q3", back="A3", category="cat1")
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+    card3 = create_flashcard(front="Q3", back="A3", category="cat1")
 
     uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=30)
     uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=5)
@@ -429,10 +403,10 @@ def test_categories_authenticated_with_mastery(anon_client, session):
     assert cat["mastery_pct"] == 33
 
 
-def test_categories_anonymous_no_mastery(anon_client, session):
+def test_categories_anonymous_no_mastery(anon_client, session, create_flashcard):
     """Anonymous requests get null mastery fields."""
-    create_flashcard(session, front="Q1", back="A1", category="cat1")
-    create_flashcard(session, front="Q2", back="A2", category="cat1")
+    create_flashcard(front="Q1", back="A1", category="cat1")
+    create_flashcard(front="Q2", back="A2", category="cat1")
 
     r = anon_client.get("/categories")
     assert r.status_code == 200
@@ -443,13 +417,13 @@ def test_categories_anonymous_no_mastery(anon_client, session):
     assert cat["learned"] is None
 
 
-def test_categories_100_percent_mastery(anon_client, session):
+def test_categories_100_percent_mastery(anon_client, session, create_user, create_flashcard, get_token):
     """All cards mastered: mastery_pct == 100."""
-    user = create_user(session, "user", "password")
+    user = create_user("user", "password")
     token = get_token(anon_client, "user", "password")
 
-    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
-    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(front="Q2", back="A2", category="cat1")
 
     uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=30)
     uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=25)
@@ -464,13 +438,13 @@ def test_categories_100_percent_mastery(anon_client, session):
     assert cat["mastered"] == 2
 
 
-def test_categories_zero_mastery(anon_client, session):
+def test_categories_zero_mastery(anon_client, session, create_user, create_flashcard, get_token):
     """Cards reviewed but interval <= 21: mastered == 0, mastery_pct == 0."""
-    user = create_user(session, "user", "password")
+    user = create_user("user", "password")
     token = get_token(anon_client, "user", "password")
 
-    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
-    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(front="Q2", back="A2", category="cat1")
 
     uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=10)
     uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=21)

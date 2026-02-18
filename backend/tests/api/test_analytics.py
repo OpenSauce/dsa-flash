@@ -5,24 +5,9 @@ from sqlmodel import Session
 
 from app.api.analytics import router as events_router
 from app.api.analytics import summary_router
-from app.api.users import get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import Event, User
-
-
-def create_user(session, username="user", password="password", is_admin=False):
-    user = User(username=username, hashed_password=get_password_hash(password), is_admin=is_admin)
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
-
-def get_token(client, username, password) -> str:
-    resp = client.post("/token", data={"username": username, "password": password})
-    assert resp.status_code == 200
-    return resp.json()["access_token"]
+from app.models import Event
 
 
 @pytest.fixture(name="app")
@@ -80,8 +65,8 @@ def test_batch_event_ingestion(client):
     assert resp.json()["count"] == 3
 
 
-def test_authenticated_events_include_user_id(client, session):
-    user = create_user(session)
+def test_authenticated_events_include_user_id(client, session, create_user, get_token):
+    user = create_user()
     token = get_token(client, "user", "password")
 
     resp = client.post(
@@ -111,23 +96,23 @@ def test_summary_requires_auth(client):
     assert resp.status_code == 401
 
 
-def test_summary_requires_admin(client, session):
-    create_user(session, is_admin=False)
+def test_summary_requires_admin(client, session, create_user, get_token):
+    create_user(is_admin=False)
     token = get_token(client, "user", "password")
     resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 403
     assert resp.json()["detail"] == "Admin access required"
 
 
-def test_summary_allowed_for_admin(client, session):
-    create_user(session, is_admin=True)
+def test_summary_allowed_for_admin(client, session, create_user, get_token):
+    create_user(is_admin=True)
     token = get_token(client, "user", "password")
     resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
 
-def test_summary_no_events(client, session):
-    create_user(session, is_admin=True)
+def test_summary_no_events(client, session, create_user, get_token):
+    create_user(is_admin=True)
     token = get_token(client, "user", "password")
 
     resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
@@ -140,8 +125,8 @@ def test_summary_no_events(client, session):
     assert data["conversion_rate"] == 0
 
 
-def test_summary_with_seeded_events(client, session):
-    user = create_user(session, is_admin=True)
+def test_summary_with_seeded_events(client, session, create_user, get_token):
+    user = create_user(is_admin=True)
     token = get_token(client, "user", "password")
 
     # Seed events: 2 sessions - one anonymous, one authenticated
@@ -177,8 +162,8 @@ def test_summary_with_seeded_events(client, session):
     assert data["drop_off_distribution"]["1-3"] == 2
 
 
-def test_users_me_returns_is_admin_false(client, session):
-    create_user(session, is_admin=False)
+def test_users_me_returns_is_admin_false(client, session, create_user, get_token):
+    create_user(is_admin=False)
     token = get_token(client, "user", "password")
     resp = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
@@ -187,8 +172,8 @@ def test_users_me_returns_is_admin_false(client, session):
     assert data["is_admin"] is False
 
 
-def test_users_me_returns_is_admin_true(client, session):
-    create_user(session, username="admin", is_admin=True)
+def test_users_me_returns_is_admin_true(client, session, create_user, get_token):
+    create_user(username="admin", is_admin=True)
     token = get_token(client, "admin", "password")
     resp = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200

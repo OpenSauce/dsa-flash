@@ -6,10 +6,9 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.api.flashcards import router as flashcard_router
-from app.api.users import User, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import Flashcard, StudySession
+from app.models import StudySession
 
 
 def _get_test_session(session):
@@ -34,20 +33,6 @@ def client_fixture(app):
     return TestClient(app)
 
 
-def create_user(session, username="streakuser", password="password"):
-    user = User(username=username, hashed_password=get_password_hash(password))
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
-
-def get_token(client, username, password) -> str:
-    response = client.post("/token", data={"username": username, "password": password})
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
 def seed_study_session(session, user_id, study_date, cards_reviewed=1):
     ss = StudySession(
         user_id=user_id,
@@ -59,22 +44,13 @@ def seed_study_session(session, user_id, study_date, cards_reviewed=1):
     return ss
 
 
-def create_flashcard(session, **kwargs):
-    kwargs.setdefault("title", kwargs.get("front") or "Untitled")
-    card = Flashcard(**kwargs)
-    session.add(card)
-    session.commit()
-    session.refresh(card)
-    return card
-
-
 def test_streak_unauthenticated_returns_401(client):
     r = client.get("/users/streak")
     assert r.status_code == 401
 
 
-def test_streak_new_user_returns_zeros(client, session):
-    create_user(session)
+def test_streak_new_user_returns_zeros(client, session, create_user, get_token):
+    create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
 
     r = client.get("/users/streak", headers={"Authorization": f"Bearer {token}"})
@@ -85,10 +61,10 @@ def test_streak_new_user_returns_zeros(client, session):
     assert data["today_reviewed"] == 0
 
 
-def test_streak_after_one_review_today(client, session):
-    create_user(session)
+def test_streak_after_one_review_today(client, session, create_user, create_flashcard, get_token):
+    create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
-    card = create_flashcard(session, front="Q", back="A")
+    card = create_flashcard(front="Q", back="A")
 
     client.post(
         f"/flashcards/{card.id}/review",
@@ -103,8 +79,8 @@ def test_streak_after_one_review_today(client, session):
     assert data["today_reviewed"] == 1
 
 
-def test_streak_consecutive_days(client, session):
-    user = create_user(session)
+def test_streak_consecutive_days(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
@@ -118,8 +94,8 @@ def test_streak_consecutive_days(client, session):
     assert data["current_streak"] == 3
 
 
-def test_streak_resets_after_missed_day(client, session):
-    user = create_user(session)
+def test_streak_resets_after_missed_day(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
@@ -132,8 +108,8 @@ def test_streak_resets_after_missed_day(client, session):
     assert data["current_streak"] == 1
 
 
-def test_streak_longest_preserved(client, session):
-    user = create_user(session)
+def test_streak_longest_preserved(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
@@ -150,10 +126,10 @@ def test_streak_longest_preserved(client, session):
     assert data["longest_streak"] == 5
 
 
-def test_review_creates_study_session(client, session):
-    user = create_user(session)
+def test_review_creates_study_session(client, session, create_user, create_flashcard, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
-    card = create_flashcard(session, front="Q", back="A")
+    card = create_flashcard(front="Q", back="A")
 
     client.post(
         f"/flashcards/{card.id}/review",
@@ -172,11 +148,11 @@ def test_review_creates_study_session(client, session):
     assert ss.cards_reviewed == 1
 
 
-def test_review_increments_study_session(client, session):
-    user = create_user(session)
+def test_review_increments_study_session(client, session, create_user, create_flashcard, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
-    card1 = create_flashcard(session, front="Q1", back="A1")
-    card2 = create_flashcard(session, front="Q2", back="A2")
+    card1 = create_flashcard(front="Q1", back="A1")
+    card2 = create_flashcard(front="Q2", back="A2")
 
     client.post(
         f"/flashcards/{card1.id}/review",
@@ -200,8 +176,8 @@ def test_review_increments_study_session(client, session):
     assert ss.cards_reviewed == 2
 
 
-def test_streak_not_studied_today_but_yesterday(client, session):
-    user = create_user(session)
+def test_streak_not_studied_today_but_yesterday(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
@@ -214,8 +190,8 @@ def test_streak_not_studied_today_but_yesterday(client, session):
     assert data["today_reviewed"] == 0
 
 
-def test_streak_not_studied_today_multi_day(client, session):
-    user = create_user(session)
+def test_streak_not_studied_today_multi_day(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
@@ -230,8 +206,8 @@ def test_streak_not_studied_today_multi_day(client, session):
     assert data["today_reviewed"] == 0
 
 
-def test_streak_missed_yesterday_and_today(client, session):
-    user = create_user(session)
+def test_streak_missed_yesterday_and_today(client, session, create_user, get_token):
+    user = create_user("streakuser", "password")
     token = get_token(client, "streakuser", "password")
     today = datetime.now(timezone.utc).date()
 
