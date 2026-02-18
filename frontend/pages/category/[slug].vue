@@ -3,6 +3,8 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import { CATEGORY_META, DEFAULT_META } from '@/utils/categoryMeta'
 import type { StudyMode } from '@/composables/useStudySession'
 
+definePageMeta({ ssr: false })
+
 const route = useRoute()
 const category = route.params.slug as string
 const categoryEmoji = (CATEGORY_META[category] || DEFAULT_META).emoji
