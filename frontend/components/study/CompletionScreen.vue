@@ -32,17 +32,16 @@ const ENCOURAGEMENT_TEMPLATES = [
   () => 'Each session builds lasting knowledge',
 ]
 
-const heading = computed(() => {
-  const idx = Math.floor(Math.random() * HEADINGS.length)
-  return HEADINGS[idx]
-})
+const HEADING_INDEX = Math.floor(Math.random() * HEADINGS.length)
+const ENCOURAGEMENT_INDEX = Math.floor(Math.random() * ENCOURAGEMENT_TEMPLATES.length)
+
+const heading = computed(() => HEADINGS[HEADING_INDEX])
 
 const encouragement = computed(() => {
   const pct = props.categoryTotal > 0 && props.runningTotal !== null
-    ? Math.round((props.runningTotal / props.categoryTotal) * 100)
+    ? Math.min(100, Math.max(0, Math.round((props.runningTotal / props.categoryTotal) * 100)))
     : 0
-  const idx = Math.floor(Math.random() * ENCOURAGEMENT_TEMPLATES.length)
-  return ENCOURAGEMENT_TEMPLATES[idx](props.categoryName, pct)
+  return ENCOURAGEMENT_TEMPLATES[ENCOURAGEMENT_INDEX](props.categoryName, pct)
 })
 </script>
 

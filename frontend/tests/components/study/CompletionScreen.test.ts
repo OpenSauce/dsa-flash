@@ -153,7 +153,7 @@ describe('CompletionScreen', () => {
       }
     }
     // With 5 possible messages and 20 mounts, statistically we get more than 1 unique
-    expect(messages.size).toBeGreaterThanOrEqual(1)
+    expect(messages.size).toBeGreaterThan(1)
     for (const msg of messages) {
       expect(msg.length).toBeGreaterThan(0)
     }

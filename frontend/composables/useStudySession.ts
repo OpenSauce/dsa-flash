@@ -139,7 +139,10 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   const cardsReviewedInSession = ref(0)
   let sessionEndEmitted = false
 
-  // New vs reviewed breakdown: ratio-based estimate from initial category stats
+  // New vs reviewed breakdown: ratio-based estimate from initial category stats.
+  // This is approximate — the backend serves a mixed queue so we can't know per-card
+  // whether it was new or due without a server-side session. Task 5 (session modes)
+  // will make this exact once the API distinguishes new from review cards.
   const newConceptsInSession = computed(() => {
     const total = categoryNewCount.value + categoryDueCount.value
     if (total === 0) return 0
