@@ -366,6 +366,8 @@ def test_categories_authenticated(anon_client, session):
     assert cat["due"] == 1
     assert cat["new"] == 1
     assert cat["has_language"] is False
+    assert cat["mastered"] == 0
+    assert cat["mastery_pct"] == 0
 
 
 def test_categories_empty(anon_client):
@@ -400,3 +402,84 @@ def test_categories_has_language(anon_client, session):
 
     sd = next(c for c in data if c["slug"] == "system-design")
     assert sd["has_language"] is False
+
+
+def test_categories_authenticated_with_mastery(anon_client, session):
+    """3 cards: 1 mastered (interval=30), 1 reviewed-not-mastered (interval=5), 1 new."""
+    user = create_user(session, "user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+    card3 = create_flashcard(session, front="Q3", back="A3", category="cat1")
+
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=30)
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=5)
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    _ = card3
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["mastered"] == 1
+    assert cat["learned"] == 2
+    assert cat["mastery_pct"] == 33
+
+
+def test_categories_anonymous_no_mastery(anon_client, session):
+    """Anonymous requests get null mastery fields."""
+    create_flashcard(session, front="Q1", back="A1", category="cat1")
+    create_flashcard(session, front="Q2", back="A2", category="cat1")
+
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["mastered"] is None
+    assert cat["mastery_pct"] is None
+    assert cat["learned"] is None
+
+
+def test_categories_100_percent_mastery(anon_client, session):
+    """All cards mastered: mastery_pct == 100."""
+    user = create_user(session, "user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=30)
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=25)
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["mastery_pct"] == 100
+    assert cat["mastered"] == 2
+
+
+def test_categories_zero_mastery(anon_client, session):
+    """Cards reviewed but interval <= 21: mastered == 0, mastery_pct == 0."""
+    user = create_user(session, "user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card1 = create_flashcard(session, front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(session, front="Q2", back="A2", category="cat1")
+
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=10)
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=21)
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["mastered"] == 0
+    assert cat["mastery_pct"] == 0

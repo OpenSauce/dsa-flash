@@ -1,16 +1,17 @@
 from datetime import datetime, timezone
+from math import floor
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, and_, col, or_, select
 
 from ..database import get_session
-from ..models import CategoryOut, Flashcard, StudySession, User, UserFlashcard
+from ..models import MASTERY_INTERVAL_DAYS, CategoryOut, Flashcard, StudySession, User, UserFlashcard
 from ..spaced import sm2
 from .users import get_current_user, get_optional_user
 
@@ -43,6 +44,8 @@ def list_categories(
 
     due_map: dict[str, int] = {}
     new_map: dict[str, int] = {}
+    learned_map: dict[str, int] = {}
+    mastered_map: dict[str, int] = {}
 
     if user:
         now = datetime.now(timezone.utc)
@@ -78,6 +81,26 @@ def list_categories(
         )
         new_map = {row.category: row.new_count for row in session.exec(new_stmt).all()}
 
+        progress_stmt = (
+            select(
+                Flashcard.category,
+                func.count(UserFlashcard.flashcard_id).label("learned"),
+                func.sum(
+                    case((UserFlashcard.interval > MASTERY_INTERVAL_DAYS, 1), else_=0)
+                ).label("mastered"),
+            )
+            .select_from(UserFlashcard)
+            .join(Flashcard, Flashcard.id == UserFlashcard.flashcard_id)
+            .where(
+                UserFlashcard.user_id == user.id,
+                col(Flashcard.category).is_not(None),
+            )
+            .group_by(Flashcard.category)
+        )
+        for row in session.exec(progress_stmt).all():
+            learned_map[row.category] = row.learned
+            mastered_map[row.category] = int(row.mastered or 0)
+
     return [
         CategoryOut(
             slug=row.category,
@@ -86,6 +109,13 @@ def list_categories(
             has_language=row.category in lang_categories,
             due=due_map.get(row.category, 0) if user else None,
             new=new_map.get(row.category, 0) if user else None,
+            learned=learned_map.get(row.category, 0) if user else None,
+            mastered=mastered_map.get(row.category, 0) if user else None,
+            mastery_pct=(
+                floor(mastered_map.get(row.category, 0) / row.total * 100)
+                if user and row.total > 0
+                else None
+            ),
         )
         for row in rows
     ]

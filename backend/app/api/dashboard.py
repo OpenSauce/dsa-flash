@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from ..database import get_session
 from ..models import (
+    MASTERY_INTERVAL_DAYS,
     DashboardDomain,
     DashboardKnowledgeSummary,
     DashboardOut,
@@ -38,7 +39,7 @@ def get_dashboard(
     mastered_count = session.exec(
         select(func.count())
         .select_from(UserFlashcard)
-        .where(UserFlashcard.user_id == uid, UserFlashcard.interval > 21)
+        .where(UserFlashcard.user_id == uid, UserFlashcard.interval > MASTERY_INTERVAL_DAYS)
     ).one()
 
     domains_explored_count = session.exec(
@@ -66,7 +67,7 @@ def get_dashboard(
             Flashcard.category,
             func.count(UserFlashcard.flashcard_id).label("learned"),
             func.sum(
-                case((UserFlashcard.interval > 21, 1), else_=0)
+                case((UserFlashcard.interval > MASTERY_INTERVAL_DAYS, 1), else_=0)
             ).label("mastered"),
         )
         .select_from(UserFlashcard)
