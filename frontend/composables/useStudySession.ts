@@ -1,10 +1,20 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
+import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
 interface StudyCard {
   id: number
   front: string
   back: string
+}
+
+interface CategoryAPIItem {
+  slug: string
+  has_language: boolean
+  new: number | null
+  due: number | null
+  learned: number | null
+  total: number
 }
 
 interface UseStudySessionOptions {
@@ -34,6 +44,11 @@ interface UseStudySessionReturn {
   revealed: Ref<boolean>
   buttonsEnabled: Ref<boolean>
   isSubmitting: Ref<boolean>
+  categoryDisplayName: string
+  categoryLearnedCount: Ref<number>
+  categoryTotal: Ref<number>
+  newConceptsInSession: ComputedRef<number>
+  reviewedConceptsInSession: ComputedRef<number>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>
@@ -47,15 +62,27 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)
 
-  const { data: categoriesData } = await useFetch<{ slug: string; has_language: boolean }[]>(
+  // Category metadata captured at session start
+  const categoryLearnedCount = ref(0)
+  const categoryTotal = ref(0)
+  const categoryNewCount = ref(0)
+  const categoryDueCount = ref(0)
+
+  const { data: categoriesData } = await useFetch<CategoryAPIItem[]>(
     `${apiBase}/categories`
   )
   if (categoriesData.value) {
     const match = categoriesData.value.find(c => c.slug === category)
     if (match) {
       language.value = match.has_language ? 'go' : null
+      categoryLearnedCount.value = match.learned ?? 0
+      categoryTotal.value = match.total ?? 0
+      categoryNewCount.value = match.new ?? 0
+      categoryDueCount.value = match.due ?? 0
     }
   }
+
+  const categoryDisplayName = getCategoryDisplayName(category)
 
   // Build the "next card" endpoint URL
   const url = computed(() => {
@@ -111,6 +138,17 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   const sessionStartTime = Date.now()
   const cardsReviewedInSession = ref(0)
   let sessionEndEmitted = false
+
+  // New vs reviewed breakdown: ratio-based estimate from initial category stats
+  const newConceptsInSession = computed(() => {
+    const total = categoryNewCount.value + categoryDueCount.value
+    if (total === 0) return 0
+    return Math.round(cardsReviewedInSession.value * categoryNewCount.value / total)
+  })
+
+  const reviewedConceptsInSession = computed(() =>
+    cardsReviewedInSession.value - newConceptsInSession.value
+  )
 
   function emitSessionEnd(reason: string) {
     if (sessionEndEmitted) return
@@ -304,6 +342,11 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     revealed,
     buttonsEnabled,
     isSubmitting,
+    categoryDisplayName,
+    categoryLearnedCount,
+    categoryTotal,
+    newConceptsInSession,
+    reviewedConceptsInSession,
     flipCard,
     nextCard,
     recordResponse,
