@@ -15,7 +15,6 @@ const NuxtLinkStub = defineComponent({
 const defaultProps = {
   categoryName: 'System Design',
   categoryEmoji: '🏗️',
-  categorySlug: 'system-design',
   cardsReviewed: 7,
   newConcepts: 4,
   reviewedConcepts: 3,

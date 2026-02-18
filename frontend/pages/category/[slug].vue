@@ -3,6 +3,8 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import { CATEGORY_META, DEFAULT_META } from '@/utils/categoryMeta'
 import type { StudyMode } from '@/composables/useStudySession'
 
+definePageMeta({ ssr: false })
+
 const route = useRoute()
 const category = route.params.slug as string
 const categoryEmoji = (CATEGORY_META[category] || DEFAULT_META).emoji
@@ -134,7 +136,6 @@ async function startSession(selectedMode: StudyMode) {
         v-else-if="sessionFinished || !card"
         :category-name="categoryDisplayName"
         :category-emoji="categoryEmoji"
-        :category-slug="category"
         :cards-reviewed="cardsReviewedInSession"
         :new-concepts="newConceptsInSession"
         :reviewed-concepts="reviewedConceptsInSession"
