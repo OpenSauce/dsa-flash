@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import type { StudyMode } from '@/composables/useStudySession'
+
 defineProps<{
   current: number
   total: number
   percent: number
-  mode?: string
+  mode?: StudyMode
 }>()
 </script>
 

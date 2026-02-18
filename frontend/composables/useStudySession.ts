@@ -66,6 +66,9 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   // Save the component instance BEFORE any await — lifecycle hooks like
   // onMounted/onBeforeUnmount lose the instance after async boundaries.
   const instance = getCurrentInstance()
+  if (!instance) {
+    throw new Error('useStudySession must be called within a Vue component setup() or <script setup> context.')
+  }
 
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)

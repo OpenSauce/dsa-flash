@@ -74,6 +74,7 @@ watch(
 
 <template>
   <div class="max-w-4xl mx-auto px-6 pb-6">
+    <h1 class="sr-only">Technical interview flashcards powered by spaced repetition</h1>
     <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-6">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>

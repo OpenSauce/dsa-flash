@@ -5,7 +5,6 @@ import type { StudyMode } from '@/composables/useStudySession'
 const props = defineProps<{
   categoryName: string
   categoryEmoji: string
-  categorySlug: string
   cardsReviewed: number
   newConcepts: number
   reviewedConcepts: number
@@ -41,7 +40,7 @@ const HEADING_INDEX = Math.floor(Math.random() * HEADINGS.length)
 const ENCOURAGEMENT_INDEX = Math.floor(Math.random() * ENCOURAGEMENT_TEMPLATES.length)
 
 const categoryComplete = computed(() =>
-  props.isLoggedIn && props.runningTotal !== null && props.categoryTotal > 0 && props.runningTotal >= props.categoryTotal
+  props.isLoggedIn && props.mode !== 'due' && props.runningTotal !== null && props.categoryTotal > 0 && props.runningTotal >= props.categoryTotal
 )
 
 const heading = computed(() => {

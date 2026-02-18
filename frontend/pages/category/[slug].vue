@@ -134,7 +134,6 @@ async function startSession(selectedMode: StudyMode) {
         v-else-if="sessionFinished || !card"
         :category-name="categoryDisplayName"
         :category-emoji="categoryEmoji"
-        :category-slug="category"
         :cards-reviewed="cardsReviewedInSession"
         :new-concepts="newConceptsInSession"
         :reviewed-concepts="reviewedConceptsInSession"
