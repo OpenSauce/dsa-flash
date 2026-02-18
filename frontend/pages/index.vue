@@ -102,9 +102,9 @@ watch(
       <div class="grid sm:grid-cols-2 gap-6">
         <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="`/category/${cat.slug}`"
           class="border p-6 rounded-xl shadow hover:shadow-lg transition">
-          <!-- Auth: ring left, emoji inline with name -->
-          <div v-if="cat.mastery_pct !== null" class="flex items-start gap-4">
-            <div class="flex-shrink-0">
+          <div class="flex items-start justify-between">
+            <div class="text-3xl mb-2">{{ cat.emoji }}</div>
+            <div v-if="cat.mastery_pct !== null" class="flex-shrink-0">
               <svg viewBox="0 0 36 36" class="w-14 h-14"
                 :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
               >
@@ -124,27 +124,19 @@ watch(
                 </text>
               </svg>
             </div>
-            <div class="min-w-0 flex-1">
-              <h2 class="text-xl font-semibold">{{ cat.emoji }} {{ cat.name }}</h2>
-              <p class="text-gray-500">{{ cat.description }}</p>
-              <p class="text-sm text-gray-600 mt-2">
-                <span class="font-medium">{{ cat.mastered }}</span> of {{ cat.total }} mastered
-                &nbsp;&middot;&nbsp;
-                <span class="font-medium">{{ cat.learned }}</span> learned
-                &nbsp;&middot;&nbsp;
-                <span class="font-medium">{{ cat.due }}</span> due
-              </p>
-            </div>
           </div>
-          <!-- Anon: emoji + name, concept count -->
-          <div v-else>
-            <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-            <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
-            <p class="text-gray-500">{{ cat.description }}</p>
-            <p class="text-sm text-gray-600 mt-2">
-              <span class="font-medium">{{ cat.total }}</span> concepts
-            </p>
-          </div>
+          <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
+          <p class="text-gray-500">{{ cat.description }}</p>
+          <p v-if="cat.mastery_pct !== null" class="text-sm text-gray-600 mt-2">
+            <span class="font-medium">{{ cat.mastered }}</span> of {{ cat.total }} mastered
+            &nbsp;&middot;&nbsp;
+            <span class="font-medium">{{ cat.learned }}</span> learned
+            &nbsp;&middot;&nbsp;
+            <span class="font-medium">{{ cat.due }}</span> due
+          </p>
+          <p v-else class="text-sm text-gray-600 mt-2">
+            <span class="font-medium">{{ cat.total }}</span> concepts
+          </p>
         </NuxtLink>
       </div>
     </template>
