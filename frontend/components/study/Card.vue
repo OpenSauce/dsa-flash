@@ -13,13 +13,16 @@ const emit = defineEmits<{
 }>()
 
 // Only flip on clean clicks — ignore if the user dragged to select text
-let pointerDownAt = 0
-function onPointerDown() {
-  pointerDownAt = Date.now()
+let startX = 0
+let startY = 0
+function onPointerDown(e: PointerEvent) {
+  startX = e.clientX
+  startY = e.clientY
 }
-function onClickCard() {
-  const elapsed = Date.now() - pointerDownAt
-  if (elapsed > 300 || window.getSelection()?.toString()) return
+function onClickCard(e: MouseEvent) {
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  if (Math.abs(dx) + Math.abs(dy) > 10 || window.getSelection()?.toString()) return
   emit('flip')
 }
 

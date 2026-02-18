@@ -138,6 +138,51 @@ describe('CompletionScreen', () => {
     expect(homeLink).toBeDefined()
   })
 
+  it('shows category-complete celebration when all concepts learned', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      runningTotal: 60,
+      categoryTotal: 60,
+      cardsReviewed: 5,
+    })
+    expect(wrapper.text()).toContain('System Design complete!')
+    expect(wrapper.text()).toContain('60 / 60 learned')
+    expect(wrapper.text()).toContain("You've learned all")
+  })
+
+  it('does not show celebration when category is not complete', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      runningTotal: 42,
+      categoryTotal: 60,
+    })
+    expect(wrapper.text()).not.toContain('complete!')
+    expect(wrapper.text()).not.toContain('/ 60 learned')
+  })
+
+  it('emits switch-mode when "Learn new concepts" is clicked in due mode', async () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      mode: 'due',
+      hasMoreCards: false,
+    })
+    const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))
+    expect(switchBtn).toBeDefined()
+    await switchBtn!.trigger('click')
+    expect(wrapper.emitted('switch-mode')).toBeTruthy()
+    expect(wrapper.emitted('switch-mode')![0]).toEqual(['new'])
+  })
+
+  it('does not show "Learn new concepts" button in new mode', () => {
+    const wrapper = mountScreen({
+      isLoggedIn: true,
+      mode: 'new',
+      hasMoreCards: false,
+    })
+    const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))
+    expect(switchBtn).toBeUndefined()
+  })
+
   it('encouragement message is non-empty and varies — mount multiple times', () => {
     const messages = new Set<string>()
     for (let i = 0; i < 20; i++) {

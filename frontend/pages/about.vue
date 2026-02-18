@@ -88,6 +88,7 @@
       <a
         href="https://github.com/OpenSauce/dsa-flash"
         target="_blank"
+        rel="noopener noreferrer"
         class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
       >
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

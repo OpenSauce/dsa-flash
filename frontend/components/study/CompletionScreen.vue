@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { StudyMode } from '@/composables/useStudySession'
 
 const props = defineProps<{
   categoryName: string
@@ -13,12 +14,12 @@ const props = defineProps<{
   remainingCards: number
   hasMoreCards: boolean
   isLoggedIn: boolean
-  mode: string
+  mode: StudyMode
 }>()
 
 defineEmits<{
   (e: 'keep-going'): void
-  (e: 'switch-mode', mode: string): void
+  (e: 'switch-mode', mode: StudyMode): void
 }>()
 
 const HEADINGS = [
