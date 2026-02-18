@@ -2,6 +2,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
+export type StudyMode = 'all' | 'due' | 'new'
+
 interface StudyCard {
   id: number
   front: string
@@ -26,7 +28,7 @@ interface UseStudySessionOptions {
   flushBeacon: () => void
   refreshStreak: () => void
   logout: () => Promise<void>
-  mode: Ref<string>
+  mode: Ref<StudyMode>
 }
 
 interface UseStudySessionReturn {
@@ -50,7 +52,7 @@ interface UseStudySessionReturn {
   categoryTotal: Ref<number>
   newConceptsInSession: ComputedRef<number>
   reviewedConceptsInSession: ComputedRef<number>
-  mode: Ref<string>
+  mode: Ref<StudyMode>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>

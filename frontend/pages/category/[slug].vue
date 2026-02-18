@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAnalytics } from '@/composables/useAnalytics'
+import type { StudyMode } from '@/composables/useStudySession'
 
 const route = useRoute()
 const category = route.params.slug as string
@@ -9,7 +10,7 @@ const { refreshStreak } = useStreak()
 const { track, flushBeacon } = useAnalytics()
 
 // Mode selector state (shown before session starts for logged-in users)
-const mode = ref('all')
+const mode = ref<StudyMode>('all')
 const sessionStarted = ref(false)
 
 interface StatsData {
@@ -58,7 +59,7 @@ const {
   mode,
 })
 
-async function startSession(selectedMode: string) {
+async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
   // Wait for the refetch triggered by mode change to complete before
   // showing the study UI, so no stale card flashes during transition.

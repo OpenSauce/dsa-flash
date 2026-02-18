@@ -97,7 +97,11 @@ const encouragement = computed(() => {
     </template>
 
     <template v-else>
-      <p class="text-gray-500 mb-4">No concepts due right now.</p>
+      <p class="text-gray-500 mb-4">
+        <template v-if="mode === 'new'">No new concepts to learn right now.</template>
+        <template v-else-if="mode === 'due'">No concepts due right now.</template>
+        <template v-else>No concepts available right now.</template>
+      </p>
       <div class="flex flex-wrap justify-center gap-4">
         <NuxtLink to="/" class="text-blue-600 hover:underline">
           Try another domain
