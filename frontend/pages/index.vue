@@ -30,6 +30,7 @@ const CATEGORY_META: Record<string, { emoji: string; description: string; sectio
   'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design', displayName: 'AWS' },
   'kubernetes': { emoji: '☸️', description: 'Pods, Deployments, Services, networking...', section: 'System Design' },
   'docker-linux': { emoji: '🐳', description: 'Containers, Dockerfiles, Linux fundamentals...', section: 'System Design' },
+  'networking': { emoji: '🌐', description: 'TCP/IP, DNS, TLS, HTTP, proxies...', section: 'System Design' },
 }
 
 const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }
