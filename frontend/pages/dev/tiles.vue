@@ -39,12 +39,6 @@ const anonCat: MockCategory = {
 
 const allCats = [...mockCats, anonCat]
 
-function colorForPct(pct: number): string {
-  if (pct === 0) return '#d1d5db'
-  if (pct === 100) return '#f59e0b'
-  if (pct >= 50) return '#22c55e'
-  return '#6366f1'
-}
 </script>
 
 <template>
@@ -61,7 +55,9 @@ function colorForPct(pct: number): string {
           <div class="flex items-center gap-4">
             <div class="flex-shrink-0">
               <template v-if="cat.mastery_pct !== null">
-                <svg viewBox="0 0 36 36" class="w-14 h-14">
+                <svg viewBox="0 0 36 36" class="w-14 h-14"
+                  :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
+                >
                   <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
                   <circle
                     cx="18" cy="18" r="15.9155" fill="none"
@@ -108,7 +104,9 @@ function colorForPct(pct: number): string {
           <div class="flex items-start justify-between">
             <div class="text-3xl mb-2">{{ cat.emoji }}</div>
             <div v-if="cat.mastery_pct !== null" class="flex-shrink-0">
-              <svg viewBox="0 0 36 36" class="w-14 h-14">
+              <svg viewBox="0 0 36 36" class="w-14 h-14"
+                :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
+              >
                 <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
                 <circle
                   cx="18" cy="18" r="15.9155" fill="none"
@@ -152,7 +150,9 @@ function colorForPct(pct: number): string {
           <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
           <p class="text-gray-500">{{ cat.description }}</p>
           <div v-if="cat.mastery_pct !== null" class="flex items-center gap-3 mt-2">
-            <svg viewBox="0 0 36 36" class="w-8 h-8 flex-shrink-0">
+            <svg viewBox="0 0 36 36" class="w-8 h-8 flex-shrink-0"
+              :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
+            >
               <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
               <circle
                 cx="18" cy="18" r="15.9155" fill="none"

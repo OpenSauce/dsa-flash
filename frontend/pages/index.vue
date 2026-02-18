@@ -70,13 +70,6 @@ const sections = computed(() => {
     .map(s => ({ name: s, categories: grouped[s] }))
 })
 
-function colorForPct(pct: number): string {
-  if (pct === 0) return '#d1d5db'
-  if (pct === 100) return '#f59e0b'
-  if (pct >= 50) return '#22c55e'
-  return '#6366f1'
-}
-
 onMounted(() => {
   track('page_view', { page: '/', referrer: document.referrer })
 })
@@ -111,7 +104,9 @@ watch(
           <div class="flex items-start justify-between">
             <div class="text-3xl mb-2">{{ cat.emoji }}</div>
             <div v-if="cat.mastery_pct !== null" class="flex-shrink-0">
-              <svg viewBox="0 0 36 36" class="w-14 h-14">
+              <svg viewBox="0 0 36 36" class="w-14 h-14"
+                :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
+              >
                 <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
                 <circle
                   cx="18" cy="18" r="15.9155" fill="none"

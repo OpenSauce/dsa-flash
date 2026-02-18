@@ -149,12 +149,6 @@ const weekSummaryText = computed(() => {
   return text
 })
 
-function colorForPct(pct: number): string {
-  if (pct === 0) return '#d1d5db'
-  if (pct === 100) return '#f59e0b'
-  if (pct >= 50) return '#22c55e'
-  return '#6366f1'
-}
 </script>
 
 <template>
@@ -234,7 +228,8 @@ function colorForPct(pct: number): string {
                   stroke-linecap="round"
                   transform="rotate(-90 18 18)"
                 />
-                <text x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
+                <text v-if="domain.mastery_pct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
+                <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
                   {{ domain.mastery_pct }}%
                 </text>
               </svg>
