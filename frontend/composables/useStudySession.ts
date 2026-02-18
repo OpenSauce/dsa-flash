@@ -127,6 +127,8 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     cardsReviewedInBatch.value = 0
     currentBatchSize.value = 0
     sessionFinished.value = false
+    cardIndex.value = 0
+    cards.value = []
   })
 
   const progressPercent = computed(() =>

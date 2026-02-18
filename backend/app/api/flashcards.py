@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from math import floor
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
@@ -138,10 +138,13 @@ def list_cards(
     tag: Optional[str] = Query(None),
     user: Optional[User] = Depends(get_optional_user),
     random: bool = Query(False, description="Shuffle the cards"),
-    mode: Optional[Literal["due", "new", "all"]] = Query(None),
+    mode: Optional[str] = Query(None),
     limit: Optional[int] = Query(None, ge=1, le=100),
 ):
+    now = datetime.now(timezone.utc)
     if user:
+        if mode not in (None, "due", "new", "all"):
+            raise HTTPException(status_code=422, detail="Invalid mode parameter")
         if mode == "due":
             stmt = (
                 select(Flashcard)
@@ -154,7 +157,7 @@ def list_cards(
                 )
                 .where(
                     col(UserFlashcard.next_review).is_not(None),
-                    col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+                    col(UserFlashcard.next_review) <= now,
                 )
             )
         elif mode == "new":
@@ -178,7 +181,7 @@ def list_cards(
                 .where(
                     or_(
                         col(UserFlashcard.user_id).is_(None),
-                        col(UserFlashcard.next_review) <= datetime.now(timezone.utc),
+                        col(UserFlashcard.next_review) <= now,
                     )
                 )
             )

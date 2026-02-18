@@ -597,6 +597,15 @@ def test_list_cards_mode_ignored_for_anonymous(anon_client, session, create_user
     assert len(r.json()) == 2
 
 
+def test_anonymous_invalid_mode_returns_200(anon_client, session, create_flashcard):
+    """Anonymous users with an invalid mode value still get 200 (mode is ignored)."""
+    create_flashcard(front="Q1", back="A1", category="cat1")
+
+    r = anon_client.get("/flashcards?category=cat1&mode=invalid")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
 def test_list_cards_mode_with_category_filter(anon_client, session, create_user, create_flashcard, get_token):
     """mode=due combined with category filter works correctly."""
     user = create_user("user", "password")

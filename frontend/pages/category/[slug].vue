@@ -4,13 +4,13 @@ import { useAnalytics } from '@/composables/useAnalytics'
 const route = useRoute()
 const category = route.params.slug as string
 const apiBase = useRuntimeConfig().public.apiBase
-const { isLoggedIn, tokenCookie, logout } = useAuth()
+const { isLoggedIn, authReady, tokenCookie, logout } = useAuth()
 const { refreshStreak } = useStreak()
 const { track, flushBeacon } = useAnalytics()
 
 // Mode selector state (shown before session starts for logged-in users)
 const mode = ref('all')
-const sessionStarted = ref(!isLoggedIn.value) // anonymous users skip selector
+const sessionStarted = ref(false)
 
 interface StatsData {
   due: number
@@ -18,7 +18,7 @@ interface StatsData {
 }
 const stats = ref<StatsData>({ due: 0, new: 0 })
 
-if (isLoggedIn.value) {
+const fetchStats = async () => {
   try {
     const data = await $fetch<StatsData>(
       `${apiBase}/flashcards/stats?category=${category}`,
@@ -31,13 +31,21 @@ if (isLoggedIn.value) {
   }
 }
 
-function startSession(selectedMode: string) {
-  mode.value = selectedMode
-  sessionStarted.value = true
-}
+watch(
+  [authReady, isLoggedIn],
+  async ([ready, loggedIn]) => {
+    if (!ready) return
+    if (!loggedIn) {
+      sessionStarted.value = true
+      return
+    }
+    await fetchStats()
+  },
+  { immediate: true }
+)
 
 const {
-  card, error,
+  card, pending, error,
   sessionFinished, cardsReviewedInBatch, cardsReviewedInSession,
   currentBatchSize, remainingCards, hasMoreCards, progressPercent,
   revealed, buttonsEnabled,
@@ -49,6 +57,23 @@ const {
   track, flushBeacon, refreshStreak, logout,
   mode,
 })
+
+async function startSession(selectedMode: string) {
+  mode.value = selectedMode
+  // Wait for the refetch triggered by mode change to complete before
+  // showing the study UI, so no stale card flashes during transition.
+  if (pending.value) {
+    await new Promise<void>((resolve) => {
+      const stop = watch(pending, (isPending) => {
+        if (!isPending) {
+          stop()
+          resolve()
+        }
+      })
+    })
+  }
+  sessionStarted.value = true
+}
 </script>
 
 <template>
