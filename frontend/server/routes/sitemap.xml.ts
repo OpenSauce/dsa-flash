@@ -1,4 +1,4 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, setResponseHeader } from 'h3'
 
 const SITE_URL = 'https://dsaflash.cards'
 
@@ -38,6 +38,6 @@ ${allPages
   .join('\n')}
 </urlset>`
 
-  event.node.res.setHeader('content-type', 'application/xml')
+  setResponseHeader(event, 'content-type', 'application/xml; charset=utf-8')
   return xml
 })
