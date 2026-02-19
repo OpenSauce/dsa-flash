@@ -232,7 +232,7 @@ const weekSummaryText = computed(() => {
             <div class="min-w-0">
               <div class="font-semibold text-gray-900 truncate">{{ domainDisplayName(domain.slug, domain.name) }}</div>
               <div class="text-sm text-gray-500">
-                <span class="font-semibold text-gray-700">{{ domain.total - domain.learned }}</span> remaining
+                <span class="font-medium text-green-600">{{ domain.total - domain.learned }}</span> remaining
                 &middot;
                 <span class="text-blue-600 font-medium">{{ domain.mastered }}</span> mastered
               </div>
