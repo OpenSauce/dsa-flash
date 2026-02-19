@@ -8,9 +8,6 @@ useSeoMeta({
   description: 'Create a free account on dsaflash.cards to track your learning progress with spaced repetition.',
   robots: 'noindex, nofollow',
 })
-useHead({
-  link: [{ rel: 'canonical', href: 'https://dsaflash.cards/signup' }],
-})
 
 const { signup } = useAuth()
 const router = useRouter()

@@ -8,9 +8,6 @@ useSeoMeta({
   description: 'Your personal knowledge portfolio on dsaflash.cards.',
   robots: 'noindex, nofollow',
 })
-useHead({
-  link: [{ rel: 'canonical', href: 'https://dsaflash.cards/dashboard' }],
-})
 
 interface DashboardKnowledgeSummary {
   total_concepts_learned: number

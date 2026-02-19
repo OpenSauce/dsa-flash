@@ -14,7 +14,12 @@ useSeoMeta({
   ogType: 'website',
 })
 
-const categoryListItems = Object.keys(CATEGORY_META).map((slug, i) => ({
+const orderedSlugs = SECTION_ORDER.flatMap((section) =>
+  Object.entries(CATEGORY_META)
+    .filter(([, meta]) => meta.section === section)
+    .map(([slug]) => slug)
+)
+const categoryListItems = orderedSlugs.map((slug, i) => ({
   '@type': 'ListItem',
   position: i + 1,
   name: getCategoryDisplayName(slug),
