@@ -18,15 +18,15 @@ const outerOffset = computed(() => 100 - props.learnedPct)
 const hovered = ref(false)
 
 const centerText = computed(() => {
-  if (props.masteredPct === 100) return null
-  if (hovered.value) return `${props.masteredPct}%`
-  if (props.learnedPct === 100) return `${props.masteredPct}%`
+  if (clampedMastered.value === 100) return null
+  if (hovered.value) return `${clampedMastered.value}%`
+  if (props.learnedPct === 100) return `${clampedMastered.value}%`
   return `${props.learnedPct}%`
 })
 
 const ariaLabel = computed(() => {
-  if (props.masteredPct === 100) return '100% mastered'
-  return `${props.learnedPct}% learned, ${props.masteredPct}% mastered`
+  if (clampedMastered.value === 100) return '100% mastered'
+  return `${props.learnedPct}% learned, ${clampedMastered.value}% mastered`
 })
 </script>
 
@@ -36,11 +36,8 @@ const ariaLabel = computed(() => {
     :class="size"
     :aria-label="ariaLabel"
     role="img"
-    tabindex="0"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
-    @focus="hovered = true"
-    @blur="hovered = false"
   >
     <!-- Outer track (learned background) -->
     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="2.5" />
@@ -67,7 +64,7 @@ const ariaLabel = computed(() => {
       transform="rotate(-90 18 18)"
     />
     <!-- Center: gold checkmark when 100% mastered -->
-    <text v-if="masteredPct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
+    <text v-if="clampedMastered === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
     <!-- Center: percentage text otherwise -->
     <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
       {{ centerText }}
