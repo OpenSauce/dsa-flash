@@ -132,6 +132,10 @@ async function startSession(selectedMode: StudyMode) {
         {{ error.data?.detail || error }}
       </div>
 
+      <div v-else-if="pending && !card" class="text-center py-16 text-gray-400">
+        Loading cards...
+      </div>
+
       <StudyCompletionScreen
         v-else-if="sessionFinished || !card"
         :category-name="categoryDisplayName"
