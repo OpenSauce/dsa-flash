@@ -95,7 +95,7 @@ async function startSession(selectedMode: StudyMode) {
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
-      <div v-if="!statsLoaded" class="text-gray-400">Loading...</div>
+      <div v-if="!statsLoaded"><!-- waiting for stats --></div>
 
       <div v-else-if="stats.due === 0 && stats.new === 0" class="text-gray-500">
         <p class="mb-4">No cards due and no new cards. Come back tomorrow!</p>
@@ -137,9 +137,7 @@ async function startSession(selectedMode: StudyMode) {
         {{ error.data?.detail || error }}
       </div>
 
-      <div v-else-if="pending && !card" class="text-center py-16 text-gray-400">
-        Loading cards...
-      </div>
+      <div v-else-if="pending && !card" class="py-16"><!-- loading cards --></div>
 
       <StudyCompletionScreen
         v-else-if="sessionFinished || !card"
