@@ -36,8 +36,11 @@ const ariaLabel = computed(() => {
     :class="size"
     :aria-label="ariaLabel"
     role="img"
+    tabindex="0"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
+    @focus="hovered = true"
+    @blur="hovered = false"
   >
     <!-- Outer track (learned background) -->
     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="2.5" />
