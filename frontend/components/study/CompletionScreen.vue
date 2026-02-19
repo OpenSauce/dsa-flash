@@ -24,7 +24,7 @@ defineEmits<{
 const HEADINGS = [
   'Nice work!',
   'Knowledge growing!',
-  'Session complete!',
+  'Well done!',
   'Keep it up!',
 ]
 
