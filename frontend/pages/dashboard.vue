@@ -182,7 +182,7 @@ const weekSummaryText = computed(() => {
           <span class="font-semibold">{{ dashboard.knowledge_summary.domains_explored }}</span>
           {{ dashboard.knowledge_summary.domains_explored === 1 ? 'domain' : 'domains' }}
           &nbsp;&middot;&nbsp;
-          <span class="font-semibold text-blue-600">{{ dashboard.knowledge_summary.concepts_mastered }}</span>
+          <span class="font-semibold text-purple-600">{{ dashboard.knowledge_summary.concepts_mastered }}</span>
           mastered
         </p>
       </div>
@@ -232,9 +232,9 @@ const weekSummaryText = computed(() => {
             <div class="min-w-0">
               <div class="font-semibold text-gray-900 truncate">{{ domainDisplayName(domain.slug, domain.name) }}</div>
               <div class="text-sm text-gray-500">
-                <span class="font-medium text-green-600">{{ domain.total - domain.learned }}</span> remaining
+                <span class="text-green-600 font-medium">{{ domain.learned }}</span> learned
                 &middot;
-                <span class="text-blue-600 font-medium">{{ domain.mastered }}</span> mastered
+                <span class="text-purple-600 font-medium">{{ domain.mastered }}</span> mastered
               </div>
             </div>
           </NuxtLink>

@@ -72,7 +72,7 @@ describe('DualProgressRing', () => {
     expect(centerText).toBeDefined()
   })
 
-  it('shows masteredPct on hover with blue color', async () => {
+  it('shows masteredPct on hover with purple color', async () => {
     const wrapper = mount(DualProgressRing, {
       props: { learnedPct: 60, masteredPct: 20 },
     })
@@ -80,7 +80,7 @@ describe('DualProgressRing', () => {
     const texts = wrapper.findAll('text')
     const centerText = texts.find(t => t.text().includes('20%'))
     expect(centerText).toBeDefined()
-    expect(centerText?.attributes('fill')).toBe('#3b82f6')
+    expect(centerText?.attributes('fill')).toBe('#9333ea')
   })
 
   it('shows learned color when not hovered', () => {
