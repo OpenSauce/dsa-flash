@@ -7,7 +7,8 @@ const { streak, fetchStreak } = useStreak()
 watch(
   [authReady, isLoggedIn],
   async ([ready, loggedIn]) => {
-    if (ready && loggedIn) await fetchStreak()
+    if (!ready) return // don't clear streak while auth is initializing
+    if (loggedIn) await fetchStreak()
     else streak.value = null
   },
   { immediate: true }
