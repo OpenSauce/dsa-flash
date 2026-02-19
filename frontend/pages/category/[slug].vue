@@ -22,6 +22,7 @@ interface StatsData {
   new: number
 }
 const stats = ref<StatsData>({ due: 0, new: 0 })
+const statsLoaded = ref(false)
 
 const fetchStats = async () => {
   try {
@@ -33,6 +34,8 @@ const fetchStats = async () => {
   } catch {
     // fallback: skip selector, start with mode=all
     sessionStarted.value = true
+  } finally {
+    statsLoaded.value = true
   }
 }
 
@@ -57,7 +60,7 @@ const {
   categoryDisplayName, categoryLearnedCount, categoryTotal,
   newConceptsInSession, reviewedConceptsInSession,
   flipCard, nextCard, recordResponse, keepGoing, finishSession,
-} = await useStudySession({
+} = useStudySession({
   category, apiBase, isLoggedIn, tokenCookie,
   track, flushBeacon, refreshStreak, logout,
   mode,
@@ -92,7 +95,9 @@ async function startSession(selectedMode: StudyMode) {
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
-      <div v-if="stats.due === 0 && stats.new === 0" class="text-gray-500">
+      <div v-if="!statsLoaded"><!-- waiting for stats --></div>
+
+      <div v-else-if="stats.due === 0 && stats.new === 0" class="text-gray-500">
         <p class="mb-4">No cards due and no new cards. Come back tomorrow!</p>
         <NuxtLink to="/" class="text-blue-600 hover:underline">&larr; Back to categories</NuxtLink>
       </div>
@@ -131,6 +136,8 @@ async function startSession(selectedMode: StudyMode) {
       <div v-if="error" class="text-red-500">
         {{ error.data?.detail || error }}
       </div>
+
+      <div v-else-if="pending && !card" class="py-16"><!-- loading cards --></div>
 
       <StudyCompletionScreen
         v-else-if="sessionFinished || !card"
