@@ -43,10 +43,23 @@ const md: MarkdownIt = new MarkdownIt({
 
 <template>
   <div @pointerdown="onPointerDown" @click="onClickCard"
-    class="border rounded-xl p-8 shadow-sm mb-6 cursor-pointer transition duration-300 ease-in-out prose mx-auto"
+    class="border rounded-xl p-4 sm:p-8 shadow-sm mb-6 cursor-pointer transition duration-300 ease-in-out prose max-w-none sm:max-w-prose mx-auto overflow-hidden"
     :class="{
       'bg-white hover:bg-gray-50': !revealed,
       'bg-amber-50 ring-2 ring-amber-400': revealed,
     }"
     v-html="revealed ? md.render(back) : md.render(front)" />
 </template>
+
+<style scoped>
+.prose :deep(pre) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.prose :deep(code) {
+  word-break: break-word;
+}
+.prose :deep(pre code) {
+  word-break: normal;
+}
+</style>

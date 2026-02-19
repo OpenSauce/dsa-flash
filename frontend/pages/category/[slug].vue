@@ -88,7 +88,7 @@ async function startSession(selectedMode: StudyMode) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-6">
+  <div class="max-w-4xl mx-auto p-2 sm:p-6">
 
     <!-- Mode selector (logged-in users only, before session starts) -->
     <div v-if="!sessionStarted && isLoggedIn" class="text-center py-16">
@@ -156,7 +156,7 @@ async function startSession(selectedMode: StudyMode) {
         @switch-mode="startSession"
       />
 
-      <div v-else>
+      <div v-else class="pb-24 sm:pb-0">
         <div v-if="!isLoggedIn"
              class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           Your progress won't be saved.
@@ -177,14 +177,16 @@ async function startSession(selectedMode: StudyMode) {
           @flip="flipCard"
         />
 
-        <StudyReviewButtons
-          :revealed="revealed"
-          :is-logged-in="isLoggedIn"
-          :buttons-enabled="buttonsEnabled"
-          :mode="mode"
-          @rate="recordResponse"
-          @next="nextCard"
-        />
+        <div class="fixed bottom-0 left-0 right-0 z-20 bg-gray-50 px-4 py-3 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sm:relative sm:border-0 sm:p-0 sm:bg-transparent sm:shadow-none sm:z-auto">
+          <StudyReviewButtons
+            :revealed="revealed"
+            :is-logged-in="isLoggedIn"
+            :buttons-enabled="buttonsEnabled"
+            :mode="mode"
+            @rate="recordResponse"
+            @next="nextCard"
+          />
+        </div>
       </div>
     </template>
   </div>
