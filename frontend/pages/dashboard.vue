@@ -174,7 +174,7 @@ const weekSummaryText = computed(() => {
         <p class="text-gray-500 text-lg mb-1">Your knowledge portfolio</p>
         <h1 class="font-headline text-4xl sm:text-5xl font-bold leading-tight text-gray-900">
           You know
-          <span class="text-indigo-600">{{ dashboard.knowledge_summary.total_concepts_learned }}</span>
+          <span class="text-green-600">{{ dashboard.knowledge_summary.total_concepts_learned }}</span>
           {{ dashboard.knowledge_summary.total_concepts_learned === 1 ? 'tech concept' : 'tech concepts' }}
         </h1>
         <p class="text-gray-600 mt-2 text-xl">
@@ -182,7 +182,7 @@ const weekSummaryText = computed(() => {
           <span class="font-semibold">{{ dashboard.knowledge_summary.domains_explored }}</span>
           {{ dashboard.knowledge_summary.domains_explored === 1 ? 'domain' : 'domains' }}
           &nbsp;&middot;&nbsp;
-          <span class="font-semibold text-green-600">{{ dashboard.knowledge_summary.concepts_mastered }}</span>
+          <span class="font-semibold text-blue-600">{{ dashboard.knowledge_summary.concepts_mastered }}</span>
           mastered
         </p>
       </div>
@@ -232,9 +232,9 @@ const weekSummaryText = computed(() => {
             <div class="min-w-0">
               <div class="font-semibold text-gray-900 truncate">{{ domainDisplayName(domain.slug, domain.name) }}</div>
               <div class="text-sm text-gray-500">
-                <span class="text-indigo-600 font-medium">{{ domain.learned }}</span> learned
+                <span class="font-medium text-green-600">{{ domain.total - domain.learned }}</span> remaining
                 &middot;
-                <span class="text-amber-600 font-medium">{{ domain.mastered }}</span> mastered
+                <span class="text-blue-600 font-medium">{{ domain.mastered }}</span> mastered
               </div>
             </div>
           </NuxtLink>

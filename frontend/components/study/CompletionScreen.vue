@@ -94,9 +94,9 @@ const encouragement = computed(() => {
         </p>
 
         <p v-if="isLoggedIn && mode === 'all' && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
-          <span class="font-medium text-indigo-600">{{ newConcepts }}</span> new
+          <span class="font-medium text-green-600">{{ newConcepts }}</span> new
           &nbsp;&middot;&nbsp;
-          <span class="font-medium">{{ reviewedConcepts }}</span> reviewed
+          <span class="font-medium text-blue-600">{{ reviewedConcepts }}</span> reviewed
         </p>
 
         <p v-if="isLoggedIn && runningTotal !== null && mode !== 'due'" class="text-gray-600 mb-4">
@@ -120,7 +120,7 @@ const encouragement = computed(() => {
         <button v-if="hasMoreCards" @click="$emit('keep-going')"
                 :class="mode === 'new'
                   ? 'px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700'
-                  : 'px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700'">
+                  : 'px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'">
           Keep going
         </button>
         <button v-if="isLoggedIn && mode === 'due'" @click="$emit('switch-mode', 'new')"

@@ -137,10 +137,10 @@ async function startSession(selectedMode: StudyMode) {
 
       <div v-else class="flex flex-col gap-3 max-w-sm mx-auto">
         <button v-if="stats.due > 0" @click="startSession('due')"
-                class="flex items-center gap-4 px-6 py-4 border-2 border-indigo-600 rounded-xl text-left hover:bg-indigo-50 transition">
+                class="flex items-center gap-4 px-6 py-4 border-2 border-blue-600 rounded-xl text-left hover:bg-blue-50 transition">
           <span class="text-2xl flex-shrink-0">💧</span>
           <div>
-            <span class="block font-semibold text-indigo-700">Review due ({{ stats.due }})</span>
+            <span class="block font-semibold text-blue-700">Review due ({{ stats.due }})</span>
             <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
           </div>
         </button>

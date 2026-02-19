@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { LEARNED_HEX, LEARNED_TEXT_HEX, MASTERED_HEX } from '@/composables/useMasteryColors'
 
 const props = withDefaults(defineProps<{
   learnedPct: number
@@ -17,12 +18,15 @@ const outerOffset = computed(() => 100 - props.learnedPct)
 
 const hovered = ref(false)
 
+const showingMastery = computed(() => hovered.value && clampedMastered.value < 100)
+
 const centerText = computed(() => {
   if (clampedMastered.value === 100) return null
-  if (hovered.value) return `${clampedMastered.value}%`
-  if (props.learnedPct === 100) return `${clampedMastered.value}%`
+  if (showingMastery.value) return `${clampedMastered.value}%`
   return `${props.learnedPct}%`
 })
+
+const centerFill = computed(() => showingMastery.value ? MASTERED_HEX : LEARNED_TEXT_HEX)
 
 const ariaLabel = computed(() => {
   if (clampedMastered.value === 100) return '100% mastered'
@@ -41,10 +45,10 @@ const ariaLabel = computed(() => {
   >
     <!-- Outer track (learned background) -->
     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="2.5" />
-    <!-- Outer arc (learned, indigo) -->
+    <!-- Outer arc (learned, green) -->
     <circle
       cx="18" cy="18" r="15.9155" fill="none"
-      stroke="#6366f1"
+      :stroke="LEARNED_HEX"
       stroke-width="2.5"
       stroke-dasharray="100"
       :stroke-dashoffset="outerOffset"
@@ -53,20 +57,20 @@ const ariaLabel = computed(() => {
     />
     <!-- Inner track (mastered background) -->
     <circle cx="18" cy="18" r="12" fill="none" stroke="#e5e7eb" stroke-width="2.5" />
-    <!-- Inner arc (mastered, amber) -->
+    <!-- Inner arc (mastered, blue) -->
     <circle
       cx="18" cy="18" r="12" fill="none"
-      stroke="#f59e0b"
+      :stroke="MASTERED_HEX"
       stroke-width="2.5"
       :stroke-dasharray="INNER_CIRC"
       :stroke-dashoffset="innerOffset"
       stroke-linecap="round"
       transform="rotate(-90 18 18)"
     />
-    <!-- Center: gold checkmark when 100% mastered -->
-    <text v-if="clampedMastered === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
+    <!-- Center: blue checkmark when 100% mastered -->
+    <text v-if="clampedMastered === 100" x="18" y="22" text-anchor="middle" font-size="12" :fill="MASTERED_HEX">&#10003;</text>
     <!-- Center: percentage text otherwise -->
-    <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
+    <text v-else x="18" y="21" text-anchor="middle" font-size="8" :fill="centerFill" font-weight="600">
       {{ centerText }}
     </text>
   </svg>
