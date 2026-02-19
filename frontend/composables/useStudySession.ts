@@ -1,4 +1,4 @@
-import { ref, computed, watch, getCurrentInstance, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
@@ -60,30 +60,25 @@ interface UseStudySessionReturn {
   finishSession: (reason: 'completed' | 'user_ended') => void
 }
 
-export async function useStudySession(options: UseStudySessionOptions): Promise<UseStudySessionReturn> {
+export function useStudySession(options: UseStudySessionOptions): UseStudySessionReturn {
   const { category, apiBase, isLoggedIn, tokenCookie, track, flushBeacon, refreshStreak, logout, mode } = options
-
-  // Save the component instance BEFORE any await — lifecycle hooks like
-  // onMounted/onBeforeUnmount lose the instance after async boundaries.
-  const instance = getCurrentInstance()
-  if (!instance) {
-    throw new Error('useStudySession must be called within a Vue component setup() or <script setup> context.')
-  }
 
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)
 
-  // Category metadata captured at session start
+  // Category metadata — populated when categories fetch completes
   const categoryLearnedCount = ref(0)
   const categoryTotal = ref(0)
   const categoryNewCount = ref(0)
   const categoryDueCount = ref(0)
 
-  const { data: categoriesData } = await useFetch<CategoryAPIItem[]>(
+  // Fetch categories synchronously (no await) — watcher populates metadata
+  const { data: categoriesData } = useFetch<CategoryAPIItem[]>(
     `${apiBase}/categories`
   )
-  if (categoriesData.value) {
-    const match = categoriesData.value.find(c => c.slug === category)
+  watch(categoriesData, (data) => {
+    if (!data) return
+    const match = data.find(c => c.slug === category)
     if (match) {
       language.value = match.has_language ? 'go' : null
       categoryLearnedCount.value = match.learned ?? 0
@@ -91,7 +86,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
       categoryNewCount.value = match.new ?? 0
       categoryDueCount.value = match.due ?? 0
     }
-  }
+  }, { immediate: true })
 
   const categoryDisplayName = getCategoryDisplayName(category)
 
@@ -105,8 +100,8 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     return `${apiBase}/flashcards?${qs.toString()}`
   })
 
-  // Fetch cards (headers as getter so refresh() picks up token changes)
-  const { data: cards, pending, error, refresh } = await useFetch<StudyCard[]>(url, {
+  // Fetch cards synchronously (no await) — reactive URL triggers refetch
+  const { data: cards, pending, error, refresh } = useFetch<StudyCard[]>(url, {
     headers: () => tokenCookie.value
       ? { Authorization: `Bearer ${tokenCookie.value}` }
       : {},
@@ -168,9 +163,6 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
   let sessionEndEmitted = false
 
   // New vs reviewed breakdown: ratio-based estimate from initial category stats.
-  // This is approximate — the backend serves a mixed queue so we can't know per-card
-  // whether it was new or due without a server-side session. Task 5 (session modes)
-  // will make this exact once the API distinguishes new from review cards.
   const newConceptsInSession = computed(() => {
     const total = categoryNewCount.value + categoryDueCount.value
     if (total === 0) return 0
@@ -249,14 +241,13 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     }
   }
 
-  // Use the saved instance to register lifecycle hooks — the component
-  // instance is lost after await useFetch() so we pass it explicitly.
+  // No await boundaries — lifecycle hooks register normally
   onMounted(() => {
     track('page_view', { page: `/category/${category}`, referrer: document.referrer })
     track('session_start', { category })
     window.addEventListener('beforeunload', handleBeforeUnload)
     window.addEventListener('keydown', handleKeydown)
-  }, instance)
+  })
 
   function nextCard() {
     cardsReviewedInSession.value++
@@ -290,7 +281,7 @@ export async function useStudySession(options: UseStudySessionOptions): Promise<
     window.removeEventListener('keydown', handleKeydown)
     if (buttonsTimer) clearTimeout(buttonsTimer)
     emitSessionEnd('navigated_away')
-  }, instance)
+  })
 
   function finishSession(reason: 'completed' | 'user_ended') {
     emitSessionEnd(reason)

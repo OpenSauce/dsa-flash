@@ -57,7 +57,7 @@ const {
   categoryDisplayName, categoryLearnedCount, categoryTotal,
   newConceptsInSession, reviewedConceptsInSession,
   flipCard, nextCard, recordResponse, keepGoing, finishSession,
-} = await useStudySession({
+} = useStudySession({
   category, apiBase, isLoggedIn, tokenCookie,
   track, flushBeacon, refreshStreak, logout,
   mode,
