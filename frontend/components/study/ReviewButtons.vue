@@ -24,9 +24,9 @@ defineEmits<{
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'good')"
               :disabled="!buttonsEnabled"
-              class="px-5 py-2.5 bg-amber-400 text-amber-900 rounded-xl hover:bg-amber-500 transition disabled:cursor-not-allowed">
+              class="px-5 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Got it' : 'Almost' }}</span>
-        <span class="block text-xs text-amber-700 mt-0.5">Review later</span>
+        <span class="block text-xs text-blue-100 mt-0.5">Review later</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'easy')"
               :disabled="!buttonsEnabled"

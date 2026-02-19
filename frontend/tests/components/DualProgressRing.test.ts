@@ -63,13 +63,34 @@ describe('DualProgressRing', () => {
     expect(centerText).toBeDefined()
   })
 
-  it('shows masteredPct as center text when learnedPct is 100', () => {
+  it('shows learnedPct even when learnedPct is 100 (mastery only on hover)', () => {
     const wrapper = mount(DualProgressRing, {
       props: { learnedPct: 100, masteredPct: 19 },
     })
     const texts = wrapper.findAll('text')
-    const centerText = texts.find(t => t.text().includes('19%'))
+    const centerText = texts.find(t => t.text().includes('100%'))
     expect(centerText).toBeDefined()
+  })
+
+  it('shows masteredPct on hover with blue color', async () => {
+    const wrapper = mount(DualProgressRing, {
+      props: { learnedPct: 60, masteredPct: 20 },
+    })
+    await wrapper.find('svg').trigger('mouseenter')
+    const texts = wrapper.findAll('text')
+    const centerText = texts.find(t => t.text().includes('20%'))
+    expect(centerText).toBeDefined()
+    expect(centerText?.attributes('fill')).toBe('#3b82f6')
+  })
+
+  it('shows learned color when not hovered', () => {
+    const wrapper = mount(DualProgressRing, {
+      props: { learnedPct: 60, masteredPct: 20 },
+    })
+    const texts = wrapper.findAll('text')
+    const centerText = texts.find(t => t.text().includes('60%'))
+    expect(centerText).toBeDefined()
+    expect(centerText?.attributes('fill')).toBe('#16a34a')
   })
 
   it('0% learned shows outer arc dashoffset of 100 (no arc visible)', () => {
