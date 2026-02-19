@@ -146,11 +146,11 @@ watch(
           <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
           <p class="text-gray-500">{{ cat.description }}</p>
           <p v-if="cat.learned_pct !== null" class="text-sm text-gray-600 mt-2">
-            <span class="font-medium text-green-600">{{ cat.total - (cat.learned ?? 0) }}</span> remaining
+            <span class="font-medium text-green-600">{{ cat.learned }}</span> of {{ cat.total }} learned
             &nbsp;&middot;&nbsp;
-            <span :class="cat.due && cat.due > 0 ? 'font-semibold text-blue-600' : 'font-medium text-blue-600'">
-              {{ cat.due }} due
-            </span>
+            <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
+            &nbsp;&middot;&nbsp;
+            <span class="font-medium text-blue-600">{{ cat.due }}</span> due
           </p>
           <p v-else class="text-sm text-gray-600 mt-2">
             <span class="font-medium">{{ cat.total }}</span> concepts

@@ -57,7 +57,7 @@ const ariaLabel = computed(() => {
     />
     <!-- Inner track (mastered background) -->
     <circle cx="18" cy="18" r="12" fill="none" stroke="#e5e7eb" stroke-width="2.5" />
-    <!-- Inner arc (mastered, blue) -->
+    <!-- Inner arc (mastered, purple) -->
     <circle
       cx="18" cy="18" r="12" fill="none"
       :stroke="MASTERED_HEX"
@@ -67,7 +67,7 @@ const ariaLabel = computed(() => {
       stroke-linecap="round"
       transform="rotate(-90 18 18)"
     />
-    <!-- Center: blue checkmark when 100% mastered -->
+    <!-- Center: purple checkmark when 100% mastered -->
     <text v-if="clampedMastered === 100" x="18" y="22" text-anchor="middle" font-size="12" :fill="MASTERED_HEX">&#10003;</text>
     <!-- Center: percentage text otherwise -->
     <text v-else x="18" y="21" text-anchor="middle" font-size="8" :fill="centerFill" font-weight="600">
