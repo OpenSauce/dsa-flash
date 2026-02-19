@@ -1,4 +1,9 @@
 <script setup lang="ts">
+useSeoMeta({
+  title: 'Admin | dsaflash.cards',
+  robots: 'noindex, nofollow',
+})
+
 const { isAdmin, isLoggedIn, authReady, tokenCookie } = useAuth()
 
 interface AnalyticsSummary {

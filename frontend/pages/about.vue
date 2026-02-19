@@ -1,3 +1,18 @@
+<script setup lang="ts">
+useSeoMeta({
+  title: 'About | dsaflash.cards',
+  ogTitle: 'About dsaflash.cards – Spaced Repetition for Engineers',
+  description: 'dsaflash.cards is a free spaced repetition flashcard app for engineers. Learn how SM-2 scheduling, active recall, and the spacing effect help you retain technical knowledge.',
+  ogDescription: 'dsaflash.cards is a free spaced repetition flashcard app for engineers. Learn how SM-2 scheduling, active recall, and the spacing effect help you retain technical knowledge.',
+  ogUrl: 'https://dsaflash.cards/about',
+  ogType: 'article',
+})
+
+useHead({
+  link: [{ rel: 'canonical', href: 'https://dsaflash.cards/about' }],
+})
+</script>
+
 <template>
   <div class="max-w-2xl mx-auto">
     <h1 class="text-4xl font-bold mb-6">About dsaflash.cards</h1>

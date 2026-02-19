@@ -3,6 +3,12 @@ import { ref, computed, watch } from 'vue'
 import { useRuntimeConfig, navigateTo } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 
+useSeoMeta({
+  title: 'Dashboard | dsaflash.cards',
+  description: 'Your personal knowledge portfolio on dsaflash.cards.',
+  robots: 'noindex, nofollow',
+})
+
 interface DashboardKnowledgeSummary {
   total_concepts_learned: number
   concepts_mastered: number

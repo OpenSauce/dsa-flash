@@ -3,6 +3,12 @@ import { ref } from 'vue'
 import { useRouter } from '#imports'
 import { useAuth } from '~/composables/useAuth'
 
+useSeoMeta({
+  title: 'Log In | dsaflash.cards',
+  description: 'Log in to dsaflash.cards to track your learning progress with spaced repetition.',
+  robots: 'noindex, nofollow',
+})
+
 const { login } = useAuth()
 const router = useRouter()
 
