@@ -86,6 +86,7 @@ def get_dashboard(
         total = row.total
         learned, mastered = progress_by_slug.get(slug, (0, 0))
         mastery_pct = floor(mastered / total * 100) if total > 0 else 0
+        learned_pct = floor(learned / total * 100) if total > 0 else 0
         name = slug.replace("-", " ").title()
         domains.append(
             DashboardDomain(
@@ -95,6 +96,7 @@ def get_dashboard(
                 learned=learned,
                 mastered=mastered,
                 mastery_pct=mastery_pct,
+                learned_pct=learned_pct,
             )
         )
 

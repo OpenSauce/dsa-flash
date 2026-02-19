@@ -22,6 +22,7 @@ interface DashboardDomain {
   learned: number
   mastered: number
   mastery_pct: number
+  learned_pct: number
 }
 
 interface DashboardStreak {
@@ -221,32 +222,19 @@ const weekSummaryText = computed(() => {
             :to="`/category/${domain.slug}`"
             class="flex items-center gap-4 bg-white border rounded-xl shadow-sm hover:shadow-md transition p-4"
           >
-            <!-- SVG progress ring -->
+            <!-- Dual progress ring -->
             <div class="flex-shrink-0">
-              <svg viewBox="0 0 36 36" class="w-14 h-14">
-                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
-                <circle
-                  cx="18" cy="18" r="15.9155" fill="none"
-                  :stroke="colorForPct(domain.mastery_pct)"
-                  stroke-width="3"
-                  stroke-dasharray="100"
-                  :stroke-dashoffset="100 - domain.mastery_pct"
-                  stroke-linecap="round"
-                  transform="rotate(-90 18 18)"
-                />
-                <text v-if="domain.mastery_pct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
-                <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
-                  {{ domain.mastery_pct }}%
-                </text>
-              </svg>
+              <DualProgressRing
+                :learned-pct="domain.learned_pct"
+                :mastered-pct="domain.mastery_pct"
+              />
             </div>
             <div class="min-w-0">
               <div class="font-semibold text-gray-900 truncate">{{ domainDisplayName(domain.slug, domain.name) }}</div>
               <div class="text-sm text-gray-500">
-                {{ domain.mastered }} of {{ domain.total }} mastered
-              </div>
-              <div class="text-xs text-gray-400 mt-0.5">
-                {{ domain.learned }} concept{{ domain.learned !== 1 ? 's' : '' }} learned
+                <span class="text-indigo-600 font-medium">{{ domain.learned }}</span> learned
+                &middot;
+                <span class="text-amber-600 font-medium">{{ domain.mastered }}</span> mastered
               </div>
             </div>
           </NuxtLink>

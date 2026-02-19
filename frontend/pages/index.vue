@@ -60,6 +60,7 @@ interface CategoryFromAPI {
   learned: number | null
   mastered: number | null
   mastery_pct: number | null
+  learned_pct: number | null
 }
 
 interface CategoryDisplay extends CategoryFromAPI {
@@ -135,33 +136,19 @@ watch(
           :class="cat.due !== null && cat.due === 0 && cat.new === 0 ? 'bg-gray-100/80 opacity-60' : 'bg-white'">
           <div class="flex items-start justify-between">
             <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-            <div v-if="cat.mastery_pct !== null" class="flex-shrink-0">
-              <svg viewBox="0 0 36 36" class="w-14 h-14"
-                :aria-label="cat.mastery_pct === 100 ? '100% mastered' : 'Mastery: ' + cat.mastery_pct + '%'"
-              >
-                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" stroke-width="3" />
-                <circle
-                  cx="18" cy="18" r="15.9155" fill="none"
-                  :stroke="colorForPct(cat.mastery_pct)"
-                  stroke-width="3"
-                  stroke-dasharray="100"
-                  :stroke-dashoffset="100 - cat.mastery_pct"
-                  stroke-linecap="round"
-                  transform="rotate(-90 18 18)"
-                />
-                <text v-if="cat.mastery_pct === 100" x="18" y="22" text-anchor="middle" font-size="12" fill="#f59e0b">&#10003;</text>
-                <text v-else x="18" y="21" text-anchor="middle" font-size="8" fill="#374151" font-weight="600">
-                  {{ cat.mastery_pct }}%
-                </text>
-              </svg>
+            <div v-if="cat.learned_pct !== null" class="flex-shrink-0">
+              <DualProgressRing
+                :learned-pct="cat.learned_pct"
+                :mastered-pct="cat.mastery_pct ?? 0"
+              />
             </div>
           </div>
           <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
           <p class="text-gray-500">{{ cat.description }}</p>
-          <p v-if="cat.mastery_pct !== null" class="text-sm text-gray-600 mt-2">
-            <span class="font-medium">{{ cat.mastered }}</span> of {{ cat.total }} mastered
+          <p v-if="cat.learned_pct !== null" class="text-sm text-gray-600 mt-2">
+            <span class="font-medium text-indigo-600">{{ cat.learned }}</span> learned
             &nbsp;&middot;&nbsp;
-            <span class="font-medium">{{ cat.learned }}</span> learned
+            <span class="font-medium text-amber-600">{{ cat.mastered }}</span> mastered
             &nbsp;&middot;&nbsp;
             <span :class="cat.due && cat.due > 0 ? 'font-semibold text-indigo-600' : 'font-medium'">
               {{ cat.due }} due
