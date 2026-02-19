@@ -51,7 +51,7 @@ watch(
               </div>
               <div v-else class="flex items-center gap-3">
                 <span
-                  v-show="streak && streak.current_streak > 0"
+                  v-if="streak && streak.current_streak > 0"
                   class="flex items-center gap-1 text-sm font-medium"
                   :title="streak ? `${streak.current_streak} day streak` : ''"
                 >
