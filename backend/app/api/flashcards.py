@@ -116,6 +116,11 @@ def list_categories(
                 if user and row.total > 0
                 else None
             ),
+            learned_pct=(
+                floor(learned_map.get(row.category, 0) / row.total * 100)
+                if user and row.total > 0
+                else None
+            ),
         )
         for row in rows
     ]

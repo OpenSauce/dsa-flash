@@ -110,6 +110,7 @@ class CategoryOut(BaseModel):
     learned: Optional[int] = None
     mastered: Optional[int] = None
     mastery_pct: Optional[int] = None
+    learned_pct: Optional[int] = None
 
 
 class DashboardKnowledgeSummary(BaseModel):
@@ -125,6 +126,7 @@ class DashboardDomain(BaseModel):
     learned: int
     mastered: int
     mastery_pct: int
+    learned_pct: int
 
 
 class DashboardStreak(BaseModel):

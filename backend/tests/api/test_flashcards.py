@@ -459,6 +459,79 @@ def test_categories_zero_mastery(anon_client, session, create_user, create_flash
     assert cat["mastery_pct"] == 0
 
 
+def test_categories_learned_pct_partial(anon_client, session, create_user, create_flashcard, get_token):
+    """learned_pct is floor(learned / total * 100)."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    # 3 cards total, 1 reviewed
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    _card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+    _card3 = create_flashcard(front="Q3", back="A3", category="cat1")
+
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=5)
+    session.add(uf1)
+    session.commit()
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    # floor(1/3 * 100) == 33
+    assert cat["learned_pct"] == 33
+    assert cat["mastery_pct"] == 0
+
+
+def test_categories_learned_pct_null_for_anonymous(anon_client, session, create_flashcard):
+    """Anonymous users get learned_pct == null."""
+    create_flashcard(front="Q1", back="A1", category="cat1")
+    create_flashcard(front="Q2", back="A2", category="cat1")
+
+    r = anon_client.get("/categories")
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["learned_pct"] is None
+
+
+def test_categories_learned_pct_100_when_all_reviewed(anon_client, session, create_user, create_flashcard, get_token):
+    """learned_pct == 100 when all cards reviewed."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+
+    uf1 = UserFlashcard(user_id=user.id, flashcard_id=card1.id, interval=5)
+    uf2 = UserFlashcard(user_id=user.id, flashcard_id=card2.id, interval=5)
+    session.add_all([uf1, uf2])
+    session.commit()
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["learned_pct"] == 100
+    assert cat["mastery_pct"] == 0
+
+
+def test_categories_learned_pct_zero_when_nothing_reviewed(
+    anon_client, session, create_user, create_flashcard, get_token,
+):
+    """learned_pct == 0 when no cards reviewed."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    _card1 = create_flashcard(front="Q1", back="A1", category="cat1")
+    _card2 = create_flashcard(front="Q2", back="A2", category="cat1")
+
+    r = anon_client.get("/categories", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    cat = next(c for c in data if c["slug"] == "cat1")
+    assert cat["learned_pct"] == 0
+
+
 # ── Mode parameter tests ─────────────────────────────────────────────────
 
 
