@@ -182,7 +182,7 @@ const weekSummaryText = computed(() => {
 
       <!-- Streak display -->
       <div class="mb-10 flex justify-center">
-        <div class="inline-flex items-center gap-6 bg-white border rounded-xl shadow px-8 py-5">
+        <div class="inline-flex items-center gap-3 sm:gap-6 bg-white border rounded-xl shadow px-4 sm:px-8 py-5">
           <div class="flex items-center gap-2">
             <svg class="w-8 h-8 text-orange-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />

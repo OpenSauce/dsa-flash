@@ -3,6 +3,9 @@ import { definePageMeta, useHead, watch } from '#imports'
 
 const { isLoggedIn, isAdmin, logout, authReady } = useAuth()
 const { streak, fetchStreak } = useStreak()
+const route = useRoute()
+
+const mobileMenuOpen = ref(false)
 
 watch(
   [authReady, isLoggedIn],
@@ -16,10 +19,26 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => route.path,
+  () => {
+    mobileMenuOpen.value = false
+  }
+)
+
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && mobileMenuOpen.value) closeMobileMenu()
+}
+
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col font-sans">
+  <div class="min-h-screen flex flex-col font-sans overflow-x-hidden" @keydown="onKeydown">
     <!-- Header -->
     <header class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -49,20 +68,38 @@ watch(
                   Sign&nbsp;up
                 </NuxtLink>
               </div>
-              <div v-else class="flex items-center gap-3">
-                <span
-                  v-if="streak && streak.current_streak > 0"
-                  class="flex items-center gap-1 text-sm font-medium"
-                  :title="streak ? `${streak.current_streak} day streak` : ''"
+              <div v-else>
+                <!-- Desktop nav (sm and up) -->
+                <div class="hidden sm:flex items-center gap-3">
+                  <span
+                    v-if="streak && streak.current_streak > 0"
+                    class="flex items-center gap-1 text-sm font-medium"
+                    :title="streak ? `${streak.current_streak} day streak` : ''"
+                  >
+                    <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
+                    </svg>
+                    <span>{{ streak.current_streak }}</span>
+                  </span>
+                  <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
+                  <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
+                  <button @click="logout().then(() => window.location.href = '/')" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
+                </div>
+
+                <!-- Mobile hamburger button -->
+                <button
+                  class="sm:hidden flex items-center justify-center w-8 h-8 rounded-md hover:bg-white/10 transition-colors"
+                  :aria-expanded="mobileMenuOpen"
+                  aria-label="Toggle navigation menu"
+                  @click="mobileMenuOpen = !mobileMenuOpen"
                 >
-                  <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
+                  <svg v-if="!mobileMenuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
-                  <span>{{ streak.current_streak }}</span>
-                </span>
-                <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
-                <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
-                <button @click="logout().then(() => window.location.href = '/')" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
             <div v-else class="flex items-center gap-3 min-h-[36px]">
@@ -72,6 +109,42 @@ watch(
           </div>
 
         </nav>
+      </div>
+
+      <!-- Mobile dropdown menu (logged-in only) -->
+      <div
+        v-if="mobileMenuOpen && isLoggedIn"
+        class="sm:hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-lg"
+      >
+        <div class="px-4 py-3 flex flex-col gap-1 text-sm font-medium">
+          <div v-if="streak && streak.current_streak > 0" class="flex items-center gap-2 px-3 py-2 text-white/80">
+            <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
+            </svg>
+            <span>{{ streak.current_streak }} day streak</span>
+          </div>
+          <NuxtLink
+            to="/dashboard"
+            class="px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+            @click="closeMobileMenu"
+          >
+            Dashboard
+          </NuxtLink>
+          <NuxtLink
+            v-if="isAdmin"
+            to="/admin"
+            class="px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+            @click="closeMobileMenu"
+          >
+            Admin
+          </NuxtLink>
+          <button
+            class="text-left px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+            @click="closeMobileMenu(); logout().then(() => window.location.href = '/')"
+          >
+            Log&nbsp;out
+          </button>
+        </div>
       </div>
     </header>
 
