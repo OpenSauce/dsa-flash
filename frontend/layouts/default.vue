@@ -30,10 +30,15 @@ watch(
 function closeMobileMenu() {
   mobileMenuOpen.value = false
 }
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && mobileMenuOpen.value) closeMobileMenu()
+}
+
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col font-sans overflow-x-hidden">
+  <div class="min-h-screen flex flex-col font-sans overflow-x-hidden" @keydown="onKeydown">
     <!-- Header -->
     <header class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
       <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
