@@ -1,17 +1,11 @@
 export default defineNuxtConfig({
   app: {
     head: {
-      title: 'Flashcards for Engineers – dsaflash.cards',
+      title: 'dsaflash.cards – Flashcards for Engineers',
       meta: [
-        { name: 'description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, networking, and Big O — concepts that stick.' },
-        // open-graph
-        { property: 'og:title', content: 'Flashcards for Engineers – dsaflash.cards' },
-        { property: 'og:description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, networking, and Big O.' },
+        { name: 'description', content: 'Free spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, networking, and Big O — no signup required.' },
         { property: 'og:image', content: 'https://dsaflash.cards/social-preview.png' },
-        { property: 'og:url', content: 'https://dsaflash.cards' },
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: 'Flashcards for Engineers – dsaflash.cards' },
-        { name: 'twitter:description', content: 'Spaced repetition flashcards for engineers. Master data structures, algorithms, system design, AWS, Kubernetes, Docker, and networking.' },
         { name: 'twitter:image', content: 'https://dsaflash.cards/social-preview.png' }
       ],
       link: [
@@ -20,7 +14,6 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
         { rel: 'manifest', href: '/site.webmanifest' },
-        { rel: 'canonical', href: 'https://dsaflash.cards' }
       ],
     }
   },

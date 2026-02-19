@@ -3,7 +3,48 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
-import { CATEGORY_META, DEFAULT_META, SECTION_ORDER } from '@/utils/categoryMeta'
+import { CATEGORY_META, DEFAULT_META, SECTION_ORDER, getCategoryDisplayName } from '@/utils/categoryMeta'
+
+useSeoMeta({
+  title: 'Flashcards for Engineers – Master Technical Concepts | dsaflash.cards',
+  ogTitle: 'Flashcards for Engineers – Master Technical Concepts | dsaflash.cards',
+  description: 'Free spaced repetition flashcards for data structures, algorithms, system design, AWS, Kubernetes, Docker, and networking. No signup required.',
+  ogDescription: 'Free spaced repetition flashcards for data structures, algorithms, system design, AWS, Kubernetes, Docker, and networking. No signup required.',
+  ogUrl: 'https://dsaflash.cards/',
+  ogType: 'website',
+})
+
+const categoryListItems = Object.keys(CATEGORY_META).map((slug, i) => ({
+  '@type': 'ListItem',
+  position: i + 1,
+  name: getCategoryDisplayName(slug),
+  url: `https://dsaflash.cards/category/${slug}`,
+}))
+
+useHead({
+  link: [{ rel: 'canonical', href: 'https://dsaflash.cards/' }],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'dsaflash.cards',
+        url: 'https://dsaflash.cards',
+        description: 'Free spaced repetition flashcards for engineers covering data structures, algorithms, system design, AWS, Kubernetes, Docker, and networking.',
+      }),
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Technical Flashcard Categories',
+        itemListElement: categoryListItems,
+      }),
+    },
+  ],
+})
 
 interface CategoryFromAPI {
   slug: string

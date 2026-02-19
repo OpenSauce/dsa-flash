@@ -1,13 +1,46 @@
 <script setup lang="ts">
 import { useAnalytics } from '@/composables/useAnalytics'
-import { CATEGORY_META, DEFAULT_META } from '@/utils/categoryMeta'
+import { CATEGORY_META, DEFAULT_META, getCategoryDisplayName } from '@/utils/categoryMeta'
 import type { StudyMode } from '@/composables/useStudySession'
-
-definePageMeta({ ssr: false })
 
 const route = useRoute()
 const category = route.params.slug as string
 const categoryEmoji = (CATEGORY_META[category] || DEFAULT_META).emoji
+
+const categoryDisplayNameForMeta = getCategoryDisplayName(category)
+
+useSeoMeta({
+  title: `${categoryDisplayNameForMeta} Flashcards | dsaflash.cards`,
+  ogTitle: `${categoryDisplayNameForMeta} Flashcards | dsaflash.cards`,
+  description: `Free spaced repetition flashcards for ${categoryDisplayNameForMeta}. Learn and retain key concepts with active recall.`,
+  ogDescription: `Free spaced repetition flashcards for ${categoryDisplayNameForMeta}. Learn and retain key concepts with active recall.`,
+  ogUrl: `https://dsaflash.cards/category/${category}`,
+  ogType: 'article',
+})
+
+useHead({
+  link: [{ rel: 'canonical', href: `https://dsaflash.cards/category/${category}` }],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Course',
+        name: `${categoryDisplayNameForMeta} Flashcards`,
+        description: `Spaced repetition flashcards covering ${categoryDisplayNameForMeta} concepts for engineers.`,
+        provider: {
+          '@type': 'Organization',
+          name: 'dsaflash.cards',
+          url: 'https://dsaflash.cards',
+        },
+        educationalLevel: 'intermediate',
+        isAccessibleForFree: true,
+        url: `https://dsaflash.cards/category/${category}`,
+      }),
+    },
+  ],
+})
+
 const apiBase = useRuntimeConfig().public.apiBase
 const { isLoggedIn, authReady, tokenCookie, logout } = useAuth()
 const { refreshStreak } = useStreak()
