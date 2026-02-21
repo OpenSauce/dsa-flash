@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useCookie, useRuntimeConfig } from '#imports'
+import { computed, watch, onMounted } from 'vue'
+import { useCookie, useRuntimeConfig, useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { CATEGORY_META, DEFAULT_META, SECTION_ORDER, getCategoryDisplayName } from '@/utils/categoryMeta'
@@ -72,25 +72,25 @@ interface CategoryDisplay extends CategoryFromAPI {
 const { public: { apiBase } } = useRuntimeConfig()
 const token = useCookie('token')
 
-const { isLoggedIn, authReady } = useAuth()
+const { isLoggedIn } = useAuth()
 const { track } = useAnalytics()
 
-const categories = ref<CategoryDisplay[]>([])
-
-const fetchCategories = async () => {
-  try {
-    const headers = token.value
+const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
+  'categories',
+  () => $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, {
+    headers: token.value
       ? { Authorization: `Bearer ${token.value}` }
-      : undefined
-    const data = await $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, { headers })
-    categories.value = data.map(cat => {
-      const meta = CATEGORY_META[cat.slug] || DEFAULT_META
-      return { ...cat, ...meta }
-    })
-  } catch (err) {
-    console.error('categories fetch', err)
-  }
-}
+      : {},
+  }),
+)
+
+const categories = computed<CategoryDisplay[]>(() => {
+  if (!rawCategories.value) return []
+  return rawCategories.value.map(cat => {
+    const meta = CATEGORY_META[cat.slug] || DEFAULT_META
+    return { ...cat, ...meta }
+  })
+})
 
 const sections = computed(() => {
   const grouped: Record<string, CategoryDisplay[]> = {}
@@ -108,21 +108,18 @@ onMounted(() => {
   track('page_view', { page: '/', referrer: document.referrer })
 })
 
-watch(
-  [authReady, isLoggedIn],
-  async ([ready]) => {
-    if (ready) {
-      await fetchCategories()
-    }
-  },
-  { immediate: true }
-)
+watch(isLoggedIn, () => {
+  refreshCategories()
+})
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-6 pb-6">
     <h1 class="sr-only">Technical interview flashcards powered by spaced repetition</h1>
-    <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-6">
+    <div v-if="error" class="text-center text-red-400 py-8">
+      Failed to load categories. Please try again later.
+    </div>
+    <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-4">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
 
