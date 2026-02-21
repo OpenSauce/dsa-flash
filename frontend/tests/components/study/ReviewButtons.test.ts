@@ -8,7 +8,10 @@ const defaultProps = {
   mode: 'new',
 }
 
-function mountButtons(props: Record<string, unknown> = {}) {
+type ReviewButtonsProps = Partial<typeof defaultProps> & {
+  projectedIntervals?: Record<string, string> | null
+}
+function mountButtons(props: ReviewButtonsProps = {}) {
   return mount(ReviewButtons, { props: { ...defaultProps, ...props } })
 }
 

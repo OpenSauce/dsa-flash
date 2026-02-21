@@ -110,6 +110,19 @@ class StreakOut(BaseModel):
     today_reviewed: int
 
 
+class FlashcardWithIntervals(BaseModel):
+    id: Optional[int]
+    front: str
+    back: str
+    title: str
+    difficulty: Optional[str] = None
+    tags: List[str] = []
+    category: Optional[str] = None
+    language: Optional[str] = None
+    created_at: datetime
+    projected_intervals: Optional[dict[str, str]] = None
+
+
 class EventIn(BaseModel):
     event_type: str
     payload: dict = {}

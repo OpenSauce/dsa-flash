@@ -36,7 +36,7 @@ def sm2(review: UserFlashcard, quality: int) -> None:
 def sm2_preview(repetitions: int, interval: int, easiness: float, quality: int) -> int:
     """Return the projected interval (days) for a hypothetical review at the given quality."""
     if quality not in range(6):
-        raise ValueError("quality must be 0-5")
+        raise ValueError("quality must be 0–5")
 
     ef = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
     ef = max(1.3, ef)
@@ -55,13 +55,13 @@ def sm2_preview(repetitions: int, interval: int, easiness: float, quality: int) 
 
 def format_interval(days: int) -> str:
     """Format an interval in days to a human-readable short string."""
-    if days < 14:
+    if days < 30:
         return f"{days}d"
-    elif days < 60:
-        weeks = days // 7
-        return f"{weeks}w"
+    elif days < 365:
+        months = max(1, round(days / 30))
+        return f"{months}mo"
     else:
-        months = days // 30
+        months = round(days / 30)
         return f"{months}mo"
 
 

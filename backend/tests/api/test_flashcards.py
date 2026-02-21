@@ -759,15 +759,15 @@ def test_reviewed_card_gets_state_based_projected_intervals(
     intervals = card_data["projected_intervals"]
     assert intervals["1"] == "1d"
     # With reps=2, interval=6, easiness=2.5, quality 5: ef=2.6, interval=round(6*2.6)=16d -> "16d"
-    assert intervals["5"] != "1d"
+    assert intervals["5"] == "16d"
 
 
 def test_anonymous_list_cards_no_projected_intervals(anon_client, session, create_flashcard):
-    """Anonymous users do NOT get projected_intervals field."""
+    """Anonymous users get projected_intervals as null (no SM-2 state)."""
     create_flashcard(front="Q1", back="A1", category="cat1")
 
     r = anon_client.get("/flashcards?category=cat1")
     assert r.status_code == 200
     data = r.json()
     assert len(data) == 1
-    assert "projected_intervals" not in data[0]
+    assert data[0]["projected_intervals"] is None

@@ -156,20 +156,15 @@ def test_sm2_preview_does_not_mutate_inputs():
 # ── format_interval tests ─────────────────────────────────────────────────
 
 
-def test_format_interval_days_less_than_14():
+def test_format_interval_days_less_than_30():
     assert format_interval(1) == "1d"
     assert format_interval(7) == "7d"
-    assert format_interval(13) == "13d"
+    assert format_interval(14) == "14d"
+    assert format_interval(29) == "29d"
 
 
-def test_format_interval_weeks_14_to_59():
-    assert format_interval(14) == "2w"
-    assert format_interval(21) == "3w"
-    assert format_interval(56) == "8w"
-    assert format_interval(59) == "8w"
-
-
-def test_format_interval_months_60_plus():
+def test_format_interval_months_30_plus():
+    assert format_interval(30) == "1mo"
     assert format_interval(60) == "2mo"
     assert format_interval(90) == "3mo"
     assert format_interval(365) == "12mo"

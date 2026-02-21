@@ -3,8 +3,6 @@ from math import floor
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -15,6 +13,7 @@ from ..models import (
     MASTERY_INTERVAL_DAYS,
     CategoryOut,
     Flashcard,
+    FlashcardWithIntervals,
     StudySession,
     User,
     UserFlashcard,
@@ -143,7 +142,7 @@ class StatsOut(BaseModel):
     new: int
 
 
-@router.get("", response_model=list[Flashcard])
+@router.get("", response_model=list[FlashcardWithIntervals])
 def list_cards(
     session: Session = Depends(get_session),
     category: Optional[str] = Query(None),
@@ -232,18 +231,42 @@ def list_cards(
         else:
             uf_map = {}
 
-        card_dicts = jsonable_encoder(cards)
-        for cd in card_dicts:
-            uf = uf_map.get(cd["id"])
+        result = []
+        for card in cards:
+            uf = uf_map.get(card.id)
             if uf:
-                cd["projected_intervals"] = compute_projected_intervals(
-                    uf.repetitions, uf.interval, uf.easiness
-                )
+                intervals = compute_projected_intervals(uf.repetitions, uf.interval, uf.easiness)
             else:
-                cd["projected_intervals"] = compute_projected_intervals()
-        return JSONResponse(content=card_dicts)
+                intervals = compute_projected_intervals()
+            result.append(FlashcardWithIntervals(
+                id=card.id,
+                front=card.front,
+                back=card.back,
+                title=card.title,
+                difficulty=card.difficulty,
+                tags=card.tags,
+                category=card.category,
+                language=card.language,
+                created_at=card.created_at,
+                projected_intervals=intervals,
+            ))
+        return result
 
-    return JSONResponse(content=jsonable_encoder(cards))
+    return [
+        FlashcardWithIntervals(
+            id=card.id,
+            front=card.front,
+            back=card.back,
+            title=card.title,
+            difficulty=card.difficulty,
+            tags=card.tags,
+            category=card.category,
+            language=card.language,
+            created_at=card.created_at,
+            projected_intervals=None,
+        )
+        for card in cards
+    ]
 
 
 @router.post("/{card_id}/review", status_code=204)
