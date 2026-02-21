@@ -53,6 +53,8 @@ interface UseStudySessionReturn {
   newConceptsInSession: ComputedRef<number>
   reviewedConceptsInSession: ComputedRef<number>
   mode: Ref<StudyMode>
+  hasFlippedOnce: Ref<boolean>
+  hasFlippedEver: Ref<boolean>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>
@@ -192,11 +194,19 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
   // Reveal state
   const revealed = ref(false)
   const buttonsEnabled = ref(false)
+  const hasFlippedOnce = ref(false)
+  const hasFlippedEver = ref(false)
+  try { hasFlippedEver.value = localStorage.getItem('dsaflash_has_flipped') === '1' } catch {}
   let buttonsTimer: ReturnType<typeof setTimeout> | null = null
 
   function flipCard() {
     revealed.value = !revealed.value
     if (revealed.value) {
+      hasFlippedOnce.value = true
+      if (!hasFlippedEver.value) {
+        hasFlippedEver.value = true
+        try { localStorage.setItem('dsaflash_has_flipped', '1') } catch {}
+      }
       flipTime.value = Date.now()
       track('card_flip', {
         card_id: card.value?.id,
@@ -374,6 +384,8 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
     newConceptsInSession,
     reviewedConceptsInSession,
     mode,
+    hasFlippedOnce,
+    hasFlippedEver,
     flipCard,
     nextCard,
     recordResponse,
