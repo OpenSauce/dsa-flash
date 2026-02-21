@@ -8,15 +8,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.flashcards import router as flashcard_router
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import StudySession, UserFlashcard
-
-
-def _get_test_session(session):
-    def get_test_session():
-        with session.__class__(session.get_bind()) as s:
-            yield s
-
-    return get_test_session
+from tests.conftest import create_user_flashcard, get_test_session, seed_study_session
 
 
 @pytest.fixture(name="app")
@@ -25,37 +17,13 @@ def app_fixture(session):
     app.include_router(flashcard_router)
     app.include_router(user_router)
     app.include_router(dashboard_router)
-    app.dependency_overrides[get_session] = _get_test_session(session)
+    app.dependency_overrides[get_session] = get_test_session(session)
     return app
 
 
 @pytest.fixture(name="client")
 def client_fixture(app):
     return TestClient(app)
-
-
-def create_user_flashcard(
-    session, user_id, flashcard_id, interval=0, easiness=2.5, created_at=None, last_reviewed=None
-):
-    now = datetime.now(timezone.utc)
-    uf = UserFlashcard(
-        user_id=user_id,
-        flashcard_id=flashcard_id,
-        interval=interval,
-        easiness=easiness,
-        created_at=created_at or now,
-        last_reviewed=last_reviewed or now,
-    )
-    session.add(uf)
-    session.commit()
-    return uf
-
-
-def seed_study_session(session, user_id, study_date, cards_reviewed=1):
-    ss = StudySession(user_id=user_id, study_date=study_date, cards_reviewed=cards_reviewed)
-    session.add(ss)
-    session.commit()
-    return ss
 
 
 # ─── Tests ─────────────────────────────────────────────────────────────────────

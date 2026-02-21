@@ -1,26 +1,18 @@
 import jwt
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
 
 from app.api.users import ALGORITHM, SECRET_KEY, User, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
-
-
-def _get_test_session(session):
-    def get_test_session():
-        with Session(session.get_bind()) as s:
-            yield s
-
-    return get_test_session
+from tests.conftest import get_test_session
 
 
 def anon_app(session):
     """App without get_current_user override — uses real auth."""
     app = FastAPI()
     app.include_router(user_router)
-    app.dependency_overrides[get_session] = _get_test_session(session)
+    app.dependency_overrides[get_session] = get_test_session(session)
     return app
 
 
