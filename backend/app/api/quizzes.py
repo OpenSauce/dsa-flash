@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from ..database import get_session
 from ..models import (
+    Flashcard,
     Quiz,
     QuizAnswerResult,
     QuizDetailOut,
@@ -16,6 +17,7 @@ from ..models import (
     QuizSubmitIn,
     QuizSubmitOut,
     User,
+    UserFlashcard,
     UserQuizAttempt,
 )
 from .users import get_optional_user
@@ -129,6 +131,8 @@ def submit_quiz(
 
     if user:
         _upsert_attempt(session, user.id, quiz.id, score, total)
+        if quiz.lesson_slug:
+            _seed_flashcards_for_lesson(session, user.id, quiz.lesson_slug)
 
     return QuizSubmitOut(score=score, total=total, results=results)
 
@@ -174,4 +178,41 @@ def _upsert_attempt(
                 existing.total = total
                 existing.completed_at = now
                 session.add(existing)
+    session.commit()
+
+
+def _seed_flashcards_for_lesson(
+    session: Session, user_id: int, lesson_slug: str
+) -> None:
+    """Create UserFlashcard entries (due tomorrow) for all flashcards linked to this lesson.
+
+    Skips flashcards the user already has in their SRS queue.
+    """
+    flashcards = session.exec(
+        select(Flashcard).where(Flashcard.lesson_slug == lesson_slug)
+    ).all()
+
+    if not flashcards:
+        return
+
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+
+    for card in flashcards:
+        existing = session.exec(
+            select(UserFlashcard).where(
+                UserFlashcard.user_id == user_id,
+                UserFlashcard.flashcard_id == card.id,
+            )
+        ).first()
+        if not existing:
+            session.add(
+                UserFlashcard(
+                    user_id=user_id,
+                    flashcard_id=card.id,
+                    next_review=tomorrow,
+                    interval=1,
+                    repetitions=0,
+                    easiness=2.5,
+                )
+            )
     session.commit()

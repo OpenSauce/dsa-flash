@@ -170,22 +170,14 @@ const renderedContent = computed(() =>
       <div class="border-t border-gray-200 pt-8">
         <div v-if="completionSuccess" class="rounded-lg bg-green-50 border border-green-200 px-5 py-4 mb-6">
           <p class="font-semibold text-green-800 mb-1">Lesson complete!</p>
-          <p class="text-green-700 text-sm">
-            <template v-if="linkedQuiz">
-              Ready to test yourself?
-              <NuxtLink :to="`/quiz/${linkedQuiz.slug}`" class="underline font-medium">
-                Take the quiz
-              </NuxtLink>
-            </template>
-            <template v-else>
-              Head to the
-              <NuxtLink
-                v-if="lesson.category"
-                :to="`/category/${lesson.category}`"
-                class="underline font-medium"
-              >{{ categoryDisplayName }} flashcards</NuxtLink>
-              to reinforce what you learned.
-            </template>
+          <p v-if="linkedQuiz" class="text-green-700 text-sm">
+            Ready to test yourself?
+            <NuxtLink :to="`/quiz/${linkedQuiz.slug}`" class="underline font-medium">
+              Take the quiz
+            </NuxtLink>
+          </p>
+          <p v-else class="text-green-700 text-sm">
+            Great work! Check back tomorrow for flashcard reviews.
           </p>
         </div>
 

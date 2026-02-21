@@ -60,16 +60,23 @@ const showResult = ref(false)
 const quizComplete = ref(false)
 const submitResult = ref<QuizSubmitOut | null>(null)
 const submitting = ref(false)
+const retryQuestions = ref<QuizQuestion[]>([])
+const inRetryRound = ref(false)
+const firstPassAnswers = ref<Record<number, number>>({})
 
 const categoryDisplayName = computed(() =>
   quiz.value?.category ? getCategoryDisplayName(quiz.value.category) : ''
 )
 
-const currentQuestion = computed(() =>
-  quiz.value ? quiz.value.questions[currentIndex.value] : null
+const activeQuestions = computed(() =>
+  inRetryRound.value ? retryQuestions.value : (quiz.value?.questions ?? [])
 )
 
-const totalQuestions = computed(() => quiz.value?.questions.length ?? 0)
+const currentQuestion = computed(() =>
+  activeQuestions.value[currentIndex.value] ?? null
+)
+
+const totalQuestions = computed(() => activeQuestions.value.length)
 
 const optionLabels = ['A', 'B', 'C', 'D']
 
@@ -98,11 +105,27 @@ function isWrongSelected(optionIndex: number): boolean {
 async function nextQuestion() {
   if (!quiz.value) return
 
-  if (currentIndex.value < quiz.value.questions.length - 1) {
+  if (currentIndex.value < activeQuestions.value.length - 1) {
     currentIndex.value++
     selectedForCurrent.value = null
     showResult.value = false
+  } else if (!inRetryRound.value) {
+    // First pass done — check for missed questions
+    const missed = quiz.value.questions.filter(
+      q => answers.value[q.id] !== q.correct_index
+    )
+    if (missed.length > 0) {
+      firstPassAnswers.value = { ...answers.value }
+      retryQuestions.value = missed
+      inRetryRound.value = true
+      currentIndex.value = 0
+      selectedForCurrent.value = null
+      showResult.value = false
+    } else {
+      await submitQuiz()
+    }
   } else {
+    // Retry round done
     await submitQuiz()
   }
 }
@@ -111,8 +134,10 @@ async function submitQuiz() {
   if (!quiz.value) return
   submitting.value = true
   try {
+    // Submit first-pass answers for scoring (not retry-corrected ones)
+    const scoreAnswers = inRetryRound.value ? firstPassAnswers.value : answers.value
     const answersPayload: Record<string, number> = {}
-    for (const [qId, idx] of Object.entries(answers.value)) {
+    for (const [qId, idx] of Object.entries(scoreAnswers)) {
       answersPayload[String(qId)] = idx
     }
     const headers: Record<string, string> = {}
@@ -128,8 +153,9 @@ async function submitQuiz() {
   } catch {
     // non-fatal — show score based on local state
     if (quiz.value) {
+      const fallbackAnswers = inRetryRound.value ? firstPassAnswers.value : answers.value
       const results: QuizAnswerResult[] = quiz.value.questions.map(q => {
-        const selected = answers.value[q.id]
+        const selected = fallbackAnswers[q.id]
         return {
           question_id: q.id,
           correct: selected === q.correct_index,
@@ -154,6 +180,9 @@ function tryAgain() {
   quizComplete.value = false
   submitResult.value = null
   submitting.value = false
+  retryQuestions.value = []
+  inRetryRound.value = false
+  firstPassAnswers.value = {}
 }
 
 function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
@@ -270,7 +299,10 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
         <!-- Header -->
         <header class="mb-8">
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{{ quiz.title }}</h1>
-          <p class="text-sm text-gray-500">Question {{ currentIndex + 1 }} of {{ totalQuestions }}</p>
+          <p v-if="inRetryRound" class="text-sm text-amber-600 font-medium">
+            Let's retry the ones you missed — {{ currentIndex + 1 }} of {{ totalQuestions }} remaining
+          </p>
+          <p v-else class="text-sm text-gray-500">Question {{ currentIndex + 1 }} of {{ totalQuestions }}</p>
 
           <!-- Progress bar -->
           <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
