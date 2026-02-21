@@ -89,7 +89,7 @@ const {
   card, pending, error,
   sessionFinished, cardsReviewedInBatch, cardsReviewedInSession,
   currentBatchSize, remainingCards, hasMoreCards, progressPercent,
-  revealed, buttonsEnabled,
+  revealed, buttonsEnabled, totalFlipsInSession,
   categoryDisplayName, categoryLearnedCount, categoryTotal,
   newConceptsInSession, reviewedConceptsInSession,
   hasFlippedOnce, hasFlippedEver,
@@ -99,6 +99,8 @@ const {
   track, flushBeacon, refreshStreak, logout,
   mode,
 })
+
+const ctaDismissed = ref(false)
 
 const showFlipHint = computed(() => !hasFlippedOnce.value && !hasFlippedEver.value)
 
@@ -193,10 +195,32 @@ async function startSession(selectedMode: StudyMode) {
       />
 
       <div v-else class="pb-24 sm:pb-0">
-        <div v-if="!isLoggedIn"
+        <!-- Initial amber banner: anonymous users before 3rd flip -->
+        <div v-if="!isLoggedIn && totalFlipsInSession < 3 && !ctaDismissed"
              class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          Your progress won't be saved.
-          <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink> to track your learning.
+          <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink> to save your progress and unlock spaced repetition.
+        </div>
+
+        <!-- Upgraded CTA: appears after 3rd flip, dismissable -->
+        <div v-if="!isLoggedIn && totalFlipsInSession >= 3 && !ctaDismissed"
+             class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm text-indigo-800 flex items-center justify-between gap-3">
+          <div>
+            <NuxtLink to="/signup" class="underline font-semibold">Sign up</NuxtLink>
+            to save your progress and unlock spaced repetition &mdash; the system that makes knowledge stick.
+          </div>
+          <button @click="ctaDismissed = true"
+                  class="flex-shrink-0 text-indigo-400 hover:text-indigo-600 transition"
+                  aria-label="Dismiss signup prompt">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- "Learning new concepts" label for anonymous sessions -->
+        <div v-if="!isLoggedIn" class="flex items-center gap-2 mb-2 text-sm text-green-700">
+          <span class="text-lg">🌱</span>
+          <span class="font-medium">Learning new concepts</span>
         </div>
 
         <StudyProgressBar
@@ -217,11 +241,9 @@ async function startSession(selectedMode: StudyMode) {
         <div class="fixed bottom-0 left-0 right-0 z-20 bg-gray-50 px-4 py-3 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sm:relative sm:border-0 sm:p-0 sm:bg-transparent sm:shadow-none sm:z-auto">
           <StudyReviewButtons
             :revealed="revealed"
-            :is-logged-in="isLoggedIn"
             :buttons-enabled="buttonsEnabled"
             :mode="mode"
             @rate="recordResponse"
-            @next="nextCard"
           />
         </div>
       </div>
