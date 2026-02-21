@@ -55,6 +55,7 @@ interface UseStudySessionReturn {
   mode: Ref<StudyMode>
   hasFlippedOnce: Ref<boolean>
   hasFlippedEver: Ref<boolean>
+  totalFlipsInSession: Ref<number>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>
@@ -196,12 +197,14 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
   const buttonsEnabled = ref(false)
   const hasFlippedOnce = ref(false)
   const hasFlippedEver = ref(false)
+  const totalFlipsInSession = ref(0)
   try { hasFlippedEver.value = localStorage.getItem('dsaflash_has_flipped') === '1' } catch {}
   let buttonsTimer: ReturnType<typeof setTimeout> | null = null
 
   function flipCard() {
     revealed.value = !revealed.value
     if (revealed.value) {
+      totalFlipsInSession.value++
       hasFlippedOnce.value = true
       if (!hasFlippedEver.value) {
         hasFlippedEver.value = true
@@ -238,16 +241,9 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
         flipCard()
       }
     } else {
-      if (isLoggedIn.value) {
-        if (e.key === '1') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('again') }
-        else if (e.key === '2') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('good') }
-        else if (e.key === '3') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('easy') }
-      } else {
-        if (e.key === '1' || e.key === '2' || e.key === '3' || e.code === 'Space' || e.code === 'Enter') {
-          e.preventDefault()
-          nextCard()
-        }
-      }
+      if (e.key === '1') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('again') }
+      else if (e.key === '2') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('good') }
+      else if (e.key === '3') { e.preventDefault(); if (buttonsEnabled.value) recordResponse('easy') }
     }
   }
 
@@ -321,8 +317,45 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
   const qualityMap = { easy: 5, good: 3, again: 1 } as const
   const isSubmitting = ref(false)
 
+  function recordAnonymousResponse(grade: keyof typeof qualityMap) {
+    if (!card.value) return
+
+    const now = Date.now()
+    track('card_review', {
+      card_id: card.value.id,
+      category,
+      grade,
+      quality: qualityMap[grade],
+      time_on_back_ms: now - flipTime.value,
+      time_total_ms: now - frontShownAt.value,
+      anonymous: true,
+    })
+
+    try {
+      const key = 'dsaflash_anon_ratings'
+      const existing = JSON.parse(localStorage.getItem(key) || '[]')
+      existing.push({
+        card_id: card.value.id,
+        category,
+        grade,
+        quality: qualityMap[grade],
+        timestamp: now,
+      })
+      if (existing.length > 200) existing.splice(0, existing.length - 200)
+      localStorage.setItem(key, JSON.stringify(existing))
+    } catch {
+      // localStorage full or unavailable -- silently continue
+    }
+
+    nextCard()
+  }
+
   async function recordResponse(grade: keyof typeof qualityMap) {
     if (!card.value || isSubmitting.value) return
+    if (!isLoggedIn.value) {
+      recordAnonymousResponse(grade)
+      return
+    }
     isSubmitting.value = true
 
     const now = Date.now()
@@ -386,6 +419,7 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
     mode,
     hasFlippedOnce,
     hasFlippedEver,
+    totalFlipsInSession,
     flipCard,
     nextCard,
     recordResponse,

@@ -1,20 +1,17 @@
 <script setup lang="ts">
 defineProps<{
   revealed: boolean
-  isLoggedIn: boolean
   buttonsEnabled: boolean
   mode: string
 }>()
 
 defineEmits<{
   (e: 'rate', grade: 'again' | 'good' | 'easy'): void
-  (e: 'next'): void
 }>()
 </script>
 
 <template>
-  <!-- Logged-in: review buttons -->
-  <div v-if="revealed && isLoggedIn" class="text-center">
+  <div v-if="revealed" class="text-center">
     <div class="flex justify-center gap-3 rating-buttons" :class="{ 'rating-buttons--visible': buttonsEnabled }">
       <button @click="buttonsEnabled && $emit('rate', 'again')"
               :disabled="!buttonsEnabled"
@@ -36,13 +33,6 @@ defineEmits<{
       </button>
     </div>
     <p class="text-xs text-gray-400 mt-3">Press 1, 2, or 3</p>
-  </div>
-
-  <!-- Anonymous: next card button -->
-  <div v-if="revealed && !isLoggedIn" class="flex justify-center">
-    <button @click="$emit('next')" class="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition">
-      Next card &rarr;
-    </button>
   </div>
 </template>
 
