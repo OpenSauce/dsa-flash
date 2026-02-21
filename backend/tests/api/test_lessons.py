@@ -198,7 +198,7 @@ def test_lessons_for_category_anon(anon_client, create_lesson):
 
 def test_complete_lesson_unlocks_flashcards(client, session, create_user, create_lesson, create_flashcard):
     """Completing a lesson creates UserFlashcard rows for all linked cards."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     create_user(username="user", password="password")
     lesson = create_lesson(slug="unlock-test")
