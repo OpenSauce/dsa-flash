@@ -138,6 +138,13 @@ function onKeydown(e: KeyboardEvent) {
           >
             Admin
           </NuxtLink>
+          <NuxtLink
+            to="/about"
+            class="px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+            @click="closeMobileMenu"
+          >
+            About
+          </NuxtLink>
           <button
             class="text-left px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
             @click="closeMobileMenu(); logout().then(() => window.location.href = '/')"

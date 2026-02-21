@@ -58,7 +58,7 @@ const encouragement = computed(() => {
 </script>
 
 <template>
-  <div class="text-center py-16">
+  <div class="text-center py-8 sm:py-16">
     <template v-if="cardsReviewed > 0">
       <!-- Category complete celebration -->
       <template v-if="categoryComplete">
