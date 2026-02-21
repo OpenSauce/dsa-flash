@@ -73,7 +73,7 @@ useHead({
     <section class="mb-8">
       <h2 class="text-2xl font-bold mb-3">What's covered</h2>
       <p class="text-gray-700 leading-relaxed mb-4">
-        The current library spans nine topic areas:
+        The current library spans ten topic areas:
       </p>
       <ul class="list-disc list-inside space-y-1 text-gray-700 mb-4">
         <li><strong>Data structures</strong> — arrays, hash maps, trees, heaps, linked lists, stacks, queues</li>
