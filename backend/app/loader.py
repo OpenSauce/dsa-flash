@@ -1,11 +1,13 @@
 import logging
+import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
 from sqlmodel import Session, select
 
 from .database import engine
-from .models import Flashcard
+from .models import Flashcard, Lesson
 
 logger = logging.getLogger(__name__)
 
@@ -111,5 +113,82 @@ def load_yaml_flashcards() -> None:
                     db_card.language,
                 )
                 session.delete(db_card)
+
+        session.commit()
+
+
+def _parse_front_matter(text: str) -> tuple[dict, str]:
+    """Split YAML front matter from markdown body."""
+    match = re.match(r'^---\s*\n(.*?)\n---\s*\n(.*)', text, re.DOTALL)
+    if not match:
+        return {}, text
+    front_matter = yaml.safe_load(match.group(1)) or {}
+    body = match.group(2)
+    return front_matter, body
+
+
+def _estimate_reading_time(text: str) -> int:
+    """Estimate reading time in minutes (~200 words/min, minimum 1)."""
+    words = len(text.split())
+    return max(1, round(words / 200))
+
+
+def upsert_lesson(lesson: Lesson, session: Session) -> None:
+    """Insert or update by slug."""
+    existing = session.exec(
+        select(Lesson).where(Lesson.slug == lesson.slug)
+    ).first()
+    if existing:
+        existing.title = lesson.title
+        existing.category = lesson.category
+        existing.order = lesson.order
+        existing.content = lesson.content
+        existing.summary = lesson.summary
+        existing.reading_time_minutes = lesson.reading_time_minutes
+        existing.updated_at = datetime.now(timezone.utc)
+    else:
+        session.add(lesson)
+
+
+def load_lessons() -> None:
+    """Walk {category}/lessons/*.md under ROOT and upsert lessons."""
+    lesson_files = list(ROOT.rglob("lessons/*.md"))
+    yaml_slugs: set[str] = set()
+
+    with Session(engine) as session:
+        for file in lesson_files:
+            # Skip .github directory
+            if ".github" in file.parts:
+                continue
+
+            # Derive category from path: ROOT/{category}/lessons/{slug}.md
+            rel = file.relative_to(ROOT)
+            parts = rel.parts  # e.g., ("docker", "lessons", "docker-layers.md")
+            if len(parts) < 3 or parts[-2] != "lessons":
+                continue
+            category = parts[0].replace(" ", "-")
+            slug = file.stem  # filename without .md
+
+            text = file.read_text()
+            front_matter, body = _parse_front_matter(text)
+
+            lesson = Lesson(
+                title=front_matter.get("title", slug.replace("-", " ").title()),
+                slug=slug,
+                category=category,
+                order=front_matter.get("order", 0),
+                content=body.strip(),
+                summary=front_matter.get("summary", ""),
+                reading_time_minutes=_estimate_reading_time(body),
+            )
+            upsert_lesson(lesson, session)
+            yaml_slugs.add(slug)
+
+        # Remove orphan lessons no longer in files
+        all_db_lessons = session.exec(select(Lesson)).all()
+        for lesson in all_db_lessons:
+            if lesson.slug not in yaml_slugs:
+                logger.info("Removing orphaned lesson: %s", lesson.slug)
+                session.delete(lesson)
 
         session.commit()

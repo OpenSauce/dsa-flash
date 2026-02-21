@@ -14,6 +14,7 @@ from ..models import (
     CategoryOut,
     Flashcard,
     FlashcardWithIntervals,
+    Lesson,
     StudySession,
     User,
     UserFlashcard,
@@ -48,6 +49,24 @@ def list_categories(
         .group_by(Flashcard.category)
     )
     lang_categories = {row for row in session.exec(lang_stmt).all()}
+
+    lesson_count_stmt = (
+        select(Lesson.category, func.count().label("count"))
+        .where(col(Lesson.category).is_not(None))
+        .group_by(Lesson.category)
+    )
+    lesson_count_map = {
+        row.category: row.count for row in session.exec(lesson_count_stmt).all()
+    }
+
+    first_lesson_map: dict[str, str] = {}
+    for row in session.exec(
+        select(Lesson.category, Lesson.slug, Lesson.order)
+        .where(col(Lesson.category).is_not(None))
+        .order_by(Lesson.category, Lesson.order)
+    ).all():
+        if row.category not in first_lesson_map:
+            first_lesson_map[row.category] = row.slug
 
     due_map: dict[str, int] = {}
     new_map: dict[str, int] = {}
@@ -128,6 +147,8 @@ def list_categories(
                 if user and row.total > 0
                 else None
             ),
+            lessons_available=lesson_count_map.get(row.category, 0),
+            first_lesson_slug=first_lesson_map.get(row.category),
         )
         for row in rows
     ]

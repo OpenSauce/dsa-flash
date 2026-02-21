@@ -61,6 +61,8 @@ interface CategoryFromAPI {
   mastered: number | null
   mastery_pct: number | null
   learned_pct: number | null
+  lessons_available: number | null
+  first_lesson_slug: string | null
 }
 
 interface CategoryDisplay extends CategoryFromAPI {
@@ -104,6 +106,13 @@ const sections = computed(() => {
     .map(s => ({ name: s, categories: grouped[s] }))
 })
 
+function categoryTileTo(cat: CategoryDisplay): string {
+  if (cat.lessons_available && cat.lessons_available > 0 && cat.first_lesson_slug) {
+    return `/lesson/${cat.first_lesson_slug}`
+  }
+  return `/category/${cat.slug}`
+}
+
 onMounted(() => {
   track('page_view', { page: '/', referrer: document.referrer })
 })
@@ -128,7 +137,7 @@ watch(isLoggedIn, () => {
         {{ section.name }}
       </h3>
       <div class="grid sm:grid-cols-2 gap-6">
-        <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="`/category/${cat.slug}`"
+        <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="categoryTileTo(cat)"
           class="border p-6 rounded-xl shadow hover:shadow-lg transition"
           :class="cat.due !== null && cat.due === 0 && cat.new === 0 ? 'bg-gray-100/80 opacity-60' : 'bg-white'">
           <div class="flex items-start justify-between">
@@ -151,6 +160,10 @@ watch(isLoggedIn, () => {
           </p>
           <p v-else class="text-sm text-gray-600 mt-2">
             <span class="font-medium">{{ cat.total }}</span> concepts
+            <template v-if="cat.lessons_available && cat.lessons_available > 0">
+              &nbsp;&middot;&nbsp;
+              <span class="text-indigo-600 font-medium">Lesson available</span>
+            </template>
           </p>
         </NuxtLink>
       </div>

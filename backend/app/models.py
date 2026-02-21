@@ -104,6 +104,63 @@ class StudySession(SQLModel, table=True):
     cards_reviewed: int = Field(default=0)
 
 
+class Lesson(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    slug: str = Field(index=True, unique=True)
+    category: Optional[str] = Field(default=None, index=True)
+    order: int = Field(default=0)
+    content: str
+    summary: str
+    reading_time_minutes: int = Field(default=5)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class UserLesson(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("user_id", "lesson_id", name="uq_userlesson_user_lesson"),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    lesson_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("lesson.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    completed_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class LessonOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    category: Optional[str] = None
+    order: int
+    summary: str
+    reading_time_minutes: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class LessonDetailOut(LessonOut):
+    content: str
+
+
+class CategoryLessonInfo(BaseModel):
+    slug: str
+    title: str
+    completed: bool = False
+
+
 class StreakOut(BaseModel):
     current_streak: int
     longest_streak: int
@@ -143,6 +200,8 @@ class CategoryOut(BaseModel):
     mastered: Optional[int] = None
     mastery_pct: Optional[int] = None
     learned_pct: Optional[int] = None
+    lessons_available: Optional[int] = None
+    first_lesson_slug: Optional[str] = None
 
 
 class DashboardKnowledgeSummary(BaseModel):
