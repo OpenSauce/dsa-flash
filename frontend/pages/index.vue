@@ -107,9 +107,6 @@ const sections = computed(() => {
 })
 
 function categoryTileTo(cat: CategoryDisplay): string {
-  if (cat.lessons_available && cat.lessons_available > 0 && cat.first_lesson_slug) {
-    return `/lesson/${cat.first_lesson_slug}`
-  }
   return `/category/${cat.slug}`
 }
 

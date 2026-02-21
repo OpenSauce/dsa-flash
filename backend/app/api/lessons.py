@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,10 +7,12 @@ from sqlmodel import Session, select
 from ..database import get_session
 from ..models import (
     CategoryLessonInfo,
+    Flashcard,
     Lesson,
     LessonDetailOut,
     LessonOut,
     User,
+    UserFlashcard,
     UserLesson,
 )
 from .users import get_current_user, get_optional_user
@@ -98,4 +101,37 @@ def complete_lesson(
 
     user_lesson = UserLesson(user_id=user.id, lesson_id=lesson.id)
     session.add(user_lesson)
+
+    linked_cards = session.exec(
+        select(Flashcard).where(Flashcard.lesson_slug == slug)
+    ).all()
+
+    card_ids = [card.id for card in linked_cards]
+    existing_ids: set[int] = set()
+    if card_ids:
+        existing_ids = set(
+            session.exec(
+                select(UserFlashcard.flashcard_id).where(
+                    UserFlashcard.user_id == user.id,
+                    UserFlashcard.flashcard_id.in_(card_ids),
+                )
+            ).all()
+        )
+
+    now = datetime.now(timezone.utc)
+    for card in linked_cards:
+        if card.id in existing_ids:
+            continue
+        uf = UserFlashcard(
+            user_id=user.id,
+            flashcard_id=card.id,
+            repetitions=0,
+            interval=1,
+            easiness=2.5,
+            next_review=now + timedelta(days=1),
+            last_reviewed=None,
+            created_at=now,
+        )
+        session.add(uf)
+
     session.commit()
