@@ -198,8 +198,7 @@ async function startSession(selectedMode: StudyMode) {
         <!-- Initial amber banner: anonymous users before 3rd flip -->
         <div v-if="!isLoggedIn && totalFlipsInSession < 3 && !ctaDismissed"
              class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          Sign up to save your progress and unlock spaced repetition.
-          <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink>
+          <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink> to save your progress and unlock spaced repetition.
         </div>
 
         <!-- Upgraded CTA: appears after 3rd flip, dismissable -->

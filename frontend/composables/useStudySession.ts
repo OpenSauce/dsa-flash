@@ -331,22 +331,6 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
       anonymous: true,
     })
 
-    try {
-      const key = 'dsaflash_anon_ratings'
-      const existing = JSON.parse(localStorage.getItem(key) || '[]')
-      existing.push({
-        card_id: card.value.id,
-        category,
-        grade,
-        quality: qualityMap[grade],
-        timestamp: now,
-      })
-      if (existing.length > 200) existing.splice(0, existing.length - 200)
-      localStorage.setItem(key, JSON.stringify(existing))
-    } catch {
-      // localStorage full or unavailable -- silently continue
-    }
-
     nextCard()
   }
 
