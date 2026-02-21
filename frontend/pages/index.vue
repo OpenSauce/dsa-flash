@@ -75,7 +75,7 @@ const token = useCookie('token')
 const { isLoggedIn } = useAuth()
 const { track } = useAnalytics()
 
-const { data: rawCategories, refresh: refreshCategories } = useAsyncData(
+const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
   'categories',
   () => $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, {
     headers: token.value
@@ -116,6 +116,9 @@ watch(isLoggedIn, () => {
 <template>
   <div class="max-w-4xl mx-auto px-6 pb-6">
     <h1 class="sr-only">Technical interview flashcards powered by spaced repetition</h1>
+    <div v-if="error" class="text-center text-red-400 py-8">
+      Failed to load categories. Please try again later.
+    </div>
     <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-4">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>

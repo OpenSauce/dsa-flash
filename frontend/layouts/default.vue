@@ -71,7 +71,7 @@ function onKeydown(e: KeyboardEvent) {
               <div v-else>
                 <!-- Desktop nav (sm and up) -->
                 <div class="hidden sm:flex items-center gap-3">
-                  <span class="text-white/80 text-sm">{{ user?.name }}</span>
+                  <span v-if="user?.name" class="text-white/80 text-sm">{{ user.name }}</span>
                   <span
                     v-if="streak && streak.current_streak > 0"
                     class="flex items-center gap-1 text-sm font-medium"
@@ -118,7 +118,7 @@ function onKeydown(e: KeyboardEvent) {
         class="sm:hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-lg"
       >
         <div class="px-4 py-3 flex flex-col gap-1 text-sm font-medium">
-          <div class="px-3 py-2 text-white/80 font-semibold">{{ user?.name }}</div>
+          <div v-if="user?.name" class="px-3 py-2 text-white/80 font-semibold">{{ user.name }}</div>
           <div v-if="streak && streak.current_streak > 0" class="flex items-center gap-2 px-3 py-2 text-white/80">
             <svg class="w-4 h-4 text-orange-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.5-6.5 5-9 .396-.396 1.058-.104 1.058.464 0 1.5 1.5 3.5 3 3.5-.442-2-1-4.5 0-7.5.167-.5.833-.5 1 0 1.5 4.5 4.942 6.5 4.942 9.536 0 3.866-3.134 7-7 7z" />
