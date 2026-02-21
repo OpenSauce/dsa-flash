@@ -29,9 +29,6 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
   ],
-  css: [
-    'highlight.js/styles/github.min.css'
-  ],
   googleFonts: {
     families: {
       'Space Grotesk': [400, 500, 600, 700],
