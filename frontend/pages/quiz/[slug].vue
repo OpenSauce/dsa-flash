@@ -13,6 +13,7 @@ interface QuizQuestion {
   question: string
   options: string[]
   correct_index: number
+  explanation: string
 }
 
 interface QuizDetail {
@@ -160,7 +161,7 @@ async function submitQuiz() {
           question_id: q.id,
           correct: selected === q.correct_index,
           correct_index: q.correct_index,
-          explanation: '',
+          explanation: q.explanation || '',
         }
       })
       const score = results.filter(r => r.correct).length

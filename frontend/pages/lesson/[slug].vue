@@ -70,13 +70,11 @@ const fetchCategoryLessons = async () => {
 }
 
 const fetchLinkedQuiz = async () => {
-  if (!lesson.value?.category) return
   try {
-    const quizzes = await $fetch<Array<{ slug: string; title: string; lesson_slug: string | null }>>(
-      `${apiBase}/quizzes?category=${lesson.value.category}`
+    const quizzes = await $fetch<Array<{ slug: string; title: string }>>(
+      `${apiBase}/quizzes?lesson_slug=${slug}`
     )
-    const match = quizzes.find(q => q.lesson_slug === slug)
-    if (match) linkedQuiz.value = match
+    if (quizzes.length) linkedQuiz.value = quizzes[0]
   } catch {
     // non-fatal
   }

@@ -308,6 +308,7 @@ class QuizQuestionOut(BaseModel):
     question: str
     options: list[str]
     correct_index: int
+    explanation: str = ""
 
 
 class QuizOut(BaseModel):

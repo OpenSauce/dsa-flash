@@ -28,12 +28,15 @@ router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 @router.get("", response_model=list[QuizOut])
 def list_quizzes(
     category: Optional[str] = Query(None),
+    lesson_slug: Optional[str] = Query(None),
     session: Session = Depends(get_session),
 ):
-    """List quizzes, optionally filtered by category. No auth required."""
+    """List quizzes, optionally filtered by category or lesson_slug. No auth required."""
     stmt = select(Quiz).order_by(Quiz.category, Quiz.title)
     if category:
         stmt = stmt.where(Quiz.category == category)
+    if lesson_slug:
+        stmt = stmt.where(Quiz.lesson_slug == lesson_slug)
     quizzes = session.exec(stmt).all()
 
     result = []
@@ -87,6 +90,7 @@ def get_quiz(
                 question=q.question,
                 options=q.options,
                 correct_index=q.correct_index,
+                explanation=q.explanation,
             )
             for q in questions
         ],
