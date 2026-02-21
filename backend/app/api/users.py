@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 from sqlmodel import Field, Session, SQLModel, select
 
 from ..database import get_session
+from ..limiter import limiter
 from ..models import StreakOut, StudySession, Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
@@ -120,7 +121,9 @@ def get_optional_user(
     response_model=None,
     tags=["auth"],
 )
+@limiter.limit("3/minute")
 def signup(
+    request: Request,
     data: UserCreate,
     session: Session = Depends(get_session),
 ):
@@ -144,7 +147,9 @@ def signup(
     response_model=Token,
     tags=["auth"],
 )
+@limiter.limit("5/minute")
 def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session),
 ):
