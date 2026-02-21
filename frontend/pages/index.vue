@@ -85,7 +85,7 @@ const fetchCategories = async () => {
     const data = await $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, { headers })
     categories.value = data.map(cat => {
       const meta = CATEGORY_META[cat.slug] || DEFAULT_META
-      return { ...cat, ...meta, name: meta.displayName || cat.name }
+      return { ...cat, ...meta }
     })
   } catch (err) {
     console.error('categories fetch', err)

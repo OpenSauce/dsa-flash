@@ -18,6 +18,7 @@ from ..models import (
     StudySession,
     User,
     UserFlashcard,
+    slug_to_display_name,
 )
 from .users import compute_streak, get_current_user
 
@@ -87,7 +88,7 @@ def get_dashboard(
         learned, mastered = progress_by_slug.get(slug, (0, 0))
         mastery_pct = floor(mastered / total * 100) if total > 0 else 0
         learned_pct = floor(learned / total * 100) if total > 0 else 0
-        name = slug.replace("-", " ").title()
+        name = slug_to_display_name(slug)
         domains.append(
             DashboardDomain(
                 name=name,

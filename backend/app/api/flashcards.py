@@ -11,7 +11,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, and_, col, or_, select
 
 from ..database import get_session
-from ..models import MASTERY_INTERVAL_DAYS, CategoryOut, Flashcard, StudySession, User, UserFlashcard
+from ..models import (
+    MASTERY_INTERVAL_DAYS,
+    CategoryOut,
+    Flashcard,
+    StudySession,
+    User,
+    UserFlashcard,
+    slug_to_display_name,
+)
 from ..spaced import sm2
 from .users import get_current_user, get_optional_user
 
@@ -104,7 +112,7 @@ def list_categories(
     return [
         CategoryOut(
             slug=row.category,
-            name=row.category.replace("-", " ").title(),
+            name=slug_to_display_name(row.category),
             total=row.total,
             has_language=row.category in lang_categories,
             due=due_map.get(row.category, 0) if user else None,

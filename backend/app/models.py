@@ -9,6 +9,25 @@ from sqlmodel import Field, SQLModel
 
 MASTERY_INTERVAL_DAYS = 21
 
+DISPLAY_NAMES: dict[str, str] = {
+    "aws": "AWS",
+    "data-structures": "Data Structures",
+    "algorithms": "Algorithms",
+    "advanced-data-structures": "Advanced Data Structures",
+    "big-o-notation": "Big O Notation",
+    "system-design": "System Design",
+    "kubernetes": "Kubernetes",
+    "docker": "Docker",
+    "linux": "Linux",
+    "networking": "Networking",
+}
+
+
+def slug_to_display_name(slug: str) -> str:
+    if slug in DISPLAY_NAMES:
+        return DISPLAY_NAMES[slug]
+    return slug.replace("-", " ").title()
+
 
 class Flashcard(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

@@ -53,19 +53,6 @@ interface DashboardOut {
   study_calendar: string[]
 }
 
-const DOMAIN_DISPLAY_NAMES: Record<string, string> = {
-  'aws': 'AWS',
-  'data-structures': 'Data Structures',
-  'algorithms': 'Algorithms',
-  'advanced-data-structures': 'Advanced Data Structures',
-  'big-o-notation': 'Big O Notation',
-  'system-design': 'System Design',
-}
-
-function domainDisplayName(slug: string, apiName: string): string {
-  return DOMAIN_DISPLAY_NAMES[slug] ?? apiName
-}
-
 const { public: { apiBase } } = useRuntimeConfig()
 const { isLoggedIn, authReady, tokenCookie } = useAuth()
 
@@ -135,13 +122,18 @@ const monthLabel = computed(() => {
   return new Date(currentYear, currentMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 })
 
+const domainNameBySlug = computed(() => {
+  if (!dashboard.value) return {} as Record<string, string>
+  const map: Record<string, string> = {}
+  for (const d of dashboard.value.domains) {
+    map[d.slug] = d.name
+  }
+  return map
+})
+
 const thisWeekDomainNames = computed(() => {
   if (!dashboard.value) return []
-  const domainsBySlug: Record<string, string> = {}
-  for (const d of dashboard.value.domains) {
-    domainsBySlug[d.slug] = domainDisplayName(d.slug, d.name)
-  }
-  return dashboard.value.this_week.domains_studied.map(slug => domainsBySlug[slug] ?? slug)
+  return dashboard.value.this_week.domains_studied.map(slug => domainNameBySlug.value[slug] ?? slug)
 })
 
 const weekSummaryText = computed(() => {
@@ -230,7 +222,7 @@ const weekSummaryText = computed(() => {
               />
             </div>
             <div class="min-w-0">
-              <div class="font-semibold text-gray-900 truncate">{{ domainDisplayName(domain.slug, domain.name) }}</div>
+              <div class="font-semibold text-gray-900 truncate">{{ domain.name }}</div>
               <div class="text-sm text-gray-500">
                 <span class="text-green-600 font-medium">{{ domain.learned }}</span> learned
                 &middot;
@@ -305,7 +297,7 @@ const weekSummaryText = computed(() => {
             <div>
               <div class="font-medium text-gray-800">{{ card.title }}</div>
               <div class="text-sm text-gray-500">
-                {{ domainDisplayName(card.category, card.category.replace(/-/g, ' ')) }}
+                {{ domainNameBySlug[card.category] ?? card.category.replace(/-/g, ' ') }}
               </div>
             </div>
             <NuxtLink
