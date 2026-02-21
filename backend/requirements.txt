@@ -7,6 +7,6 @@ PyYAML
 passlib[bcrypt]
 PyJWT>=2.11,<3
 python-multipart
-bcrypt==4.0.1
+bcrypt==5.0.0
 alembic>=1.13,<2
 slowapi>=0.1.9,<1
