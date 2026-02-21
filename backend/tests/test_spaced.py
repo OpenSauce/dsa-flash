@@ -156,6 +156,11 @@ def test_sm2_preview_does_not_mutate_inputs():
 # ── format_interval tests ─────────────────────────────────────────────────
 
 
+def test_format_interval_zero_or_negative():
+    assert format_interval(0) == "1d"
+    assert format_interval(-1) == "1d"
+
+
 def test_format_interval_days_less_than_30():
     assert format_interval(1) == "1d"
     assert format_interval(7) == "7d"

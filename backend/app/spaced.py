@@ -55,13 +55,12 @@ def sm2_preview(repetitions: int, interval: int, easiness: float, quality: int) 
 
 def format_interval(days: int) -> str:
     """Format an interval in days to a human-readable short string."""
+    if days < 1:
+        return "1d"
     if days < 30:
         return f"{days}d"
-    elif days < 365:
-        months = max(1, round(days / 30))
-        return f"{months}mo"
     else:
-        months = round(days / 30)
+        months = max(1, round(days / 30))
         return f"{months}mo"
 
 
