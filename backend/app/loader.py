@@ -7,7 +7,7 @@ import yaml
 from sqlmodel import Session, select
 
 from .database import engine
-from .models import Flashcard, Lesson
+from .models import Flashcard, Lesson, Quiz, QuizQuestion
 
 logger = logging.getLogger(__name__)
 
@@ -192,5 +192,118 @@ def load_lessons() -> None:
             if lesson.slug not in yaml_slugs:
                 logger.info("Removing orphaned lesson: %s", lesson.slug)
                 session.delete(lesson)
+
+        session.commit()
+
+
+def upsert_quiz(quiz: Quiz, raw_questions: list[dict], session: Session) -> None:
+    """Insert or update quiz by slug, then sync questions (delete + reinsert)."""
+    existing = session.exec(
+        select(Quiz).where(Quiz.slug == quiz.slug)
+    ).first()
+    if existing:
+        existing.title = quiz.title
+        existing.category = quiz.category
+        existing.lesson_slug = quiz.lesson_slug
+        existing.updated_at = datetime.now(timezone.utc)
+        quiz_obj = existing
+    else:
+        session.add(quiz)
+        session.flush()
+        quiz_obj = quiz
+
+    # Delete existing questions and reinsert
+    old_questions = session.exec(
+        select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_obj.id)
+    ).all()
+    for q in old_questions:
+        session.delete(q)
+    session.flush()
+
+    for i, raw_q in enumerate(raw_questions):
+        options = raw_q.get("options", [])
+        correct = raw_q.get("correct", 0)
+        if not isinstance(options, list) or len(options) != 4:
+            logger.warning(
+                "Quiz %s question %d skipped: expected 4 options, got %s",
+                quiz.slug,
+                i,
+                len(options) if isinstance(options, list) else type(options).__name__,
+            )
+            continue
+        if not isinstance(correct, int) or correct < 0 or correct >= len(options):
+            logger.warning(
+                "Quiz %s question %d skipped: correct index %s out of range",
+                quiz.slug,
+                i,
+                correct,
+            )
+            continue
+        question_text = raw_q.get("question", "")
+        if not question_text:
+            logger.warning("Quiz %s question %d skipped: missing question text", quiz.slug, i)
+            continue
+        qq = QuizQuestion(
+            quiz_id=quiz_obj.id,
+            order=i,
+            question=question_text,
+            options=options,
+            correct_index=correct,
+            explanation=raw_q.get("explanation", ""),
+        )
+        session.add(qq)
+
+
+def load_quizzes() -> None:
+    """Walk {category}/quizzes/*.yaml under ROOT and upsert quizzes."""
+    quiz_files = list(ROOT.rglob("quizzes/*.yaml")) + list(ROOT.rglob("quizzes/*.yml"))
+    yaml_slugs: set[str] = set()
+
+    with Session(engine) as session:
+        for file in quiz_files:
+            if ".github" in file.parts:
+                continue
+
+            # Derive category from path: ROOT/{category}/quizzes/{slug}.yaml
+            rel = file.relative_to(ROOT)
+            parts = rel.parts  # e.g., ("docker", "quizzes", "docker-layers.yaml")
+            if len(parts) < 3 or parts[-2] != "quizzes":
+                continue
+            category = parts[0].replace(" ", "-")
+            slug = file.stem  # filename without extension
+
+            try:
+                data = yaml.safe_load(file.read_text()) or {}
+            except Exception as e:
+                logger.warning("Skipping %s: YAML parse error: %s", file, e)
+                continue
+
+            if not isinstance(data, dict):
+                logger.warning("Skipping %s: root is %s, not dict", file, type(data).__name__)
+                continue
+
+            title = data.get("title", slug.replace("-", " ").title())
+            lesson_slug = data.get("lesson_slug")
+            raw_questions = data.get("questions", [])
+
+            if not isinstance(raw_questions, list):
+                logger.warning("Skipping %s: questions is not a list", file)
+                continue
+
+            quiz = Quiz(
+                title=title,
+                slug=slug,
+                category=category,
+                lesson_slug=lesson_slug,
+            )
+            upsert_quiz(quiz, raw_questions, session)
+            yaml_slugs.add(slug)
+
+        # Remove orphan quizzes no longer in files
+        all_db_quizzes = session.exec(select(Quiz)).all()
+        for quiz in all_db_quizzes:
+            if quiz.slug not in yaml_slugs:
+                logger.info("Removing orphaned quiz: %s", quiz.slug)
+                session.delete(quiz)
 
         session.commit()

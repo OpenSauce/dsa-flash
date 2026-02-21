@@ -247,3 +247,101 @@ class DashboardOut(BaseModel):
     this_week: DashboardWeek
     weakest_cards: list[DashboardWeakCard]
     study_calendar: list[str]
+
+
+class Quiz(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    slug: str = Field(index=True, unique=True)
+    category: Optional[str] = Field(default=None, index=True)
+    lesson_slug: Optional[str] = Field(default=None, index=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class QuizQuestion(SQLModel, table=True):
+    __tablename__ = "quizquestion"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    quiz_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("quiz.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    order: int = Field(default=0)
+    question: str
+    options: list[str] = Field(sa_column=Column(JSON, nullable=False))
+    correct_index: int
+    explanation: str = Field(default="")
+
+
+class UserQuizAttempt(SQLModel, table=True):
+    __tablename__ = "userquizattempt"
+    __table_args__ = (
+        UniqueConstraint("user_id", "quiz_id", name="uq_userquizattempt_user_quiz"),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    quiz_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("quiz.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    score: int
+    total: int
+    completed_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class QuizQuestionOut(BaseModel):
+    id: int
+    order: int
+    question: str
+    options: list[str]
+    correct_index: int
+
+
+class QuizOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    category: Optional[str] = None
+    lesson_slug: Optional[str] = None
+    question_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class QuizDetailOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    category: Optional[str] = None
+    lesson_slug: Optional[str] = None
+    questions: list[QuizQuestionOut]
+
+
+class QuizAnswerResult(BaseModel):
+    question_id: int
+    correct: bool
+    correct_index: int
+    explanation: str
+
+
+class QuizSubmitOut(BaseModel):
+    score: int
+    total: int
+    results: list[QuizAnswerResult]
+
+
+class QuizSubmitIn(BaseModel):
+    answers: dict[str, int]
