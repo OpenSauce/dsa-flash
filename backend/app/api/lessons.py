@@ -106,20 +106,32 @@ def complete_lesson(
         select(Flashcard).where(Flashcard.lesson_slug == slug)
     ).all()
 
+    card_ids = [card.id for card in linked_cards]
+    existing_ids: set[int] = set()
+    if card_ids:
+        existing_ids = set(
+            session.exec(
+                select(UserFlashcard.flashcard_id).where(
+                    UserFlashcard.user_id == user.id,
+                    UserFlashcard.flashcard_id.in_(card_ids),
+                )
+            ).all()
+        )
+
     now = datetime.now(timezone.utc)
     for card in linked_cards:
-        existing_uf = session.get(UserFlashcard, (user.id, card.id))
-        if existing_uf is None:
-            uf = UserFlashcard(
-                user_id=user.id,
-                flashcard_id=card.id,
-                repetitions=0,
-                interval=1,
-                easiness=2.5,
-                next_review=now + timedelta(days=1),
-                last_reviewed=None,
-                created_at=now,
-            )
-            session.add(uf)
+        if card.id in existing_ids:
+            continue
+        uf = UserFlashcard(
+            user_id=user.id,
+            flashcard_id=card.id,
+            repetitions=0,
+            interval=1,
+            easiness=2.5,
+            next_review=now + timedelta(days=1),
+            last_reviewed=None,
+            created_at=now,
+        )
+        session.add(uf)
 
     session.commit()

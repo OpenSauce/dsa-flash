@@ -198,7 +198,7 @@ def test_lessons_for_category_anon(anon_client, create_lesson):
 
 def test_complete_lesson_unlocks_flashcards(client, session, create_user, create_lesson, create_flashcard):
     """Completing a lesson creates UserFlashcard rows for all linked cards."""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 
     create_user(username="user", password="password")
     lesson = create_lesson(slug="unlock-test")
@@ -219,7 +219,7 @@ def test_complete_lesson_unlocks_flashcards(client, session, create_user, create
     uf_card_ids = {uf.flashcard_id for uf in ufs}
     assert uf_card_ids == linked_ids
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for uf in ufs:
         assert uf.repetitions == 0
         assert uf.interval == 1
