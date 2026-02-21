@@ -129,7 +129,7 @@ async function startSession(selectedMode: StudyMode) {
   <div class="max-w-4xl mx-auto p-2 sm:p-6">
 
     <!-- Mode selector (logged-in users only, before session starts) -->
-    <div v-if="!sessionStarted && isLoggedIn" class="text-center py-16">
+    <div v-if="!sessionStarted && isLoggedIn" class="text-center py-8 sm:py-16">
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
