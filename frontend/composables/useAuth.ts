@@ -17,6 +17,7 @@ export const useAuth = () => {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
     sameSite: 'lax' as const,
+    secure: import.meta.env.PROD,
   })
   const authReady = useState<boolean>('authReady', () => false)
 

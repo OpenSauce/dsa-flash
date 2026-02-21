@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import Optional
 
@@ -12,6 +13,8 @@ from .users import get_current_admin, get_optional_user
 router = APIRouter(prefix="/events", tags=["events"])
 summary_router = APIRouter(prefix="/analytics", tags=["analytics"])
 
+_IS_PRODUCTION = os.getenv("DEV_MODE", "").lower() not in ("1", "true")
+
 
 def _session_id_from_request(request: Request, response: Response) -> str:
     sid = request.cookies.get("session_id")
@@ -23,6 +26,7 @@ def _session_id_from_request(request: Request, response: Response) -> str:
             httponly=True,
             samesite="lax",
             max_age=60 * 60 * 24 * 365,
+            secure=_IS_PRODUCTION,
         )
     return sid
 

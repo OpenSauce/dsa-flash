@@ -11,6 +11,7 @@ from testcontainers.postgres import PostgresContainer
 # Import all models so SQLModel.metadata knows about every table
 import app.models  # noqa: F401
 from app.api.users import User, get_password_hash
+from app.limiter import limiter
 from app.models import Flashcard, StudySession, UserFlashcard
 
 
@@ -43,6 +44,13 @@ def clear_db(engine):
                 'TRUNCATE TABLE studysession, event, userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    limiter._limiter.storage.reset()
+    yield
+    limiter._limiter.storage.reset()
 
 
 @pytest.fixture
