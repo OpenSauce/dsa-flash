@@ -92,7 +92,7 @@ const {
   revealed, buttonsEnabled,
   categoryDisplayName, categoryLearnedCount, categoryTotal,
   newConceptsInSession, reviewedConceptsInSession,
-  hasFlippedOnce,
+  hasFlippedOnce, hasFlippedEver,
   flipCard, nextCard, recordResponse, keepGoing, finishSession,
 } = useStudySession({
   category, apiBase, isLoggedIn, tokenCookie,
@@ -100,7 +100,7 @@ const {
   mode,
 })
 
-const showFlipHint = computed(() => !hasFlippedOnce.value)
+const showFlipHint = computed(() => !hasFlippedOnce.value && !hasFlippedEver.value)
 
 async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
