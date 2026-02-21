@@ -20,7 +20,7 @@ from ..models import (
     UserFlashcard,
     slug_to_display_name,
 )
-from ..spaced import sm2
+from ..spaced import compute_projected_intervals, sm2
 from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
@@ -219,6 +219,29 @@ def list_cards(
         stmt = stmt.limit(effective_limit)
 
     cards = session.exec(stmt).all()
+
+    if user:
+        card_ids = [c.id for c in cards]
+        if card_ids:
+            uf_stmt = select(UserFlashcard).where(
+                UserFlashcard.user_id == user.id,
+                col(UserFlashcard.flashcard_id).in_(card_ids),
+            )
+            uf_rows = session.exec(uf_stmt).all()
+            uf_map = {uf.flashcard_id: uf for uf in uf_rows}
+        else:
+            uf_map = {}
+
+        card_dicts = jsonable_encoder(cards)
+        for cd in card_dicts:
+            uf = uf_map.get(cd["id"])
+            if uf:
+                cd["projected_intervals"] = compute_projected_intervals(
+                    uf.repetitions, uf.interval, uf.easiness
+                )
+            else:
+                cd["projected_intervals"] = compute_projected_intervals()
+        return JSONResponse(content=card_dicts)
 
     return JSONResponse(content=jsonable_encoder(cards))
 

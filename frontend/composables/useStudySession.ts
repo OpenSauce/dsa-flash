@@ -8,6 +8,7 @@ interface StudyCard {
   id: number
   front: string
   back: string
+  projected_intervals?: Record<string, string>
 }
 
 interface CategoryAPIItem {
@@ -37,6 +38,7 @@ interface UseStudySessionReturn {
   error: Ref<any>
   language: Ref<string | null>
   card: ComputedRef<StudyCard | null>
+  projectedIntervals: ComputedRef<Record<string, string> | null>
   sessionFinished: Ref<boolean>
   cardsReviewedInBatch: Ref<number>
   cardsReviewedInSession: Ref<number>
@@ -157,6 +159,8 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
     if (isLoggedIn.value) return cards.value?.[0] ?? null
     return cards.value?.[cardIndex.value] ?? null
   })
+
+  const projectedIntervals = computed(() => card.value?.projected_intervals ?? null)
 
   // Analytics timing
   const frontShownAt = ref(Date.now())
@@ -385,6 +389,7 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
     error,
     language,
     card,
+    projectedIntervals,
     sessionFinished,
     cardsReviewedInBatch,
     cardsReviewedInSession,

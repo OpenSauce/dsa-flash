@@ -3,6 +3,7 @@ defineProps<{
   revealed: boolean
   buttonsEnabled: boolean
   mode: string
+  projectedIntervals?: Record<string, string> | null
 }>()
 
 defineEmits<{
@@ -18,18 +19,21 @@ defineEmits<{
               class="px-5 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Tricky' : 'Again' }}</span>
         <span class="block text-xs text-red-100 mt-0.5">{{ mode === 'new' ? 'Review soon' : 'Review again soon' }}</span>
+        <span v-if="projectedIntervals" class="block text-xs text-red-200 mt-0.5 font-mono">{{ projectedIntervals['1'] }}</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'good')"
               :disabled="!buttonsEnabled"
               class="px-5 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Got it' : 'Almost' }}</span>
         <span class="block text-xs text-blue-100 mt-0.5">Review later</span>
+        <span v-if="projectedIntervals" class="block text-xs text-blue-200 mt-0.5 font-mono">{{ projectedIntervals['3'] }}</span>
       </button>
       <button @click="buttonsEnabled && $emit('rate', 'easy')"
               :disabled="!buttonsEnabled"
               class="px-5 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition disabled:cursor-not-allowed">
         <span class="font-semibold text-sm">{{ mode === 'new' ? 'Easy' : 'I know it' }}</span>
         <span class="block text-xs text-emerald-100 mt-0.5">I could explain this</span>
+        <span v-if="projectedIntervals" class="block text-xs text-emerald-200 mt-0.5 font-mono">{{ projectedIntervals['5'] }}</span>
       </button>
     </div>
     <p class="text-xs text-gray-400 mt-3">Press 1, 2, or 3</p>

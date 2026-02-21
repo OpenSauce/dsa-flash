@@ -692,3 +692,82 @@ def test_list_cards_mode_with_category_filter(anon_client, session, create_user,
     data = r.json()
     assert len(data) == 1
     assert data[0]["front"] == "Due-Cat1"
+
+
+# ── projected_intervals tests ─────────────────────────────────────────────
+
+
+def test_authenticated_list_cards_has_projected_intervals(
+    anon_client, session, create_user, create_flashcard, get_token
+):
+    """Authenticated users get projected_intervals on each card."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    create_flashcard(front="Q1", back="A1", category="cat1")
+
+    r = anon_client.get("/flashcards?category=cat1", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    card = data[0]
+    assert "projected_intervals" in card
+    intervals = card["projected_intervals"]
+    assert set(intervals.keys()) == {"1", "3", "5"}
+
+
+def test_new_card_gets_default_projected_intervals(anon_client, session, create_user, create_flashcard, get_token):
+    """Cards with no UserFlashcard row get default SM-2 state intervals."""
+    create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    create_flashcard(front="Q1", back="A1", category="cat1")
+
+    r = anon_client.get("/flashcards?category=cat1", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    card = data[0]
+    assert card["projected_intervals"]["1"] == "1d"
+    assert card["projected_intervals"]["3"] == "1d"
+    assert card["projected_intervals"]["5"] == "1d"
+
+
+def test_reviewed_card_gets_state_based_projected_intervals(
+    anon_client, session, create_user, create_flashcard, get_token
+):
+    """Cards with UserFlashcard row get intervals computed from actual SM-2 state."""
+    user = create_user("user", "password")
+    token = get_token(anon_client, "user", "password")
+
+    now = datetime.now(timezone.utc)
+    card = create_flashcard(front="Q1", back="A1", category="cat1")
+    uf = UserFlashcard(
+        user_id=user.id,
+        flashcard_id=card.id,
+        repetitions=2,
+        interval=6,
+        easiness=2.5,
+        next_review=now - timedelta(hours=1),
+    )
+    session.add(uf)
+    session.commit()
+
+    r = anon_client.get("/flashcards?category=cat1", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+    card_data = data[0]
+    intervals = card_data["projected_intervals"]
+    assert intervals["1"] == "1d"
+    # With reps=2, interval=6, easiness=2.5, quality 5: ef=2.6, interval=round(6*2.6)=16d -> "16d"
+    assert intervals["5"] != "1d"
+
+
+def test_anonymous_list_cards_no_projected_intervals(anon_client, session, create_flashcard):
+    """Anonymous users do NOT get projected_intervals field."""
+    create_flashcard(front="Q1", back="A1", category="cat1")
+
+    r = anon_client.get("/flashcards?category=cat1")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert "projected_intervals" not in data[0]

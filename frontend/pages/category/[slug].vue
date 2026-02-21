@@ -93,6 +93,7 @@ const {
   categoryDisplayName, categoryLearnedCount, categoryTotal,
   newConceptsInSession, reviewedConceptsInSession,
   hasFlippedOnce, hasFlippedEver,
+  projectedIntervals,
   flipCard, nextCard, recordResponse, keepGoing, finishSession,
 } = useStudySession({
   category, apiBase, isLoggedIn, tokenCookie,
@@ -243,6 +244,7 @@ async function startSession(selectedMode: StudyMode) {
             :revealed="revealed"
             :buttons-enabled="buttonsEnabled"
             :mode="mode"
+            :projected-intervals="projectedIntervals"
             @rate="recordResponse"
           />
         </div>
