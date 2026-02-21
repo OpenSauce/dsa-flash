@@ -78,7 +78,7 @@ useHead({
       <ul class="list-disc list-inside space-y-1 text-gray-700 mb-4">
         <li><strong>Data structures</strong> — arrays, hash maps, trees, heaps, linked lists, stacks, queues</li>
         <li><strong>Algorithms</strong> — sorting, searching, graph traversal</li>
-        <li><strong>Dynamic programming</strong> — memoization, tabulation, classic interview problems</li>
+        <li><strong>Dynamic Programming</strong> — memoization, tabulation, classic interview problems</li>
         <li><strong>Big O notation</strong> — time and space complexity analysis</li>
         <li><strong>System design</strong> — load balancing, caching, database scaling, CAP theorem</li>
         <li><strong>AWS</strong> — compute, storage, networking, IAM, messaging, CDN</li>
