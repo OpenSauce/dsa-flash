@@ -3,20 +3,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.flashcards import router as flashcard_router
 from app.api.users import router as user_router
 from app.database import get_session
 from app.models import StudySession
-
-
-def _get_test_session(session):
-    def get_test_session():
-        with Session(session.get_bind()) as s:
-            yield s
-
-    return get_test_session
+from tests.conftest import get_test_session, seed_study_session
 
 
 @pytest.fixture(name="app")
@@ -24,24 +17,13 @@ def app_fixture(session):
     app = FastAPI()
     app.include_router(flashcard_router)
     app.include_router(user_router)
-    app.dependency_overrides[get_session] = _get_test_session(session)
+    app.dependency_overrides[get_session] = get_test_session(session)
     return app
 
 
 @pytest.fixture(name="client")
 def client_fixture(app):
     return TestClient(app)
-
-
-def seed_study_session(session, user_id, study_date, cards_reviewed=1):
-    ss = StudySession(
-        user_id=user_id,
-        study_date=study_date,
-        cards_reviewed=cards_reviewed,
-    )
-    session.add(ss)
-    session.commit()
-    return ss
 
 
 def test_streak_unauthenticated_returns_401(client):

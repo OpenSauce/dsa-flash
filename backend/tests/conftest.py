@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
@@ -10,7 +11,7 @@ from testcontainers.postgres import PostgresContainer
 # Import all models so SQLModel.metadata knows about every table
 import app.models  # noqa: F401
 from app.api.users import User, get_password_hash
-from app.models import Flashcard
+from app.models import Flashcard, StudySession, UserFlashcard
 
 
 @pytest.fixture(scope="session")
@@ -81,3 +82,39 @@ def get_token():
         return response.json()["access_token"]
 
     return _get_token
+
+
+def get_test_session(session):
+    def _get_test_session():
+        with Session(session.get_bind()) as s:
+            yield s
+
+    return _get_test_session
+
+
+def seed_study_session(session, user_id, study_date, cards_reviewed=1):
+    ss = StudySession(
+        user_id=user_id,
+        study_date=study_date,
+        cards_reviewed=cards_reviewed,
+    )
+    session.add(ss)
+    session.commit()
+    return ss
+
+
+def create_user_flashcard(
+    session, user_id, flashcard_id, interval=0, easiness=2.5, created_at=None, last_reviewed=None
+):
+    now = datetime.now(timezone.utc)
+    uf = UserFlashcard(
+        user_id=user_id,
+        flashcard_id=flashcard_id,
+        interval=interval,
+        easiness=easiness,
+        created_at=created_at or now,
+        last_reviewed=last_reviewed or now,
+    )
+    session.add(uf)
+    session.commit()
+    return uf

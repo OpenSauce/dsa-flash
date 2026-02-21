@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.flashcards import categories_router
 from app.api.flashcards import router as flashcard_router
@@ -11,14 +11,7 @@ from app.api.users import get_current_user
 from app.api.users import router as user_router
 from app.database import get_session
 from app.models import UserFlashcard
-
-
-def _get_test_session(session):
-    def get_test_session():
-        with Session(session.get_bind()) as s:
-            yield s
-
-    return get_test_session
+from tests.conftest import get_test_session
 
 
 @pytest.fixture(name="app")
@@ -30,7 +23,7 @@ def app_fixture(session):
     app.include_router(flashcard_router)
     app.include_router(categories_router)
     app.include_router(user_router)
-    app.dependency_overrides[get_session] = _get_test_session(session)
+    app.dependency_overrides[get_session] = get_test_session(session)
     app.dependency_overrides[get_current_user] = lambda: FakeUser()
     return app
 
@@ -47,7 +40,7 @@ def anon_app_fixture(session):
     app.include_router(flashcard_router)
     app.include_router(categories_router)
     app.include_router(user_router)
-    app.dependency_overrides[get_session] = _get_test_session(session)
+    app.dependency_overrides[get_session] = get_test_session(session)
     return app
 
 
