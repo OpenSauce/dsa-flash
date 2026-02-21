@@ -360,3 +360,43 @@ def test_load_lessons_space_in_category_dir(tmp_path, engine):
 
     assert lesson is not None
     assert lesson.category == "data-structures"
+
+
+# ---------------------------------------------------------------------------
+# lesson_slug field in flashcard loader
+# ---------------------------------------------------------------------------
+
+
+def test_load_flashcards_with_lesson_field(tmp_path, engine):
+    """Flashcard YAML with `lesson` field stores it as lesson_slug."""
+    cards = [
+        {"title": "Card 1", "Front": "Q1", "Back": "A1", "lesson": "docker-layers-build-cache"},
+        {"title": "Card 2", "Front": "Q2", "Back": "A2"},
+    ]
+    _write_yaml(tmp_path / "docker" / "cards.yaml", cards)
+
+    with patch("app.loader.ROOT", tmp_path), patch("app.loader.engine", engine):
+        load_yaml_flashcards()
+
+    with Session(engine) as session:
+        all_cards = session.exec(select(Flashcard)).all()
+
+    assert len(all_cards) == 2
+    by_title = {c.title: c for c in all_cards}
+    assert by_title["Card 1"].lesson_slug == "docker-layers-build-cache"
+    assert by_title["Card 2"].lesson_slug is None
+
+
+def test_upsert_flashcard_updates_lesson_slug(session):
+    """Upserting a card updates lesson_slug on the existing row."""
+    original = _make_card(title="Card", lesson_slug=None)
+    session.add(original)
+    session.commit()
+
+    updated = _make_card(title="Card", lesson_slug="new-lesson")
+    upsert_flashcard(updated, session)
+    session.commit()
+
+    results = session.exec(select(Flashcard).where(Flashcard.title == "Card")).all()
+    assert len(results) == 1
+    assert results[0].lesson_slug == "new-lesson"

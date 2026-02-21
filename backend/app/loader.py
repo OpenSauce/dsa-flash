@@ -41,6 +41,7 @@ def upsert_flashcard(card: Flashcard, session: Session) -> None:
         exists.back = card.back
         exists.difficulty = card.difficulty
         exists.tags = card.tags
+        exists.lesson_slug = card.lesson_slug
     else:
         session.add(card)
 
@@ -81,6 +82,7 @@ def load_yaml_flashcards() -> None:
                     tags=raw.get("tags") or [],
                     category=category,
                     language=language,
+                    lesson_slug=raw.get("lesson"),
                 )
                 upsert_flashcard(card, session)
                 yaml_keys.add((raw["title"], category, language))

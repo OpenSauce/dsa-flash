@@ -148,6 +148,17 @@ async function startSession(selectedMode: StudyMode) {
   }
   sessionStarted.value = true
 }
+
+function handleLearnNew() {
+  if (isLoggedIn.value && categoryLessons.value.length > 0 && !allLessonsComplete.value) {
+    const firstUncompleted = categoryLessons.value.find(l => !l.completed)
+    if (firstUncompleted) {
+      navigateTo(`/lesson/${firstUncompleted.slug}`)
+      return
+    }
+  }
+  startSession('new')
+}
 </script>
 
 <template>
@@ -183,7 +194,7 @@ async function startSession(selectedMode: StudyMode) {
             <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
           </div>
         </button>
-        <button v-if="stats.new > 0" @click="startSession('new')"
+        <button v-if="stats.new > 0" @click="handleLearnNew()"
                 class="flex items-center gap-4 px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
           <span class="text-2xl flex-shrink-0">🌱</span>
           <div>

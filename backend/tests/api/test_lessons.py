@@ -7,7 +7,7 @@ from app.api.lessons import router as lessons_router
 from app.api.users import get_current_user, get_optional_user
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import UserLesson
+from app.models import UserFlashcard, UserLesson
 from tests.conftest import get_test_session
 
 
@@ -194,3 +194,113 @@ def test_lessons_for_category_anon(anon_client, create_lesson):
     assert len(data) == 2
     for item in data:
         assert item["completed"] is False
+
+
+def test_complete_lesson_unlocks_flashcards(client, session, create_user, create_lesson, create_flashcard):
+    """Completing a lesson creates UserFlashcard rows for all linked cards."""
+    from datetime import datetime, timedelta, timezone
+
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="unlock-test")
+    c1 = create_flashcard(title="Card 1", lesson_slug="unlock-test")
+    c2 = create_flashcard(title="Card 2", lesson_slug="unlock-test")
+    c3 = create_flashcard(title="Card 3", lesson_slug="unlock-test")
+    _unlinked = create_flashcard(title="Unlinked Card")
+
+    response = client.post("/lessons/unlock-test/complete")
+    assert response.status_code == 204
+
+    ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(ufs) == 3
+
+    linked_ids = {c1.id, c2.id, c3.id}
+    uf_card_ids = {uf.flashcard_id for uf in ufs}
+    assert uf_card_ids == linked_ids
+
+    now = datetime.utcnow()
+    for uf in ufs:
+        assert uf.repetitions == 0
+        assert uf.interval == 1
+        assert uf.easiness == 2.5
+        assert uf.last_reviewed is None
+        assert uf.next_review is not None
+        assert uf.next_review > now
+        assert uf.next_review < now + timedelta(days=2)
+
+    _ = lesson
+
+
+def test_complete_lesson_skips_existing_user_flashcards(client, session, create_user, create_lesson, create_flashcard):
+    """Lesson completion skips cards that already have a UserFlashcard row."""
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="skip-existing-test")
+    c1 = create_flashcard(title="Card A", lesson_slug="skip-existing-test")
+    c2 = create_flashcard(title="Card B", lesson_slug="skip-existing-test")
+
+    # Pre-create a UserFlashcard for c1
+    pre_existing = UserFlashcard(
+        user_id=FakeUser.id,
+        flashcard_id=c1.id,
+        repetitions=3,
+        interval=7,
+        easiness=2.8,
+    )
+    session.add(pre_existing)
+    session.commit()
+
+    response = client.post("/lessons/skip-existing-test/complete")
+    assert response.status_code == 204
+
+    all_ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(all_ufs) == 2
+
+    c1_uf = session.get(UserFlashcard, (FakeUser.id, c1.id))
+    assert c1_uf is not None
+    assert c1_uf.repetitions == 3
+    assert c1_uf.interval == 7
+
+    c2_uf = session.get(UserFlashcard, (FakeUser.id, c2.id))
+    assert c2_uf is not None
+    assert c2_uf.interval == 1
+
+    _ = lesson
+
+
+def test_complete_lesson_idempotent_no_duplicate_unlock(client, session, create_user, create_lesson, create_flashcard):
+    """Completing a lesson twice creates only one set of UserFlashcard entries."""
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="idempotent-unlock-test")
+    _card = create_flashcard(title="Card X", lesson_slug="idempotent-unlock-test")
+
+    r1 = client.post("/lessons/idempotent-unlock-test/complete")
+    r2 = client.post("/lessons/idempotent-unlock-test/complete")
+
+    assert r1.status_code == 204
+    assert r2.status_code == 204
+
+    ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(ufs) == 1
+
+    _ = lesson
+
+
+def test_complete_lesson_no_linked_flashcards(client, session, create_user, create_lesson):
+    """Completing a lesson with no linked flashcards succeeds with no UserFlashcard rows created."""
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="no-cards-test")
+
+    response = client.post("/lessons/no-cards-test/complete")
+    assert response.status_code == 204
+
+    ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(ufs) == 0
+
+    _ = lesson

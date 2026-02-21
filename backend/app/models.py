@@ -40,6 +40,7 @@ class Flashcard(SQLModel, table=True):
     )
     category: Optional[str] = None
     language: Optional[str] = None
+    lesson_slug: Optional[str] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
 
