@@ -96,12 +96,12 @@ def complete_lesson(
             UserLesson.lesson_id == lesson.id,
         )
     ).first()
-    if existing:
-        return  # already completed, idempotent
+    if not existing:
+        user_lesson = UserLesson(user_id=user.id, lesson_id=lesson.id)
+        session.add(user_lesson)
 
-    user_lesson = UserLesson(user_id=user.id, lesson_id=lesson.id)
-    session.add(user_lesson)
-
+    # Always ensure all currently-linked flashcards have UserFlashcard rows,
+    # even on repeated calls (covers cards linked after initial completion).
     linked_cards = session.exec(
         select(Flashcard).where(Flashcard.lesson_slug == slug)
     ).all()

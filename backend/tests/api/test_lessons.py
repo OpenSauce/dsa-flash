@@ -290,6 +290,47 @@ def test_complete_lesson_idempotent_no_duplicate_unlock(client, session, create_
     _ = lesson
 
 
+def test_complete_lesson_unlocks_cards_added_after_completion(
+    client, session, create_user, create_lesson, create_flashcard
+):
+    """Re-calling complete after new cards are linked unlocks the new cards."""
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="late-link-test")
+    c1 = create_flashcard(title="Card Early", lesson_slug="late-link-test")
+
+    # First completion unlocks c1
+    r1 = client.post("/lessons/late-link-test/complete")
+    assert r1.status_code == 204
+
+    ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(ufs) == 1
+
+    # New card linked to the same lesson after completion
+    c2 = create_flashcard(title="Card Late", lesson_slug="late-link-test")
+
+    # Second completion picks up c2
+    r2 = client.post("/lessons/late-link-test/complete")
+    assert r2.status_code == 204
+
+    ufs = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(ufs) == 2
+    uf_card_ids = {uf.flashcard_id for uf in ufs}
+    assert uf_card_ids == {c1.id, c2.id}
+
+    # Still only one UserLesson row
+    rows = session.exec(
+        select(UserLesson).where(
+            UserLesson.user_id == FakeUser.id,
+            UserLesson.lesson_id == lesson.id,
+        )
+    ).all()
+    assert len(rows) == 1
+
+
 def test_complete_lesson_no_linked_flashcards(client, session, create_user, create_lesson):
     """Completing a lesson with no linked flashcards succeeds with no UserFlashcard rows created."""
     create_user(username="user", password="password")
