@@ -3,7 +3,7 @@ export const CATEGORY_META: Record<string, { emoji: string; description: string;
   'algorithms': { emoji: '⚙️', description: 'Sorting, searching, traversal...', section: 'Coding' },
   'advanced-data-structures': { emoji: '🚀', description: 'Fenwick trees, tries, unions...', section: 'Coding' },
   'big-o-notation': { emoji: '🧠', description: 'Complexity analysis essentials.', section: 'Coding' },
-  'dynamic-programming': { emoji: '🧩', description: 'Memoization, tabulation, classic problems...', section: 'Coding', displayName: 'Dynamic Programming' },
+  'dynamic-programming': { emoji: '🧩', description: 'Memoization, tabulation, classic problems...', section: 'Coding' },
   'system-design': { emoji: '🏗️', description: 'Load balancing, caching, scaling...', section: 'System Design' },
   'aws': { emoji: '☁️', description: 'EC2, S3, Lambda, VPC, and more.', section: 'System Design' },
   'kubernetes': { emoji: '☸️', description: 'Pods, Deployments, Services, networking...', section: 'System Design' },
@@ -27,6 +27,7 @@ const KNOWN_DISPLAY_NAMES: Record<string, string> = {
   'docker': 'Docker',
   'linux': 'Linux',
   'networking': 'Networking',
+  'dynamic-programming': 'Dynamic Programming',
 }
 
 export function getCategoryDisplayName(slug: string): string {
