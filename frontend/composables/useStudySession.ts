@@ -53,6 +53,7 @@ interface UseStudySessionReturn {
   newConceptsInSession: ComputedRef<number>
   reviewedConceptsInSession: ComputedRef<number>
   mode: Ref<StudyMode>
+  hasFlippedOnce: Ref<boolean>
   flipCard: () => void
   nextCard: () => void
   recordResponse: (grade: 'again' | 'good' | 'easy') => Promise<void>
@@ -192,11 +193,13 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
   // Reveal state
   const revealed = ref(false)
   const buttonsEnabled = ref(false)
+  const hasFlippedOnce = ref(false)
   let buttonsTimer: ReturnType<typeof setTimeout> | null = null
 
   function flipCard() {
     revealed.value = !revealed.value
     if (revealed.value) {
+      hasFlippedOnce.value = true
       flipTime.value = Date.now()
       track('card_flip', {
         card_id: card.value?.id,
@@ -374,6 +377,7 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
     newConceptsInSession,
     reviewedConceptsInSession,
     mode,
+    hasFlippedOnce,
     flipCard,
     nextCard,
     recordResponse,
