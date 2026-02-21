@@ -85,6 +85,30 @@ watch(
   { immediate: true }
 )
 
+// Lesson hint banner
+interface CategoryLessonInfo {
+  slug: string
+  title: string
+  completed: boolean
+}
+const categoryLessons = ref<CategoryLessonInfo[]>([])
+
+const allLessonsComplete = computed(() =>
+  categoryLessons.value.length > 0 && categoryLessons.value.every(l => l.completed)
+)
+
+onMounted(async () => {
+  try {
+    const headers = tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {}
+    categoryLessons.value = await $fetch<CategoryLessonInfo[]>(
+      `${apiBase}/lessons/by-category/${category}`,
+      { headers }
+    )
+  } catch {
+    // non-fatal
+  }
+})
+
 const {
   card, pending, error,
   sessionFinished, cardsReviewedInBatch, cardsReviewedInSession,
@@ -133,6 +157,15 @@ async function startSession(selectedMode: StudyMode) {
     <div v-if="!sessionStarted && isLoggedIn" class="text-center py-8 sm:py-16">
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
+
+      <!-- Lesson hint banner -->
+      <div v-if="categoryLessons.length > 0 && !allLessonsComplete"
+           class="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800 max-w-sm mx-auto text-left">
+        <span class="font-medium">Recommended:</span> Read the lesson before studying flashcards.
+        <NuxtLink :to="`/lesson/${categoryLessons[0].slug}`" class="underline font-semibold ml-1">
+          Start lesson
+        </NuxtLink>
+      </div>
 
       <div v-if="!statsLoaded"><!-- waiting for stats --></div>
 

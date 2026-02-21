@@ -12,7 +12,7 @@ from testcontainers.postgres import PostgresContainer
 import app.models  # noqa: F401
 from app.api.users import User, get_password_hash
 from app.limiter import limiter
-from app.models import Flashcard, StudySession, UserFlashcard
+from app.models import Flashcard, Lesson, StudySession, UserFlashcard
 
 
 @pytest.fixture(scope="session")
@@ -41,7 +41,8 @@ def clear_db(engine):
     with engine.begin() as conn:
         conn.execute(
             text(
-                'TRUNCATE TABLE studysession, event, userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
+                "TRUNCATE TABLE userlesson, lesson, studysession, event,"
+                ' userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
 
@@ -90,6 +91,25 @@ def get_token():
         return response.json()["access_token"]
 
     return _get_token
+
+
+@pytest.fixture
+def create_lesson(session):
+    def _create(**kwargs):
+        kwargs.setdefault("title", "Test Lesson")
+        kwargs.setdefault("slug", "test-lesson")
+        kwargs.setdefault("category", "test-cat")
+        kwargs.setdefault("content", "# Test\n\nThis is test content.")
+        kwargs.setdefault("summary", "A test lesson.")
+        kwargs.setdefault("reading_time_minutes", 3)
+        kwargs.setdefault("order", 0)
+        lesson = Lesson(**kwargs)
+        session.add(lesson)
+        session.commit()
+        session.refresh(lesson)
+        return lesson
+
+    return _create
 
 
 def get_test_session(session):

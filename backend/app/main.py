@@ -7,13 +7,14 @@ from slowapi.errors import RateLimitExceeded
 from .api import api_router
 from .database import run_migrations
 from .limiter import limiter
-from .loader import load_yaml_flashcards
+from .loader import load_lessons, load_yaml_flashcards
 
 
 @asynccontextmanager
 async def lifespan(_):
     run_migrations()
     load_yaml_flashcards()
+    load_lessons()
     yield
 
 
