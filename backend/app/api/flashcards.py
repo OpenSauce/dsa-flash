@@ -3,8 +3,6 @@ from math import floor
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -15,12 +13,13 @@ from ..models import (
     MASTERY_INTERVAL_DAYS,
     CategoryOut,
     Flashcard,
+    FlashcardWithIntervals,
     StudySession,
     User,
     UserFlashcard,
     slug_to_display_name,
 )
-from ..spaced import sm2
+from ..spaced import compute_projected_intervals, sm2
 from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/flashcards", tags=["flashcards"])
@@ -143,7 +142,7 @@ class StatsOut(BaseModel):
     new: int
 
 
-@router.get("", response_model=list[Flashcard])
+@router.get("", response_model=list[FlashcardWithIntervals])
 def list_cards(
     session: Session = Depends(get_session),
     category: Optional[str] = Query(None),
@@ -220,7 +219,54 @@ def list_cards(
 
     cards = session.exec(stmt).all()
 
-    return JSONResponse(content=jsonable_encoder(cards))
+    if user:
+        card_ids = [c.id for c in cards]
+        if card_ids:
+            uf_stmt = select(UserFlashcard).where(
+                UserFlashcard.user_id == user.id,
+                col(UserFlashcard.flashcard_id).in_(card_ids),
+            )
+            uf_rows = session.exec(uf_stmt).all()
+            uf_map = {uf.flashcard_id: uf for uf in uf_rows}
+        else:
+            uf_map = {}
+
+        result = []
+        for card in cards:
+            uf = uf_map.get(card.id)
+            if uf:
+                intervals = compute_projected_intervals(uf.repetitions, uf.interval, uf.easiness)
+            else:
+                intervals = compute_projected_intervals()
+            result.append(FlashcardWithIntervals(
+                id=card.id,
+                front=card.front,
+                back=card.back,
+                title=card.title,
+                difficulty=card.difficulty,
+                tags=card.tags,
+                category=card.category,
+                language=card.language,
+                created_at=card.created_at,
+                projected_intervals=intervals,
+            ))
+        return result
+
+    return [
+        FlashcardWithIntervals(
+            id=card.id,
+            front=card.front,
+            back=card.back,
+            title=card.title,
+            difficulty=card.difficulty,
+            tags=card.tags,
+            category=card.category,
+            language=card.language,
+            created_at=card.created_at,
+            projected_intervals=None,
+        )
+        for card in cards
+    ]
 
 
 @router.post("/{card_id}/review", status_code=204)

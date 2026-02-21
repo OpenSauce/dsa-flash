@@ -8,7 +8,10 @@ const defaultProps = {
   mode: 'new',
 }
 
-function mountButtons(props: Partial<typeof defaultProps> = {}) {
+type ReviewButtonsProps = Partial<typeof defaultProps> & {
+  projectedIntervals?: Record<string, string> | null
+}
+function mountButtons(props: ReviewButtonsProps = {}) {
   return mount(ReviewButtons, { props: { ...defaultProps, ...props } })
 }
 
@@ -100,5 +103,62 @@ describe('ReviewButtons', () => {
     expect(wrapper.text()).toContain('Tricky')
     expect(wrapper.text()).toContain('Got it')
     expect(wrapper.text()).toContain('Easy')
+  })
+
+  // ── projectedIntervals tests ──────────────────────────────────────────
+
+  it('shows projected intervals on all three buttons when projectedIntervals is provided', () => {
+    const projectedIntervals = { '1': '1d', '3': '4d', '5': '16d' }
+    const wrapper = mountButtons({ projectedIntervals })
+    expect(wrapper.text()).toContain('1d')
+    expect(wrapper.text()).toContain('4d')
+    expect(wrapper.text()).toContain('16d')
+  })
+
+  it('does not show interval text when projectedIntervals is null', () => {
+    const wrapper = mountButtons({ projectedIntervals: null })
+    // No interval-formatted text like "1d", "4d" etc should appear
+    expect(wrapper.text()).not.toMatch(/\d+d/)
+    expect(wrapper.text()).not.toMatch(/\d+w/)
+    expect(wrapper.text()).not.toMatch(/\d+mo/)
+  })
+
+  it('does not show interval text when projectedIntervals is not provided', () => {
+    const wrapper = mountButtons()
+    expect(wrapper.text()).not.toMatch(/\d+d/)
+    expect(wrapper.text()).not.toMatch(/\d+w/)
+    expect(wrapper.text()).not.toMatch(/\d+mo/)
+  })
+
+  it('maps quality 1 interval to again/tricky button', () => {
+    const projectedIntervals = { '1': '1d', '3': '4d', '5': '16d' }
+    const wrapper = mountButtons({ projectedIntervals })
+    const buttons = wrapper.findAll('button')
+    const againBtn = buttons.find(b => b.text().includes('Tricky'))
+    expect(againBtn).toBeDefined()
+    expect(againBtn!.text()).toContain('1d')
+    expect(againBtn!.text()).not.toContain('4d')
+    expect(againBtn!.text()).not.toContain('16d')
+  })
+
+  it('maps quality 3 interval to good/got-it button', () => {
+    const projectedIntervals = { '1': '1d', '3': '4d', '5': '16d' }
+    const wrapper = mountButtons({ projectedIntervals })
+    const buttons = wrapper.findAll('button')
+    const goodBtn = buttons.find(b => b.text().includes('Got it'))
+    expect(goodBtn).toBeDefined()
+    expect(goodBtn!.text()).toContain('4d')
+    expect(goodBtn!.text()).not.toContain('1d')
+    expect(goodBtn!.text()).not.toContain('16d')
+  })
+
+  it('maps quality 5 interval to easy button', () => {
+    const projectedIntervals = { '1': '1d', '3': '4d', '5': '16d' }
+    const wrapper = mountButtons({ projectedIntervals })
+    const buttons = wrapper.findAll('button')
+    const easyBtn = buttons.find(b => b.text().includes('Easy'))
+    expect(easyBtn).toBeDefined()
+    expect(easyBtn!.text()).toContain('16d')
+    expect(easyBtn!.text()).not.toContain('4d')
   })
 })
