@@ -73,11 +73,12 @@ useHead({
     <section class="mb-8">
       <h2 class="text-2xl font-bold mb-3">What's covered</h2>
       <p class="text-gray-700 leading-relaxed mb-4">
-        The current library spans ten topic areas:
+        The current library spans eleven topic areas:
       </p>
       <ul class="list-disc list-inside space-y-1 text-gray-700 mb-4">
         <li><strong>Data structures</strong> — arrays, hash maps, trees, heaps, linked lists, stacks, queues</li>
-        <li><strong>Algorithms</strong> — sorting, searching, graph traversal, dynamic programming</li>
+        <li><strong>Algorithms</strong> — sorting, searching, graph traversal</li>
+        <li><strong>Dynamic Programming</strong> — memoization, tabulation, classic interview problems</li>
         <li><strong>Big O notation</strong> — time and space complexity analysis</li>
         <li><strong>System design</strong> — load balancing, caching, database scaling, CAP theorem</li>
         <li><strong>AWS</strong> — compute, storage, networking, IAM, messaging, CDN</li>
