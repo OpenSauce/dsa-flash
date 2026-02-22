@@ -62,6 +62,7 @@ interface CategoryFromAPI {
   mastery_pct: number | null
   learned_pct: number | null
   lessons_available: number | null
+  lessons_completed: number | null
   first_lesson_slug: string | null
 }
 
@@ -149,11 +150,20 @@ watch(isLoggedIn, () => {
           <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
           <p class="text-gray-500">{{ cat.description }}</p>
           <p v-if="cat.learned_pct !== null" class="text-sm text-gray-600 mt-2">
-            <span class="font-medium text-green-600">{{ cat.learned }}</span> of {{ cat.total }} learned
-            &nbsp;&middot;&nbsp;
-            <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
-            &nbsp;&middot;&nbsp;
-            <span class="font-medium text-blue-600">{{ cat.due }}</span> due
+            <template v-if="cat.lessons_available && cat.lessons_available > 0">
+              <span class="font-medium text-green-600">{{ cat.lessons_completed ?? 0 }}</span> of {{ cat.lessons_available }} lessons
+              &nbsp;&middot;&nbsp;
+              <span class="font-medium text-purple-600">{{ cat.mastered }}</span> concepts mastered
+              &nbsp;&middot;&nbsp;
+              <span class="font-medium text-blue-600">{{ cat.due }}</span> due
+            </template>
+            <template v-else>
+              <span class="font-medium text-green-600">{{ cat.learned }}</span> of {{ cat.total }} learned
+              &nbsp;&middot;&nbsp;
+              <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
+              &nbsp;&middot;&nbsp;
+              <span class="font-medium text-blue-600">{{ cat.due }}</span> due
+            </template>
           </p>
           <p v-else class="text-sm text-gray-600 mt-2">
             <span class="font-medium">{{ cat.total }}</span> concepts

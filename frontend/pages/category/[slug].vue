@@ -85,11 +85,12 @@ watch(
   { immediate: true }
 )
 
-// Lesson hint banner
+// Lesson state
 interface CategoryLessonInfo {
   slug: string
   title: string
   completed: boolean
+  has_quiz: boolean
 }
 const categoryLessons = ref<CategoryLessonInfo[]>([])
 
@@ -150,72 +151,86 @@ async function startSession(selectedMode: StudyMode) {
 }
 
 function handleLearnNew() {
-  if (isLoggedIn.value && categoryLessons.value.length > 0 && !allLessonsComplete.value) {
-    const firstUncompleted = categoryLessons.value.find(l => !l.completed)
-    if (firstUncompleted) {
-      navigateTo(`/lesson/${firstUncompleted.slug}`)
-      return
-    }
-  }
   startSession('new')
 }
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-2 sm:p-6">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6">
+
+    <Breadcrumb :items="sessionStarted
+      ? [{ label: 'Home', to: '/' }, { label: categoryDisplayName, onClick: () => finishSession('user_ended') }, { label: 'Review' }]
+      : [{ label: 'Home', to: '/' }, { label: categoryDisplayName }]"
+    />
 
     <!-- Mode selector (logged-in users only, before session starts) -->
-    <div v-if="!sessionStarted && isLoggedIn" class="text-center py-8 sm:py-16">
+    <div v-if="!sessionStarted && isLoggedIn" class="text-center py-4 sm:py-12">
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
-      <!-- Lesson hint banner -->
-      <div v-if="categoryLessons.length > 0 && !allLessonsComplete"
-           class="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800 max-w-sm mx-auto text-left">
-        <span class="font-medium">Recommended:</span> Read the lesson before studying flashcards.
-        <NuxtLink :to="`/lesson/${categoryLessons[0].slug}`" class="underline font-semibold ml-1">
-          Start lesson
-        </NuxtLink>
-      </div>
-
       <div v-if="!statsLoaded"><!-- waiting for stats --></div>
 
-      <div v-else-if="stats.due === 0 && stats.new === 0" class="text-gray-500">
-        <p class="mb-4">No cards due and no new cards. Come back tomorrow!</p>
-        <NuxtLink to="/" class="text-blue-600 hover:underline">&larr; Back to categories</NuxtLink>
-      </div>
+      <template v-else>
+        <div class="flex flex-col gap-3 max-w-sm mx-auto">
+          <!-- Review due button (always at top when cards are due) -->
+          <button v-if="stats.due > 0" @click="startSession('due')"
+                  class="flex items-center gap-4 px-6 py-4 border-2 border-blue-600 rounded-xl text-left hover:bg-blue-50 transition">
+            <span class="text-2xl flex-shrink-0">💧</span>
+            <div>
+              <span class="block font-semibold text-blue-700">Review due ({{ stats.due }})</span>
+              <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
+            </div>
+          </button>
 
-      <div v-else class="flex flex-col gap-3 max-w-sm mx-auto">
-        <button v-if="stats.due > 0" @click="startSession('due')"
-                class="flex items-center gap-4 px-6 py-4 border-2 border-blue-600 rounded-xl text-left hover:bg-blue-50 transition">
-          <span class="text-2xl flex-shrink-0">💧</span>
-          <div>
-            <span class="block font-semibold text-blue-700">Review due ({{ stats.due }})</span>
-            <span class="block text-sm text-gray-500 mt-0.5">Cards ready for review</span>
+          <!-- Lesson checklist (categories with lessons) -->
+          <div v-if="categoryLessons.length > 0" class="mt-2">
+            <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Lessons</h3>
+            <ul class="space-y-2">
+              <li v-for="lesson in categoryLessons" :key="lesson.slug">
+                <NuxtLink
+                  :to="`/lesson/${lesson.slug}`"
+                  class="flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition"
+                  :class="lesson.completed
+                    ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                    : 'border-gray-200 bg-white hover:bg-gray-50'"
+                >
+                  <span v-if="lesson.completed" class="flex-shrink-0 text-green-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span v-else class="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300" />
+                  <span class="text-sm font-medium" :class="lesson.completed ? 'text-green-800' : 'text-gray-700'">
+                    {{ lesson.title }}
+                  </span>
+                </NuxtLink>
+              </li>
+            </ul>
           </div>
-        </button>
-        <button v-if="stats.new > 0" @click="handleLearnNew()"
-                class="flex items-center gap-4 px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
-          <span class="text-2xl flex-shrink-0">🌱</span>
-          <div>
-            <span class="block font-semibold text-green-700">
-              Learn new ({{ stats.new > 10 ? 10 : stats.new }})
-            </span>
-            <span class="block text-sm text-gray-500 mt-0.5">Concepts you haven't seen</span>
-          </div>
-        </button>
 
-        <NuxtLink to="/" class="text-sm text-gray-400 hover:text-gray-600 mt-4">&larr; Back to categories</NuxtLink>
-      </div>
+          <!-- Learn new button (only for categories without lessons, or all lessons done) -->
+          <button v-if="stats.new > 0 && (categoryLessons.length === 0 || allLessonsComplete)" @click="handleLearnNew()"
+                  class="flex items-center gap-4 px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
+            <span class="text-2xl flex-shrink-0">🌱</span>
+            <div>
+              <span class="block font-semibold text-green-700">
+                Learn new ({{ stats.new > 10 ? 10 : stats.new }})
+              </span>
+              <span class="block text-sm text-gray-500 mt-0.5">Concepts you haven't seen</span>
+            </div>
+          </button>
+
+          <div v-if="stats.due === 0 && stats.new === 0 && categoryLessons.length === 0" class="text-gray-500 text-center">
+            <p>No cards due and no new cards. Come back tomorrow!</p>
+          </div>
+
+          <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-6 text-center">&larr; Back to categories</NuxtLink>
+        </div>
+      </template>
     </div>
 
     <!-- Study session -->
     <template v-else>
-      <button v-if="card" @click="finishSession('user_ended')"
-              class="text-blue-600 hover:underline mb-4 inline-block">
-        Stop reviewing
-      </button>
-
       <div v-if="error" class="text-red-500">
         {{ error.data?.detail || error }}
       </div>
@@ -291,6 +306,13 @@ function handleLearnNew() {
             :projected-intervals="projectedIntervals"
             @rate="recordResponse"
           />
+        </div>
+
+        <div class="hidden sm:flex justify-center mt-6">
+          <button @click="finishSession('user_ended')"
+                  class="text-sm text-gray-400 hover:text-gray-600 transition">
+            &larr; Back to categories
+          </button>
         </div>
       </div>
     </template>
