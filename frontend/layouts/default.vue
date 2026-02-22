@@ -167,8 +167,8 @@ function onKeydown(e: KeyboardEvent) {
       © {{ new Date().getFullYear() }}
       <br class="block sm:hidden" />
       <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">Technical knowledge that sticks</span>
-      <span class="mx-2 text-gray-300 hidden sm:inline" aria-hidden="true">·</span>
-      <NuxtLink to="/about" class="hover:underline hidden sm:inline">Learn more</NuxtLink>
+      <span class="mx-2 text-gray-300 inline" aria-hidden="true">·</span>
+      <NuxtLink to="/about" class="hover:underline">About DSA Flash</NuxtLink>
     </footer>
   </div>
 </template>

@@ -124,6 +124,7 @@ watch(isLoggedIn, () => {
     <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-4">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
+    <p v-if="!isLoggedIn" class="text-sm text-center text-gray-400 mb-6">Pick a topic below to start learning.</p>
 
     <template v-for="(section, index) in sections" :key="section.name">
       <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
