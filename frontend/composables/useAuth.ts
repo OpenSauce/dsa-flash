@@ -38,7 +38,10 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    user.value = await apiFetch<UserInfo>('/users/me')
+    // Use token directly — cookie ref may not propagate within the same tick
+    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
   }
 
   const signup = async (username: string, password: string): Promise<void> => {
@@ -50,7 +53,10 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    user.value = await apiFetch<UserInfo>('/users/me')
+    // Use token directly — cookie ref may not propagate within the same tick
+    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
   }
 
   const logout = async () => {
