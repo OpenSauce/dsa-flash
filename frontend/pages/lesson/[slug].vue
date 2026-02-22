@@ -168,7 +168,7 @@ const renderedContent = computed(() =>
             </p>
           </div>
 
-          <div v-else-if="isLoggedIn" class="flex flex-col items-center gap-3 mb-6">
+          <div v-else class="flex flex-col items-center gap-3 mb-6">
             <NuxtLink
               :to="`/quiz/${linkedQuiz.slug}`"
               class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition"
@@ -178,12 +178,11 @@ const renderedContent = computed(() =>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </NuxtLink>
-            <p class="text-sm text-gray-500">Complete the quiz to unlock flashcards</p>
-          </div>
-
-          <div v-else class="text-center text-sm text-gray-500 mb-6">
-            <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
-            to track your progress.
+            <p v-if="isLoggedIn" class="text-sm text-gray-500">Complete the quiz to unlock flashcards</p>
+            <p v-else class="text-sm text-gray-500">
+              <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
+              to save your progress
+            </p>
           </div>
         </template>
 

@@ -23,7 +23,7 @@ const defaultProps = {
   remainingCards: 3,
   hasMoreCards: true,
   isLoggedIn: true,
-  mode: 'all',
+  mode: 'due',
 }
 
 function mountScreen(props: Partial<typeof defaultProps> = {}) {
@@ -44,21 +44,6 @@ describe('CompletionScreen', () => {
   it('shows cards reviewed count', () => {
     const wrapper = mountScreen()
     expect(wrapper.text()).toContain('7')
-  })
-
-  it('shows new and reviewed concept breakdown for auth users', () => {
-    const wrapper = mountScreen()
-    expect(wrapper.text()).toContain('4')
-    expect(wrapper.text()).toContain('new')
-    expect(wrapper.text()).toContain('3')
-    expect(wrapper.text()).toContain('reviewed')
-  })
-
-  it('shows running total for auth users', () => {
-    const wrapper = mountScreen()
-    expect(wrapper.text()).toContain('42')
-    expect(wrapper.text()).toContain('60')
-    expect(wrapper.text()).toContain('System Design concepts')
   })
 
   it('shows encouragement message for auth users', () => {
@@ -103,8 +88,6 @@ describe('CompletionScreen', () => {
     })
     expect(wrapper.text()).toContain('System Design concepts')
     expect(wrapper.text()).toContain('7')
-    // no breakdown paragraph — new/reviewed only shows for auth
-    expect(wrapper.text()).not.toContain('4 new')
     // no running total
     expect(wrapper.text()).not.toContain('You now know')
     // anon CTA
@@ -119,9 +102,9 @@ describe('CompletionScreen', () => {
       runningTotal: 0,
       hasMoreCards: false,
     })
-    expect(wrapper.text()).toContain('No concepts available right now')
-    // no "You studied" text
-    expect(wrapper.text()).not.toContain('You studied')
+    expect(wrapper.text()).toContain('No concepts due right now')
+    // no "You reviewed" text
+    expect(wrapper.text()).not.toContain('You reviewed')
   })
 
   it('"Try another domain" appears in "no cards due" state', () => {
@@ -159,23 +142,10 @@ describe('CompletionScreen', () => {
     expect(wrapper.text()).not.toContain('/ 60 learned')
   })
 
-  it('emits switch-mode when "Learn new concepts" is clicked in due mode', async () => {
+  it('does not show "Learn new concepts" button', () => {
     const wrapper = mountScreen({
       isLoggedIn: true,
       mode: 'due',
-      hasMoreCards: false,
-    })
-    const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))
-    expect(switchBtn).toBeDefined()
-    await switchBtn!.trigger('click')
-    expect(wrapper.emitted('switch-mode')).toBeTruthy()
-    expect(wrapper.emitted('switch-mode')![0]).toEqual(['new'])
-  })
-
-  it('does not show "Learn new concepts" button in new mode', () => {
-    const wrapper = mountScreen({
-      isLoggedIn: true,
-      mode: 'new',
       hasMoreCards: false,
     })
     const switchBtn = wrapper.findAll('button').find(b => b.text().includes('Learn new concepts'))

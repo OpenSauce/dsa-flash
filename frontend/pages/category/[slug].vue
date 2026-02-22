@@ -46,8 +46,7 @@ const { isLoggedIn, authReady, tokenCookie, logout } = useAuth()
 const { refreshStreak } = useStreak()
 const { track, flushBeacon } = useAnalytics()
 
-// Mode selector state (shown before session starts for logged-in users)
-const mode = ref<StudyMode>('all')
+const mode = ref<StudyMode>('due')
 const sessionStarted = ref(false)
 
 interface StatsData {
@@ -65,7 +64,7 @@ const fetchStats = async () => {
     )
     stats.value = data
   } catch {
-    // fallback: skip selector, start with mode=all
+    // fallback: start session immediately
     sessionStarted.value = true
   } finally {
     statsLoaded.value = true
@@ -76,11 +75,10 @@ watch(
   [authReady, isLoggedIn],
   async ([ready, loggedIn]) => {
     if (!ready) return
-    if (!loggedIn) {
-      sessionStarted.value = true
-      return
+    if (loggedIn) {
+      await fetchStats()
     }
-    await fetchStats()
+    // Anonymous users: do NOT auto-start a session — show lesson list instead
   },
   { immediate: true }
 )
@@ -93,10 +91,6 @@ interface CategoryLessonInfo {
   has_quiz: boolean
 }
 const categoryLessons = ref<CategoryLessonInfo[]>([])
-
-const allLessonsComplete = computed(() =>
-  categoryLessons.value.length > 0 && categoryLessons.value.every(l => l.completed)
-)
 
 onMounted(async () => {
   try {
@@ -132,10 +126,6 @@ const showFlipHint = computed(() => !hasFlippedOnce.value && !hasFlippedEver.val
 
 async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
-  // Wait for the refetch triggered by mode change to complete before
-  // showing the study UI, so no stale card flashes during transition.
-  // Use nextTick first to ensure the reactive URL change has propagated
-  // and useFetch has initiated the refetch (pending flips to true).
   await nextTick()
   if (pending.value) {
     await new Promise<void>((resolve) => {
@@ -149,10 +139,6 @@ async function startSession(selectedMode: StudyMode) {
   }
   sessionStarted.value = true
 }
-
-function handleLearnNew() {
-  startSession('new')
-}
 </script>
 
 <template>
@@ -163,8 +149,44 @@ function handleLearnNew() {
       : [{ label: 'Home', to: '/' }, { label: categoryDisplayName }]"
     />
 
-    <!-- Mode selector (logged-in users only, before session starts) -->
-    <div v-if="!sessionStarted && isLoggedIn" class="text-center py-4 sm:py-12">
+    <!-- Anonymous user landing: lesson list + signup CTA -->
+    <div v-if="!isLoggedIn && !sessionStarted" class="text-center py-4 sm:py-12">
+      <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
+      <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
+
+      <!-- Lesson checklist (no completion marks since not logged in) -->
+      <div v-if="categoryLessons.length > 0" class="max-w-sm mx-auto mb-8">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 text-left">Lessons</h3>
+        <ul class="space-y-2">
+          <li v-for="lesson in categoryLessons" :key="lesson.slug">
+            <NuxtLink
+              :to="`/lesson/${lesson.slug}`"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left transition"
+            >
+              <span class="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300" />
+              <span class="text-sm font-medium text-gray-700">{{ lesson.title }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Signup CTA -->
+      <div class="max-w-sm mx-auto rounded-xl border border-indigo-100 bg-indigo-50 px-6 py-5 mb-6">
+        <p class="text-sm font-semibold text-indigo-800 mb-1">Unlock spaced repetition flashcards</p>
+        <p class="text-sm text-indigo-700 mb-4">Complete lessons and quizzes to build your review queue.</p>
+        <NuxtLink
+          to="/signup"
+          class="inline-block px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition"
+        >
+          Sign up — it's free
+        </NuxtLink>
+      </div>
+
+      <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 text-center">&larr; Back to categories</NuxtLink>
+    </div>
+
+    <!-- Mode selector (logged-in users, before session starts) -->
+    <div v-else-if="!sessionStarted && isLoggedIn" class="text-center py-4 sm:py-12">
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
@@ -208,20 +230,12 @@ function handleLearnNew() {
             </ul>
           </div>
 
-          <!-- Learn new button (only for categories without lessons, or all lessons done) -->
-          <button v-if="stats.new > 0 && (categoryLessons.length === 0 || allLessonsComplete)" @click="handleLearnNew()"
-                  class="flex items-center gap-4 px-6 py-4 border-2 border-green-600 rounded-xl text-left hover:bg-green-50 transition">
-            <span class="text-2xl flex-shrink-0">🌱</span>
-            <div>
-              <span class="block font-semibold text-green-700">
-                Learn new ({{ stats.new > 10 ? 10 : stats.new }})
-              </span>
-              <span class="block text-sm text-gray-500 mt-0.5">Concepts you haven't seen</span>
-            </div>
-          </button>
+          <div v-if="stats.due === 0 && categoryLessons.length === 0" class="text-gray-500 text-center">
+            <p>All caught up! Come back tomorrow.</p>
+          </div>
 
-          <div v-if="stats.due === 0 && stats.new === 0 && categoryLessons.length === 0" class="text-gray-500 text-center">
-            <p>No cards due and no new cards. Come back tomorrow!</p>
+          <div v-else-if="stats.due === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
+            <p>No cards due. Complete more lessons to build your review queue.</p>
           </div>
 
           <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-6 text-center">&larr; Back to categories</NuxtLink>
@@ -251,38 +265,9 @@ function handleLearnNew() {
         :is-logged-in="isLoggedIn"
         :mode="mode"
         @keep-going="keepGoing"
-        @switch-mode="startSession"
       />
 
       <div v-else class="pb-24 sm:pb-0">
-        <!-- Initial amber banner: anonymous users before 3rd flip -->
-        <div v-if="!isLoggedIn && totalFlipsInSession < 3 && !ctaDismissed"
-             class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          <NuxtLink to="/signup" class="underline font-medium">Sign up</NuxtLink> to save your progress and unlock spaced repetition.
-        </div>
-
-        <!-- Upgraded CTA: appears after 3rd flip, dismissable -->
-        <div v-if="!isLoggedIn && totalFlipsInSession >= 3 && !ctaDismissed"
-             class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm text-indigo-800 flex items-center justify-between gap-3">
-          <div>
-            <NuxtLink to="/signup" class="underline font-semibold">Sign up</NuxtLink>
-            to save your progress and unlock spaced repetition &mdash; the system that makes knowledge stick.
-          </div>
-          <button @click="ctaDismissed = true"
-                  class="flex-shrink-0 text-indigo-400 hover:text-indigo-600 transition"
-                  aria-label="Dismiss signup prompt">
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- "Learning new concepts" label for anonymous sessions -->
-        <div v-if="!isLoggedIn" class="flex items-center gap-2 mb-2 text-sm text-green-700">
-          <span class="text-lg">🌱</span>
-          <span class="font-medium">Learning new concepts</span>
-        </div>
-
         <StudyProgressBar
           :current="cardsReviewedInBatch"
           :total="currentBatchSize"

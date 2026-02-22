@@ -18,7 +18,6 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'keep-going'): void
-  (e: 'switch-mode', mode: StudyMode): void
 }>()
 
 const HEADINGS = [
@@ -40,7 +39,7 @@ const HEADING_INDEX = Math.floor(Math.random() * HEADINGS.length)
 const ENCOURAGEMENT_INDEX = Math.floor(Math.random() * ENCOURAGEMENT_TEMPLATES.length)
 
 const categoryComplete = computed(() =>
-  props.isLoggedIn && props.mode !== 'due' && props.runningTotal !== null && props.categoryTotal > 0 && props.runningTotal >= props.categoryTotal
+  props.isLoggedIn && props.runningTotal !== null && props.categoryTotal > 0 && props.runningTotal >= props.categoryTotal
 )
 
 const heading = computed(() => {
@@ -82,29 +81,10 @@ const encouragement = computed(() => {
         <h2 class="text-2xl font-bold mb-3">{{ heading }}</h2>
 
         <p class="text-lg text-gray-700 mb-2">
-          <template v-if="mode === 'new'">
-            You learned <span class="font-semibold">{{ cardsReviewed }}</span> new {{ categoryName }} concepts.
-          </template>
-          <template v-else-if="mode === 'due'">
-            You reviewed <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
-          </template>
-          <template v-else>
-            You studied <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
-          </template>
+          You reviewed <span class="font-semibold">{{ cardsReviewed }}</span> {{ categoryName }} concepts.
         </p>
 
-        <p v-if="isLoggedIn && mode === 'all' && (newConcepts > 0 || reviewedConcepts > 0)" class="text-gray-600 mb-2">
-          <span class="font-medium text-green-600">{{ newConcepts }}</span> new
-          &nbsp;&middot;&nbsp;
-          <span class="font-medium text-blue-600">{{ reviewedConcepts }}</span> reviewed
-        </p>
-
-        <p v-if="isLoggedIn && runningTotal !== null && mode !== 'due'" class="text-gray-600 mb-4">
-          You now know
-          <span class="font-semibold">{{ runningTotal }}</span>
-          of {{ categoryTotal }} {{ categoryName }} concepts.
-        </p>
-        <p v-else-if="isLoggedIn && mode === 'due'" class="text-gray-600 mb-4">
+        <p v-if="isLoggedIn && mode === 'due'" class="text-gray-600 mb-4">
           <span class="font-semibold">{{ cardsReviewed }}</span>
           {{ cardsReviewed === 1 ? 'concept' : 'concepts' }} reinforced — keeping your {{ categoryName }} knowledge fresh.
         </p>
@@ -118,14 +98,8 @@ const encouragement = computed(() => {
 
       <div class="flex flex-wrap justify-center gap-4">
         <button v-if="hasMoreCards" @click="$emit('keep-going')"
-                :class="mode === 'new'
-                  ? 'px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700'
-                  : 'px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'">
+                class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
           Keep going
-        </button>
-        <button v-if="isLoggedIn && mode === 'due'" @click="$emit('switch-mode', 'new')"
-                class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-          Learn new concepts
         </button>
         <NuxtLink to="/" class="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50">
           Try another domain
@@ -135,11 +109,7 @@ const encouragement = computed(() => {
 
     <template v-else>
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
-      <p class="text-gray-500 mb-4">
-        <template v-if="mode === 'new'">No new concepts to learn right now.</template>
-        <template v-else-if="mode === 'due'">No concepts due right now.</template>
-        <template v-else>No concepts available right now.</template>
-      </p>
+      <p class="text-gray-500 mb-4">No concepts due right now.</p>
       <div class="flex flex-wrap justify-center gap-4">
         <NuxtLink to="/" class="text-blue-600 hover:underline">
           Try another domain
