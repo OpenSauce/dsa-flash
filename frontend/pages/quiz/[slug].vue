@@ -137,13 +137,6 @@ function toOriginalIndex(shuffledIdx: number): number {
   return order ? order[shuffledIdx] : shuffledIdx
 }
 
-// Map an original index to its shuffled display position
-function toShuffledIndex(originalIdx: number): number {
-  if (!currentQuestion.value) return originalIdx
-  const order = shuffleMap.value[currentQuestion.value.id]
-  return order ? order.indexOf(originalIdx) : originalIdx
-}
-
 function selectOption(shuffledIdx: number) {
   if (showResult.value) return
   const originalIdx = toOriginalIndex(shuffledIdx)
