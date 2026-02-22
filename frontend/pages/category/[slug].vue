@@ -91,6 +91,7 @@ interface CategoryLessonInfo {
   has_quiz: boolean
 }
 const categoryLessons = ref<CategoryLessonInfo[]>([])
+const lessonsLoaded = ref(false)
 
 onMounted(async () => {
   try {
@@ -101,6 +102,8 @@ onMounted(async () => {
     )
   } catch {
     // non-fatal
+  } finally {
+    lessonsLoaded.value = true
   }
 })
 
@@ -154,35 +157,39 @@ async function startSession(selectedMode: StudyMode) {
       <div class="text-4xl mb-2">{{ categoryEmoji }}</div>
       <h2 class="text-2xl font-bold mb-6">{{ categoryDisplayName }}</h2>
 
-      <!-- Lesson checklist (no completion marks since not logged in) -->
-      <div v-if="categoryLessons.length > 0" class="max-w-sm mx-auto mb-8">
-        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 text-left">Lessons</h3>
-        <ul class="space-y-2">
-          <li v-for="lesson in categoryLessons" :key="lesson.slug">
-            <NuxtLink
-              :to="`/lesson/${lesson.slug}`"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left transition"
-            >
-              <span class="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300" />
-              <span class="text-sm font-medium text-gray-700">{{ lesson.title }}</span>
-            </NuxtLink>
-          </li>
-        </ul>
-      </div>
+      <div v-if="!lessonsLoaded"><!-- loading lessons --></div>
 
-      <!-- Signup CTA -->
-      <div class="max-w-sm mx-auto rounded-xl border border-indigo-100 bg-indigo-50 px-6 py-5 mb-6">
-        <p class="text-sm font-semibold text-indigo-800 mb-1">Unlock spaced repetition flashcards</p>
-        <p class="text-sm text-indigo-700 mb-4">Complete lessons and quizzes to build your review queue.</p>
-        <NuxtLink
-          to="/signup"
-          class="inline-block px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition"
-        >
-          Sign up — it's free
-        </NuxtLink>
-      </div>
+      <template v-else>
+        <!-- Lesson checklist (no completion marks since not logged in) -->
+        <div v-if="categoryLessons.length > 0" class="max-w-sm mx-auto mb-8">
+          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 text-left">Lessons</h3>
+          <ul class="space-y-2">
+            <li v-for="lesson in categoryLessons" :key="lesson.slug">
+              <NuxtLink
+                :to="`/lesson/${lesson.slug}`"
+                class="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left transition"
+              >
+                <span class="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300" />
+                <span class="text-sm font-medium text-gray-700">{{ lesson.title }}</span>
+              </NuxtLink>
+            </li>
+          </ul>
+        </div>
 
-      <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 text-center">&larr; Back to categories</NuxtLink>
+        <!-- Signup CTA -->
+        <div class="max-w-sm mx-auto rounded-xl border border-indigo-100 bg-indigo-50 px-6 py-5 mb-6">
+          <p class="text-sm font-semibold text-indigo-800 mb-1">Unlock spaced repetition flashcards</p>
+          <p class="text-sm text-indigo-700 mb-4">Complete lessons and quizzes to build your review queue.</p>
+          <NuxtLink
+            to="/signup"
+            class="inline-block px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition"
+          >
+            Sign up — it's free
+          </NuxtLink>
+        </div>
+
+        <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 text-center">&larr; Back to categories</NuxtLink>
+      </template>
     </div>
 
     <!-- Mode selector (logged-in users, before session starts) -->
