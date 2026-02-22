@@ -90,22 +90,15 @@ interface CategoryLessonInfo {
   completed: boolean
   has_quiz: boolean
 }
-const categoryLessons = ref<CategoryLessonInfo[]>([])
-const lessonsLoaded = ref(false)
-
-onMounted(async () => {
-  try {
-    const headers = tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {}
-    categoryLessons.value = await $fetch<CategoryLessonInfo[]>(
-      `${apiBase}/lessons/by-category/${category}`,
-      { headers }
-    )
-  } catch {
-    // non-fatal
-  } finally {
-    lessonsLoaded.value = true
-  }
-})
+const { data: categoryLessonsData, status: lessonsStatus } = useAsyncData(
+  `category-lessons-${category}`,
+  () => $fetch<CategoryLessonInfo[]>(
+    `${apiBase}/lessons/by-category/${category}`,
+    { headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {} }
+  ),
+)
+const categoryLessons = computed(() => categoryLessonsData.value ?? [])
+const lessonsLoaded = computed(() => lessonsStatus.value !== 'pending')
 
 const {
   card, pending, error,

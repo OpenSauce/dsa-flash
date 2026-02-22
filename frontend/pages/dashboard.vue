@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRuntimeConfig, navigateTo } from '#imports'
+import { computed, watch } from 'vue'
+import { useRuntimeConfig, navigateTo, useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 
 useSeoMeta({
@@ -56,35 +56,21 @@ interface DashboardOut {
 const { public: { apiBase } } = useRuntimeConfig()
 const { isLoggedIn, authReady, tokenCookie } = useAuth()
 
-const dashboard = ref<DashboardOut | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
-
-const fetchDashboard = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    const data = await $fetch<DashboardOut>(`${apiBase}/users/dashboard`, {
+const { data: dashboard, status, error: fetchError } = useAsyncData(
+  'dashboard',
+  () => {
+    if (!authReady.value || !isLoggedIn.value) return null
+    return $fetch<DashboardOut>(`${apiBase}/users/dashboard`, {
       headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {},
     })
-    dashboard.value = data
-  } catch (err) {
-    error.value = 'Failed to load dashboard'
-    console.error('dashboard fetch', err)
-  } finally {
-    loading.value = false
-  }
-}
+  },
+  { server: false, watch: [authReady, isLoggedIn] }
+)
 
 watch(
   [authReady, isLoggedIn],
-  async ([ready, loggedIn]) => {
-    if (!ready) return
-    if (!loggedIn) {
-      navigateTo('/login')
-      return
-    }
-    await fetchDashboard()
+  ([ready, loggedIn]) => {
+    if (ready && !loggedIn) navigateTo('/login')
   },
   { immediate: true }
 )
@@ -152,12 +138,12 @@ const weekSummaryText = computed(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 pb-8">
-    <div v-if="loading" class="flex justify-center py-20">
+    <div v-if="status === 'pending'" class="flex justify-center py-20">
       <div class="text-gray-400 text-lg">Loading your knowledge portfolio...</div>
     </div>
 
-    <div v-else-if="error" class="text-center py-20 text-red-500">
-      {{ error }}
+    <div v-else-if="fetchError" class="text-center py-20 text-red-500">
+      Failed to load dashboard
     </div>
 
     <template v-else-if="dashboard">
