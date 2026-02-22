@@ -6,7 +6,8 @@ import { getCategoryDisplayName } from '@/utils/categoryMeta'
 const route = useRoute()
 const slug = route.params.slug as string
 const { public: { apiBase } } = useRuntimeConfig()
-const { isLoggedIn, tokenCookie } = useAuth()
+const { isLoggedIn } = useAuth()
+const { apiFetch } = useApiFetch()
 const md = useMarkdown()
 
 interface LessonDetail {
@@ -53,10 +54,8 @@ const linkedQuiz = ref<{ slug: string; title: string } | null>(null)
 const fetchCategoryLessons = async () => {
   if (!lesson.value?.category) return
   try {
-    const headers = tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {}
-    const data = await $fetch<CategoryLessonInfo[]>(
-      `${apiBase}/lessons/by-category/${lesson.value.category}`,
-      { headers }
+    const data = await apiFetch<CategoryLessonInfo[]>(
+      `/lessons/by-category/${lesson.value.category}`
     )
     categoryLessons.value = data
     const thisLesson = data.find(l => l.slug === slug)
@@ -107,10 +106,7 @@ async function markComplete() {
   if (!lesson.value || completing.value || isCompleted.value) return
   completing.value = true
   try {
-    await $fetch(`${apiBase}/lessons/${slug}/complete`, {
-      method: 'POST',
-      headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {},
-    })
+    await apiFetch(`/lessons/${slug}/complete`, { method: 'POST' })
     isCompleted.value = true
     completionSuccess.value = true
   } catch {

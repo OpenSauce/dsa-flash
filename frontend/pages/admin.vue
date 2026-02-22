@@ -4,7 +4,8 @@ useSeoMeta({
   robots: 'noindex, nofollow',
 })
 
-const { isAdmin, isLoggedIn, authReady, tokenCookie } = useAuth()
+const { isAdmin, isLoggedIn, authReady } = useAuth()
+const { apiFetch } = useApiFetch()
 
 interface AnalyticsSummary {
   total_sessions: number
@@ -32,9 +33,7 @@ async function fetchSummary() {
   loading.value = true
   error.value = null
   try {
-    summary.value = await $fetch<AnalyticsSummary>('/api/analytics/summary', {
-      headers: { Authorization: `Bearer ${tokenCookie.value}` },
-    })
+    summary.value = await apiFetch<AnalyticsSummary>('/analytics/summary')
   } catch (e: any) {
     error.value = e?.data?.detail || 'Failed to load analytics'
   } finally {

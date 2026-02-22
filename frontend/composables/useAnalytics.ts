@@ -1,5 +1,6 @@
 import { onMounted, onBeforeUnmount } from 'vue'
-import { useCookie, useRuntimeConfig } from '#imports'
+import { useRuntimeConfig } from '#imports'
+import { useApiFetch } from './useApiFetch'
 
 interface AnalyticsEvent {
   event_type: string
@@ -12,7 +13,7 @@ export const useAnalytics = () => {
     maxAge: 60 * 60 * 24 * 365,
   })
   const { public: { apiBase } } = useRuntimeConfig()
-  const tokenCookie = useCookie<string | null>('token')
+  const { apiFetch } = useApiFetch()
 
   const buffer: AnalyticsEvent[] = []
   let flushTimer: ReturnType<typeof setInterval> | null = null
@@ -25,12 +26,9 @@ export const useAnalytics = () => {
     if (buffer.length === 0) return
     const events = buffer.splice(0, buffer.length)
     try {
-      await $fetch(`${apiBase}/events/batch`, {
+      await apiFetch('/events/batch', {
         method: 'POST',
         body: { events },
-        headers: tokenCookie.value
-          ? { Authorization: `Bearer ${tokenCookie.value}` }
-          : {},
       })
     } catch (err) {
       // Re-queue on failure

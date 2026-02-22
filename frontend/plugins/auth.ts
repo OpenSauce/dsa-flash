@@ -2,12 +2,11 @@
 // Runs before any page renders, so user state is available immediately.
 export default defineNuxtPlugin(async () => {
   const { user, tokenCookie, authReady } = useAuth()
+  const { apiFetch } = useApiFetch()
 
   if (tokenCookie.value && !user.value) {
     try {
-      user.value = await $fetch('/api/users/me', {
-        headers: { Authorization: `Bearer ${tokenCookie.value}` },
-      })
+      user.value = await apiFetch('/users/me')
     } catch {
       tokenCookie.value = null
       user.value = null

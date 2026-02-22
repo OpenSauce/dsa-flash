@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useRuntimeConfig, navigateTo, useAsyncData } from '#imports'
+import { navigateTo, useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 
 useSeoMeta({
@@ -57,16 +57,14 @@ interface DashboardOut {
   study_calendar: string[]
 }
 
-const { public: { apiBase } } = useRuntimeConfig()
-const { isLoggedIn, authReady, tokenCookie } = useAuth()
+const { apiFetch } = useApiFetch()
+const { isLoggedIn, authReady } = useAuth()
 
 const { data: dashboard, status, error: fetchError } = useAsyncData(
   'dashboard',
   () => {
     if (!authReady.value || !isLoggedIn.value) return null
-    return $fetch<DashboardOut>(`${apiBase}/users/dashboard`, {
-      headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {},
-    })
+    return apiFetch<DashboardOut>('/users/dashboard')
   },
   { server: false, watch: [authReady, isLoggedIn] }
 )

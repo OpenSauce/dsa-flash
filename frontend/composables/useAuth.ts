@@ -1,6 +1,7 @@
 // composables/useAuth.ts
 import { computed } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
+import { useApiFetch } from './useApiFetch'
 
 interface UserInfo {
   name: string
@@ -22,6 +23,7 @@ export const useAuth = () => {
   const authReady = useState<boolean>('authReady', () => false)
 
   const { public: { apiBase } } = useRuntimeConfig()
+  const { apiFetch } = useApiFetch()
 
   const isLoggedIn = computed(() => !!user.value)
   const isAdmin = computed(() => !!user.value?.is_admin)
@@ -36,9 +38,7 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
+    user.value = await apiFetch<UserInfo>('/users/me')
   }
 
   const signup = async (username: string, password: string): Promise<void> => {
@@ -50,9 +50,7 @@ export const useAuth = () => {
       }
     )
     tokenCookie.value = access_token
-    user.value = await $fetch<UserInfo>(`${apiBase}/users/me`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
+    user.value = await apiFetch<UserInfo>('/users/me')
   }
 
   const logout = async () => {

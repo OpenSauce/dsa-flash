@@ -67,6 +67,7 @@ interface UseStudySessionReturn {
 
 export function useStudySession(options: UseStudySessionOptions): UseStudySessionReturn {
   const { category, apiBase, isLoggedIn, tokenCookie, track, flushBeacon, refreshStreak, logout, mode } = options
+  const { apiFetch } = useApiFetch()
 
   // Optional language selector — determined from categories API
   const language = ref<string | null>(null)
@@ -356,12 +357,8 @@ export function useStudySession(options: UseStudySessionOptions): UseStudySessio
       time_total_ms: now - frontShownAt.value,
     })
     try {
-      await $fetch(`${apiBase}/flashcards/${card.value.id}/review`, {
+      await apiFetch(`/flashcards/${card.value.id}/review`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(tokenCookie.value && { Authorization: `Bearer ${tokenCookie.value}` }),
-        },
         body: { quality: qualityMap[grade] },
       })
       cardsReviewedInSession.value++

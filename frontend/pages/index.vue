@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, onMounted } from 'vue'
-import { useCookie, useRuntimeConfig, useAsyncData } from '#imports'
+import { useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { CATEGORY_META, DEFAULT_META, SECTION_ORDER, getCategoryDisplayName } from '@/utils/categoryMeta'
@@ -72,19 +72,14 @@ interface CategoryDisplay extends CategoryFromAPI {
   section: string
 }
 
-const { public: { apiBase } } = useRuntimeConfig()
-const token = useCookie('token')
+const { apiFetch } = useApiFetch()
 
 const { isLoggedIn } = useAuth()
 const { track } = useAnalytics()
 
 const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
   'categories',
-  () => $fetch<CategoryFromAPI[]>(`${apiBase}/categories`, {
-    headers: token.value
-      ? { Authorization: `Bearer ${token.value}` }
-      : {},
-  }),
+  () => apiFetch<CategoryFromAPI[]>('/categories'),
 )
 
 const categories = computed<CategoryDisplay[]>(() => {
