@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
-import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
 const slug = route.params.slug as string
 const { public: { apiBase } } = useRuntimeConfig()
-const { tokenCookie } = useAuth()
+const { apiFetch } = useApiFetch()
 
 interface QuizQuestion {
   id: number
@@ -81,11 +80,8 @@ const nextLesson = ref<CategoryLessonInfo | null>(null)
 async function fetchNextLesson() {
   if (!quiz.value?.category || !quiz.value?.lesson_slug) return
   try {
-    const headers: Record<string, string> = {}
-    if (tokenCookie.value) headers['Authorization'] = `Bearer ${tokenCookie.value}`
-    const lessons = await $fetch<CategoryLessonInfo[]>(
-      `${apiBase}/lessons/by-category/${quiz.value.category}`,
-      { headers }
+    const lessons = await apiFetch<CategoryLessonInfo[]>(
+      `/lessons/by-category/${quiz.value.category}`
     )
     const currentIdx = lessons.findIndex(l => l.slug === quiz.value!.lesson_slug)
     if (currentIdx >= 0 && currentIdx < lessons.length - 1) {
@@ -199,14 +195,9 @@ async function submitQuiz() {
     for (const [qId, idx] of Object.entries(scoreAnswers)) {
       answersPayload[String(qId)] = idx
     }
-    const headers: Record<string, string> = {}
-    if (tokenCookie.value) {
-      headers['Authorization'] = `Bearer ${tokenCookie.value}`
-    }
-    const result = await $fetch<QuizSubmitOut>(`${apiBase}/quizzes/${slug}/submit`, {
+    const result = await apiFetch<QuizSubmitOut>(`/quizzes/${slug}/submit`, {
       method: 'POST',
       body: { answers: answersPayload },
-      headers,
     })
     submitResult.value = result
   } catch {

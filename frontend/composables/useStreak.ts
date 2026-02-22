@@ -1,5 +1,5 @@
 export const useStreak = () => {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const { apiFetch } = useApiFetch()
   const { tokenCookie, isLoggedIn } = useAuth()
 
   interface StreakData {
@@ -16,9 +16,7 @@ export const useStreak = () => {
       return
     }
     try {
-      streak.value = await $fetch<StreakData>(`${apiBase}/users/streak`, {
-        headers: { Authorization: `Bearer ${tokenCookie.value}` },
-      })
+      streak.value = await apiFetch<StreakData>('/users/streak')
     } catch {
       streak.value = null
     }

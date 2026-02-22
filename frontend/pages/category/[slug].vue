@@ -41,8 +41,8 @@ useHead({
   ],
 })
 
-const apiBase = useRuntimeConfig().public.apiBase
 const { isLoggedIn, authReady, tokenCookie, logout } = useAuth()
+const { apiFetch, apiBase } = useApiFetch()
 const { refreshStreak } = useStreak()
 const { track, flushBeacon } = useAnalytics()
 
@@ -58,10 +58,7 @@ const statsLoaded = ref(false)
 
 const fetchStats = async () => {
   try {
-    const data = await $fetch<StatsData>(
-      `${apiBase}/flashcards/stats?category=${category}`,
-      { headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {} }
-    )
+    const data = await apiFetch<StatsData>(`/flashcards/stats?category=${category}`)
     stats.value = data
   } catch {
     // fallback: start session immediately
@@ -92,10 +89,7 @@ interface CategoryLessonInfo {
 }
 const { data: categoryLessonsData, status: lessonsStatus } = useAsyncData(
   `category-lessons-${category}`,
-  () => $fetch<CategoryLessonInfo[]>(
-    `${apiBase}/lessons/by-category/${category}`,
-    { headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {} }
-  ),
+  () => apiFetch<CategoryLessonInfo[]>(`/lessons/by-category/${category}`),
 )
 const categoryLessons = computed(() => categoryLessonsData.value ?? [])
 const lessonsLoaded = computed(() => lessonsStatus.value !== 'pending')
