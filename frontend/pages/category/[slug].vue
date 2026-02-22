@@ -4,8 +4,11 @@ import { CATEGORY_META, DEFAULT_META, getCategoryDisplayName } from '@/utils/cat
 import type { StudyMode } from '@/composables/useStudySession'
 
 const route = useRoute()
+const router = useRouter()
 const category = route.params.slug as string
 const categoryEmoji = (CATEGORY_META[category] || DEFAULT_META).emoji
+
+const quizJustCompleted = ref(false)
 
 const categoryDisplayNameForMeta = getCategoryDisplayName(category)
 
@@ -74,6 +77,10 @@ watch(
     if (!ready) return
     if (loggedIn) {
       await fetchStats()
+      if (route.query.quiz_completed) {
+        quizJustCompleted.value = true
+        router.replace({ query: { ...route.query, quiz_completed: undefined } })
+      }
     }
     // Anonymous users: do NOT auto-start a session — show lesson list instead
   },
@@ -228,7 +235,12 @@ async function startSession(selectedMode: StudyMode) {
             <p>All caught up! Come back tomorrow.</p>
           </div>
 
-          <div v-else-if="stats.due === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
+          <div v-else-if="stats.due === 0 && quizJustCompleted && categoryLessons.length > 0" class="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-left mt-2">
+            <p class="text-sm font-semibold text-green-800 mb-1">Flashcards unlocked!</p>
+            <p class="text-sm text-green-700">Your first review is scheduled for tomorrow. Come back then to start building long-term memory.</p>
+          </div>
+
+          <div v-else-if="stats.due === 0 && stats.new === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
             <p>No cards due. Complete more lessons to build your review queue.</p>
           </div>
 
