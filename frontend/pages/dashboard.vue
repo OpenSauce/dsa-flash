@@ -218,10 +218,6 @@ const weekSummaryText = computed(() => {
               </div>
               <div class="text-sm text-gray-500 mt-1" v-if="domain.lessons_total > 0">
                 <span class="text-green-600 font-medium">{{ domain.lessons_completed }}</span> of {{ domain.lessons_total }} lessons
-                <template v-if="domain.quiz_best_score !== null">
-                  &middot;
-                  <span class="text-indigo-600 font-medium">{{ domain.quiz_best_score }}/{{ domain.quiz_total_questions }}</span> best quiz
-                </template>
               </div>
             </div>
           </NuxtLink>
