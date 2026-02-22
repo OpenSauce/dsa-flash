@@ -133,7 +133,7 @@ def get_dashboard(
             func.row_number()
             .over(
                 partition_by=Quiz.category,
-                order_by=UserQuizAttempt.score.desc(),
+                order_by=(UserQuizAttempt.score.desc(), UserQuizAttempt.id.desc()),
             )
             .label("rn"),
         )
