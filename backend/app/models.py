@@ -230,6 +230,10 @@ class DashboardDomain(BaseModel):
     mastered: int
     mastery_pct: int
     learned_pct: int
+    lessons_total: int = 0
+    lessons_completed: int = 0
+    quiz_best_score: Optional[int] = None
+    quiz_total_questions: Optional[int] = None
 
 
 class DashboardStreak(BaseModel):

@@ -15,9 +15,13 @@ from ..models import (
     DashboardWeakCard,
     DashboardWeek,
     Flashcard,
+    Lesson,
+    Quiz,
     StudySession,
     User,
     UserFlashcard,
+    UserLesson,
+    UserQuizAttempt,
     slug_to_display_name,
 )
 from .users import compute_streak, get_current_user
@@ -81,6 +85,72 @@ def get_dashboard(
         row.category: (row.learned, int(row.mastered or 0)) for row in user_progress
     }
 
+    # Lesson totals per category
+    lesson_totals = session.exec(
+        select(Lesson.category, func.count(Lesson.id).label("total"))
+        .where(Lesson.category.isnot(None))
+        .group_by(Lesson.category)
+    ).all()
+    lesson_totals_by_cat = {row.category: row.total for row in lesson_totals}
+
+    # Lessons completed per category for this user
+    # A lesson counts as completed if:
+    #   - it has no quiz AND the user has a UserLesson record, OR
+    #   - it has a quiz AND the user has a UserQuizAttempt record
+    lesson_completed = session.exec(
+        select(
+            Lesson.category,
+            func.count(func.distinct(Lesson.id)).label("completed"),
+        )
+        .select_from(Lesson)
+        .outerjoin(Quiz, Quiz.lesson_slug == Lesson.slug)
+        .outerjoin(
+            UserLesson,
+            (UserLesson.lesson_id == Lesson.id) & (UserLesson.user_id == uid),
+        )
+        .outerjoin(
+            UserQuizAttempt,
+            (UserQuizAttempt.quiz_id == Quiz.id) & (UserQuizAttempt.user_id == uid),
+        )
+        .where(
+            Lesson.category.isnot(None),
+            (
+                (Quiz.id.is_(None) & UserLesson.id.isnot(None))
+                | (Quiz.id.isnot(None) & UserQuizAttempt.id.isnot(None))
+            ),
+        )
+        .group_by(Lesson.category)
+    ).all()
+    lesson_completed_by_cat = {row.category: row.completed for row in lesson_completed}
+
+    # Quiz best scores per category for this user — pick score and total from the
+    # same attempt (highest score) to avoid mismatched max(score)/max(total) pairs.
+    best_attempts_subq = (
+        select(
+            Quiz.category.label("category"),
+            UserQuizAttempt.score.label("score"),
+            UserQuizAttempt.total.label("total"),
+            func.row_number()
+            .over(
+                partition_by=Quiz.category,
+                order_by=(UserQuizAttempt.score.desc(), UserQuizAttempt.id.desc()),
+            )
+            .label("rn"),
+        )
+        .select_from(UserQuizAttempt)
+        .join(Quiz, Quiz.id == UserQuizAttempt.quiz_id)
+        .where(UserQuizAttempt.user_id == uid, Quiz.category.isnot(None))
+    ).subquery()
+
+    quiz_scores = session.exec(
+        select(
+            best_attempts_subq.c.category,
+            best_attempts_subq.c.score.label("best_score"),
+            best_attempts_subq.c.total.label("total_questions"),
+        ).where(best_attempts_subq.c.rn == 1)
+    ).all()
+    quiz_by_cat = {row.category: (row.best_score, row.total_questions) for row in quiz_scores}
+
     domains: list[DashboardDomain] = []
     for row in category_totals:
         slug = row.category
@@ -89,6 +159,7 @@ def get_dashboard(
         mastery_pct = floor(mastered / total * 100) if total > 0 else 0
         learned_pct = floor(learned / total * 100) if total > 0 else 0
         name = slug_to_display_name(slug)
+        quiz_score, quiz_total = quiz_by_cat.get(slug, (None, None))
         domains.append(
             DashboardDomain(
                 name=name,
@@ -98,6 +169,10 @@ def get_dashboard(
                 mastered=mastered,
                 mastery_pct=mastery_pct,
                 learned_pct=learned_pct,
+                lessons_total=lesson_totals_by_cat.get(slug, 0),
+                lessons_completed=lesson_completed_by_cat.get(slug, 0),
+                quiz_best_score=quiz_score,
+                quiz_total_questions=quiz_total,
             )
         )
 
