@@ -166,11 +166,11 @@ watch(isLoggedIn, () => {
             </template>
           </p>
           <p v-else class="text-sm text-gray-600 mt-2">
-            <span class="font-medium">{{ cat.total }}</span> concepts
             <template v-if="cat.lessons_available && cat.lessons_available > 0">
-              &nbsp;&middot;&nbsp;
               <span class="font-medium text-green-600">{{ cat.lessons_available }}</span> lessons
+              &nbsp;&middot;&nbsp;
             </template>
+            <span class="font-medium text-indigo-600">{{ cat.total }}</span> concepts
           </p>
         </NuxtLink>
       </div>

@@ -108,25 +108,56 @@ const totalQuestions = computed(() => activeQuestions.value.length)
 
 const optionLabels = ['A', 'B', 'C', 'D']
 
-function selectOption(optionIndex: number) {
+// Shuffle options per question so the correct answer isn't always at the same index.
+// Maps question ID -> shuffled index array (e.g. [2, 0, 3, 1] means display original[2] first).
+const shuffleMap = ref<Record<number, number[]>>({})
+
+function getOrCreateShuffle(questionId: number, optionCount: number): number[] {
+  if (shuffleMap.value[questionId]) return shuffleMap.value[questionId]
+  const indices = Array.from({ length: optionCount }, (_, i) => i)
+  // Fisher-Yates shuffle
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]]
+  }
+  shuffleMap.value[questionId] = indices
+  return indices
+}
+
+const shuffledOptions = computed(() => {
+  if (!currentQuestion.value) return []
+  const order = getOrCreateShuffle(currentQuestion.value.id, currentQuestion.value.options.length)
+  return order.map(origIdx => currentQuestion.value!.options[origIdx])
+})
+
+// Map a shuffled display index back to the original option index
+function toOriginalIndex(shuffledIdx: number): number {
+  if (!currentQuestion.value) return shuffledIdx
+  const order = shuffleMap.value[currentQuestion.value.id]
+  return order ? order[shuffledIdx] : shuffledIdx
+}
+
+function selectOption(shuffledIdx: number) {
   if (showResult.value) return
-  selectedForCurrent.value = optionIndex
+  const originalIdx = toOriginalIndex(shuffledIdx)
+  selectedForCurrent.value = originalIdx
   showResult.value = true
   if (currentQuestion.value) {
-    answers.value[currentQuestion.value.id] = optionIndex
+    answers.value[currentQuestion.value.id] = originalIdx
   }
 }
 
-function isCorrectOption(optionIndex: number): boolean {
+function isCorrectOption(shuffledIdx: number): boolean {
   if (!showResult.value || !currentQuestion.value) return false
-  return optionIndex === currentQuestion.value.correct_index
+  return toOriginalIndex(shuffledIdx) === currentQuestion.value.correct_index
 }
 
-function isWrongSelected(optionIndex: number): boolean {
+function isWrongSelected(shuffledIdx: number): boolean {
   if (!showResult.value || !currentQuestion.value) return false
+  const originalIdx = toOriginalIndex(shuffledIdx)
   return (
-    optionIndex === selectedForCurrent.value &&
-    optionIndex !== currentQuestion.value.correct_index
+    originalIdx === selectedForCurrent.value &&
+    originalIdx !== currentQuestion.value.correct_index
   )
 }
 
@@ -212,6 +243,7 @@ function tryAgain() {
   retryQuestions.value = []
   inRetryRound.value = false
   firstPassAnswers.value = {}
+  shuffleMap.value = {}
 }
 
 function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
@@ -292,21 +324,21 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
               @click="tryAgain"
               class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition"
             >
-              Try again
+              Retake quiz
             </button>
-            <NuxtLink
-              v-if="nextLesson"
-              :to="`/lesson/${nextLesson.slug}`"
-              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition text-center"
-            >
-              Next lesson
-            </NuxtLink>
             <NuxtLink
               v-if="quiz.category"
               :to="`/category/${quiz.category}`"
               class="px-6 py-3 border border-indigo-300 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition text-center"
             >
               Back to {{ categoryDisplayName || 'category' }}
+            </NuxtLink>
+            <NuxtLink
+              v-if="nextLesson"
+              :to="`/lesson/${nextLesson.slug}`"
+              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition text-center"
+            >
+              Next lesson
             </NuxtLink>
           </div>
         </div>
@@ -339,10 +371,10 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
         <div v-if="currentQuestion" class="mb-6">
           <p class="text-lg font-medium text-gray-900 mb-6">{{ currentQuestion.question }}</p>
 
-          <!-- Options -->
+          <!-- Options (shuffled per question) -->
           <div class="space-y-3">
             <button
-              v-for="(option, idx) in currentQuestion.options"
+              v-for="(option, idx) in shuffledOptions"
               :key="idx"
               @click="selectOption(idx)"
               :disabled="showResult"
