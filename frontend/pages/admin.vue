@@ -24,6 +24,13 @@ interface AnalyticsSummary {
     quiz_users: number
     review_users: number
   }
+  anonymous_engagement: {
+    lesson_views: number
+    lesson_sessions: number
+    quiz_starts: number
+    quiz_completions: number
+    quiz_sessions: number
+  }
   category_lesson_completions: Record<string, number>
 }
 
@@ -161,6 +168,25 @@ const categoryLessonList = computed(() => {
             {{ summary.quizzes_taken > 0 ? ((summary.avg_quiz_score_pct >= 70 ? summary.quizzes_taken : 0) > 0 ? '—' : '—') : '—' }}
           </div>
           <div class="text-xs text-gray-500 mt-1">Coming soon</div>
+        </div>
+      </div>
+
+      <!-- Anonymous Engagement -->
+      <h2 class="text-xl font-semibold mb-4">Anonymous Engagement</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Lesson Views</div>
+          <div class="text-2xl font-bold">{{ summary.anonymous_engagement.lesson_views }}</div>
+          <div class="text-xs text-gray-500 mt-1">{{ summary.anonymous_engagement.lesson_sessions }} sessions</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Quiz Starts</div>
+          <div class="text-2xl font-bold">{{ summary.anonymous_engagement.quiz_starts }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Quiz Completions</div>
+          <div class="text-2xl font-bold">{{ summary.anonymous_engagement.quiz_completions }}</div>
+          <div class="text-xs text-gray-500 mt-1">{{ summary.anonymous_engagement.quiz_sessions }} sessions</div>
         </div>
       </div>
 
