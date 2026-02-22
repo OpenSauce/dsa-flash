@@ -5,6 +5,7 @@ const route = useRoute()
 const slug = route.params.slug as string
 const { public: { apiBase } } = useRuntimeConfig()
 const { apiFetch } = useApiFetch()
+const { isLoggedIn } = useAuth()
 
 interface QuizQuestion {
   id: number
@@ -309,6 +310,18 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
             </div>
           </div>
 
+          <!-- Signup CTA for anonymous users -->
+          <div v-if="!isLoggedIn" class="max-w-sm mx-auto rounded-xl border border-indigo-100 bg-indigo-50 px-6 py-5 mb-6 text-left">
+            <p class="text-sm font-semibold text-indigo-800 mb-1">Save your progress</p>
+            <p class="text-sm text-indigo-700 mb-4">Sign up to save your progress and unlock spaced repetition flashcards — it's free.</p>
+            <NuxtLink
+              to="/signup"
+              class="inline-block px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition"
+            >
+              Sign up — it's free
+            </NuxtLink>
+          </div>
+
           <!-- CTAs -->
           <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -318,7 +331,14 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
               Retake quiz
             </button>
             <NuxtLink
-              v-if="quiz.category"
+              v-if="quiz.category && isLoggedIn"
+              :to="`/category/${quiz.category}?quiz_completed=1`"
+              class="px-6 py-3 border border-indigo-300 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition text-center"
+            >
+              Back to {{ categoryDisplayName || 'category' }}
+            </NuxtLink>
+            <NuxtLink
+              v-else-if="quiz.category"
               :to="`/category/${quiz.category}`"
               class="px-6 py-3 border border-indigo-300 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition text-center"
             >
