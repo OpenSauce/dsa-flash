@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { definePageMeta, useHead, watch } from '#imports'
+import { definePageMeta, navigateTo, useHead, watch } from '#imports'
 
 const { isLoggedIn, isAdmin, logout, authReady, user } = useAuth()
 const { streak, fetchStreak } = useStreak()
@@ -84,7 +84,7 @@ function onKeydown(e: KeyboardEvent) {
                   </span>
                   <NuxtLink to="/dashboard" class="hover:underline">Dashboard</NuxtLink>
                   <NuxtLink v-if="isAdmin" to="/admin" class="hover:underline">Admin</NuxtLink>
-                  <button @click="logout().then(() => window.location.href = '/')" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
+                  <button @click="logout().then(() => navigateTo('/'))" class="px-3 py-1 rounded-md hover:bg-white/10">Log&nbsp;out</button>
                 </div>
 
                 <!-- Mobile hamburger button -->
@@ -149,7 +149,7 @@ function onKeydown(e: KeyboardEvent) {
           </NuxtLink>
           <button
             class="text-left px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
-            @click="closeMobileMenu(); logout().then(() => window.location.href = '/')"
+            @click="closeMobileMenu(); logout().then(() => navigateTo('/'))"
           >
             Log&nbsp;out
           </button>
