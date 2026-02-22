@@ -143,7 +143,7 @@ def list_categories(
             ).all()
 
             # Map lesson_slug -> quiz_id
-            lesson_slugs = [l.slug for l in all_lessons]
+            lesson_slugs = [les.slug for les in all_lessons]
             quiz_map: dict[str, int] = {}
             if lesson_slugs:
                 for q in session.exec(

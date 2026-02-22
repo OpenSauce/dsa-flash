@@ -49,7 +49,7 @@ def lessons_for_category(
         select(Lesson).where(Lesson.category == category).order_by(Lesson.order)
     ).all()
 
-    lesson_slugs = [l.slug for l in lessons]
+    lesson_slugs = [les.slug for les in lessons]
 
     # Map lesson_slug -> quiz_id for lessons that have quizzes
     quiz_map: dict[str, int] = {}
