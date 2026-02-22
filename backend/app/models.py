@@ -190,7 +190,8 @@ class EventIn(BaseModel):
     @field_validator("payload")
     @classmethod
     def payload_size_limit(cls, v: dict) -> dict:
-        if len(json.dumps(v)) > 4096:
+        payload_bytes = json.dumps(v, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        if len(payload_bytes) > 4096:
             raise ValueError("payload exceeds 4KB limit")
         return v
 
