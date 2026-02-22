@@ -192,31 +192,41 @@ def _seed_flashcards_for_lesson(
 
     Skips flashcards the user already has in their SRS queue.
     """
-    flashcards = session.exec(
-        select(Flashcard).where(Flashcard.lesson_slug == lesson_slug)
-    ).all()
+    card_ids = [
+        c.id
+        for c in session.exec(
+            select(Flashcard).where(Flashcard.lesson_slug == lesson_slug)
+        ).all()
+        if c.id is not None
+    ]
+    if not card_ids:
+        return
 
-    if not flashcards:
+    existing_ids = set(
+        session.exec(
+            select(UserFlashcard.flashcard_id).where(
+                UserFlashcard.user_id == user_id,
+                UserFlashcard.flashcard_id.in_(card_ids),  # type: ignore[union-attr]
+            )
+        ).all()
+    )
+
+    missing_ids = [cid for cid in card_ids if cid not in existing_ids]
+    if not missing_ids:
         return
 
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
-
-    for card in flashcards:
-        existing = session.exec(
-            select(UserFlashcard).where(
-                UserFlashcard.user_id == user_id,
-                UserFlashcard.flashcard_id == card.id,
+    session.add_all(
+        [
+            UserFlashcard(
+                user_id=user_id,
+                flashcard_id=cid,
+                next_review=tomorrow,
+                interval=1,
+                repetitions=0,
+                easiness=2.5,
             )
-        ).first()
-        if not existing:
-            session.add(
-                UserFlashcard(
-                    user_id=user_id,
-                    flashcard_id=card.id,
-                    next_review=tomorrow,
-                    interval=1,
-                    repetitions=0,
-                    easiness=2.5,
-                )
-            )
+            for cid in missing_ids
+        ]
+    )
     session.commit()
