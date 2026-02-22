@@ -1,7 +1,6 @@
 // composables/useAuth.ts
 import { computed } from 'vue'
 import { useCookie, useRuntimeConfig } from '#imports'
-import { useApiFetch } from './useApiFetch'
 
 interface UserInfo {
   name: string
@@ -23,7 +22,6 @@ export const useAuth = () => {
   const authReady = useState<boolean>('authReady', () => false)
 
   const { public: { apiBase } } = useRuntimeConfig()
-  const { apiFetch } = useApiFetch()
 
   const isLoggedIn = computed(() => !!user.value)
   const isAdmin = computed(() => !!user.value?.is_admin)

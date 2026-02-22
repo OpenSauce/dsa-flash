@@ -57,12 +57,12 @@ async function onSignup() {
     <form @submit.prevent="onSignup" class="space-y-4">
       <div>
         <input v-model="username" type="text" placeholder="Username" required class="w-full border rounded px-3 py-2" />
-        <p class="text-xs text-gray-400 mt-1">Letters, numbers, and underscores only</p>
+        <p class="text-xs text-gray-600 mt-1">Letters, numbers, and underscores only</p>
       </div>
       <div>
         <input v-model="password" type="password" placeholder="Password" required
           class="w-full border rounded px-3 py-2" />
-        <p class="text-xs text-gray-400 mt-1">At least 8 characters</p>
+        <p class="text-xs text-gray-600 mt-1">At least 8 characters</p>
       </div>
       <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded px-3 py-2">
         Create Account
