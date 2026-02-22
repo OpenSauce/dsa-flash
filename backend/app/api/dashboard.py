@@ -94,26 +94,60 @@ def get_dashboard(
     lesson_totals_by_cat = {row.category: row.total for row in lesson_totals}
 
     # Lessons completed per category for this user
+    # A lesson counts as completed if:
+    #   - it has no quiz AND the user has a UserLesson record, OR
+    #   - it has a quiz AND the user has a UserQuizAttempt record
     lesson_completed = session.exec(
-        select(Lesson.category, func.count(UserLesson.id).label("completed"))
-        .select_from(UserLesson)
-        .join(Lesson, Lesson.id == UserLesson.lesson_id)
-        .where(UserLesson.user_id == uid, Lesson.category.isnot(None))
+        select(
+            Lesson.category,
+            func.count(func.distinct(Lesson.id)).label("completed"),
+        )
+        .select_from(Lesson)
+        .outerjoin(Quiz, Quiz.lesson_slug == Lesson.slug)
+        .outerjoin(
+            UserLesson,
+            (UserLesson.lesson_id == Lesson.id) & (UserLesson.user_id == uid),
+        )
+        .outerjoin(
+            UserQuizAttempt,
+            (UserQuizAttempt.quiz_id == Quiz.id) & (UserQuizAttempt.user_id == uid),
+        )
+        .where(
+            Lesson.category.isnot(None),
+            (
+                (Quiz.id.is_(None) & UserLesson.id.isnot(None))
+                | (Quiz.id.isnot(None) & UserQuizAttempt.id.isnot(None))
+            ),
+        )
         .group_by(Lesson.category)
     ).all()
     lesson_completed_by_cat = {row.category: row.completed for row in lesson_completed}
 
-    # Quiz best scores per category for this user
-    quiz_scores = session.exec(
+    # Quiz best scores per category for this user — pick score and total from the
+    # same attempt (highest score) to avoid mismatched max(score)/max(total) pairs.
+    best_attempts_subq = (
         select(
-            Quiz.category,
-            func.max(UserQuizAttempt.score).label("best_score"),
-            func.max(UserQuizAttempt.total).label("total_questions"),
+            Quiz.category.label("category"),
+            UserQuizAttempt.score.label("score"),
+            UserQuizAttempt.total.label("total"),
+            func.row_number()
+            .over(
+                partition_by=Quiz.category,
+                order_by=UserQuizAttempt.score.desc(),
+            )
+            .label("rn"),
         )
         .select_from(UserQuizAttempt)
         .join(Quiz, Quiz.id == UserQuizAttempt.quiz_id)
         .where(UserQuizAttempt.user_id == uid, Quiz.category.isnot(None))
-        .group_by(Quiz.category)
+    ).subquery()
+
+    quiz_scores = session.exec(
+        select(
+            best_attempts_subq.c.category,
+            best_attempts_subq.c.score.label("best_score"),
+            best_attempts_subq.c.total.label("total_questions"),
+        ).where(best_attempts_subq.c.rn == 1)
     ).all()
     quiz_by_cat = {row.category: (row.best_score, row.total_questions) for row in quiz_scores}
 
