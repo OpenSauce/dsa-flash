@@ -15,9 +15,13 @@ from ..models import (
     DashboardWeakCard,
     DashboardWeek,
     Flashcard,
+    Lesson,
+    Quiz,
     StudySession,
     User,
     UserFlashcard,
+    UserLesson,
+    UserQuizAttempt,
     slug_to_display_name,
 )
 from .users import compute_streak, get_current_user
@@ -81,6 +85,38 @@ def get_dashboard(
         row.category: (row.learned, int(row.mastered or 0)) for row in user_progress
     }
 
+    # Lesson totals per category
+    lesson_totals = session.exec(
+        select(Lesson.category, func.count(Lesson.id).label("total"))
+        .where(Lesson.category.isnot(None))
+        .group_by(Lesson.category)
+    ).all()
+    lesson_totals_by_cat = {row.category: row.total for row in lesson_totals}
+
+    # Lessons completed per category for this user
+    lesson_completed = session.exec(
+        select(Lesson.category, func.count(UserLesson.id).label("completed"))
+        .select_from(UserLesson)
+        .join(Lesson, Lesson.id == UserLesson.lesson_id)
+        .where(UserLesson.user_id == uid, Lesson.category.isnot(None))
+        .group_by(Lesson.category)
+    ).all()
+    lesson_completed_by_cat = {row.category: row.completed for row in lesson_completed}
+
+    # Quiz best scores per category for this user
+    quiz_scores = session.exec(
+        select(
+            Quiz.category,
+            func.max(UserQuizAttempt.score).label("best_score"),
+            func.max(UserQuizAttempt.total).label("total_questions"),
+        )
+        .select_from(UserQuizAttempt)
+        .join(Quiz, Quiz.id == UserQuizAttempt.quiz_id)
+        .where(UserQuizAttempt.user_id == uid, Quiz.category.isnot(None))
+        .group_by(Quiz.category)
+    ).all()
+    quiz_by_cat = {row.category: (row.best_score, row.total_questions) for row in quiz_scores}
+
     domains: list[DashboardDomain] = []
     for row in category_totals:
         slug = row.category
@@ -89,6 +125,7 @@ def get_dashboard(
         mastery_pct = floor(mastered / total * 100) if total > 0 else 0
         learned_pct = floor(learned / total * 100) if total > 0 else 0
         name = slug_to_display_name(slug)
+        quiz_score, quiz_total = quiz_by_cat.get(slug, (None, None))
         domains.append(
             DashboardDomain(
                 name=name,
@@ -98,6 +135,10 @@ def get_dashboard(
                 mastered=mastered,
                 mastery_pct=mastery_pct,
                 learned_pct=learned_pct,
+                lessons_total=lesson_totals_by_cat.get(slug, 0),
+                lessons_completed=lesson_completed_by_cat.get(slug, 0),
+                quiz_best_score=quiz_score,
+                quiz_total_questions=quiz_total,
             )
         )
 

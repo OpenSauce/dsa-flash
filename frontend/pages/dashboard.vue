@@ -23,6 +23,10 @@ interface DashboardDomain {
   mastered: number
   mastery_pct: number
   learned_pct: number
+  lessons_total: number
+  lessons_completed: number
+  quiz_best_score: number | null
+  quiz_total_questions: number | null
 }
 
 interface DashboardStreak {
@@ -213,6 +217,13 @@ const weekSummaryText = computed(() => {
                 <span class="text-green-600 font-medium">{{ domain.learned }}</span> learned
                 &middot;
                 <span class="text-purple-600 font-medium">{{ domain.mastered }}</span> mastered
+              </div>
+              <div class="text-sm text-gray-500 mt-1" v-if="domain.lessons_total > 0">
+                <span class="text-green-600 font-medium">{{ domain.lessons_completed }}</span> of {{ domain.lessons_total }} lessons
+                <template v-if="domain.quiz_best_score !== null">
+                  &middot;
+                  <span class="text-indigo-600 font-medium">{{ domain.quiz_best_score }}/{{ domain.quiz_total_questions }}</span> best quiz
+                </template>
               </div>
             </div>
           </NuxtLink>
