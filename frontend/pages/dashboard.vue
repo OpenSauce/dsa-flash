@@ -58,9 +58,12 @@ const { isLoggedIn, authReady, tokenCookie } = useAuth()
 
 const { data: dashboard, status, error: fetchError } = useAsyncData(
   'dashboard',
-  () => $fetch<DashboardOut>(`${apiBase}/users/dashboard`, {
-    headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {},
-  }),
+  () => {
+    if (!authReady.value || !isLoggedIn.value) return null
+    return $fetch<DashboardOut>(`${apiBase}/users/dashboard`, {
+      headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : {},
+    })
+  },
   { server: false, watch: [authReady, isLoggedIn] }
 )
 
