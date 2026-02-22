@@ -1,7 +1,8 @@
+import json
 from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -186,9 +187,17 @@ class EventIn(BaseModel):
     event_type: str
     payload: dict = {}
 
+    @field_validator("payload")
+    @classmethod
+    def payload_size_limit(cls, v: dict) -> dict:
+        payload_bytes = json.dumps(v, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        if len(payload_bytes) > 4096:
+            raise ValueError("payload exceeds 4KB limit")
+        return v
+
 
 class EventBatchIn(BaseModel):
-    events: list[EventIn]
+    events: list[EventIn] = PydanticField(max_length=50)
 
 
 class CategoryOut(BaseModel):

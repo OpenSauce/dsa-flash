@@ -118,7 +118,7 @@ def get_optional_user(
 @router.post(
     "/signup",
     status_code=status.HTTP_201_CREATED,
-    response_model=None,
+    response_model=Token,
     tags=["auth"],
 )
 @limiter.limit("3/minute")
@@ -139,7 +139,7 @@ def signup(
     session.add(user)
     session.commit()
     access_token = create_access_token({"sub": data.username})
-    return {"access_token": access_token}
+    return Token(access_token=access_token)
 
 
 @router.post(
