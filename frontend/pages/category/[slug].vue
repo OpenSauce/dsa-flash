@@ -240,7 +240,7 @@ async function startSession(selectedMode: StudyMode) {
             <p class="text-sm text-green-700">Your first review is scheduled for tomorrow. Come back then to start building long-term memory.</p>
           </div>
 
-          <div v-else-if="stats.due === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
+          <div v-else-if="stats.due === 0 && stats.new === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
             <p>No cards due. Complete more lessons to build your review queue.</p>
           </div>
 
