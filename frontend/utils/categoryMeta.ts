@@ -16,22 +16,7 @@ export const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.',
 
 export const SECTION_ORDER = ['Coding', 'System Design', 'Infrastructure', 'Other']
 
-const KNOWN_DISPLAY_NAMES: Record<string, string> = {
-  'aws': 'AWS',
-  'data-structures': 'Data Structures',
-  'algorithms': 'Algorithms',
-  'advanced-data-structures': 'Advanced Data Structures',
-  'big-o-notation': 'Big O Notation',
-  'system-design': 'System Design',
-  'kubernetes': 'Kubernetes',
-  'docker': 'Docker',
-  'linux': 'Linux',
-  'networking': 'Networking',
-  'dynamic-programming': 'Dynamic Programming',
-}
-
 export function getCategoryDisplayName(slug: string): string {
-  if (slug in KNOWN_DISPLAY_NAMES) return KNOWN_DISPLAY_NAMES[slug]
   return slug
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))

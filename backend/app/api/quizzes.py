@@ -140,6 +140,7 @@ def submit_quiz(
         if quiz.lesson_slug:
             _mark_lesson_complete(session, user.id, quiz.lesson_slug)
             _seed_flashcards_for_lesson(session, user.id, quiz.lesson_slug)
+        session.commit()
 
     return QuizSubmitOut(score=score, total=total, results=results)
 
@@ -185,7 +186,6 @@ def _upsert_attempt(
                 existing.total = total
                 existing.completed_at = now
                 session.add(existing)
-    session.commit()
 
 
 def _mark_lesson_complete(
@@ -208,7 +208,7 @@ def _mark_lesson_complete(
         return
 
     session.add(UserLesson(user_id=user_id, lesson_id=lesson.id))
-    session.commit()
+    session.flush()
 
 
 def _seed_flashcards_for_lesson(
@@ -255,4 +255,4 @@ def _seed_flashcards_for_lesson(
             for cid in missing_ids
         ]
     )
-    session.commit()
+    session.flush()

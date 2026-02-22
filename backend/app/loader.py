@@ -188,8 +188,15 @@ def load_lessons() -> None:
 
         # Remove orphan lessons no longer in files
         all_db_lessons = session.exec(select(Lesson)).all()
-        for lesson in all_db_lessons:
-            if lesson.slug not in yaml_slugs:
+        orphans = [ls for ls in all_db_lessons if ls.slug not in yaml_slugs]
+        if len(orphans) > len(all_db_lessons) * 0.5:
+            logger.warning(
+                "Skipping orphan removal: %d of %d lessons would be deleted (>50%%)",
+                len(orphans),
+                len(all_db_lessons),
+            )
+        else:
+            for lesson in orphans:
                 logger.info("Removing orphaned lesson: %s", lesson.slug)
                 session.delete(lesson)
 
@@ -301,8 +308,15 @@ def load_quizzes() -> None:
 
         # Remove orphan quizzes no longer in files
         all_db_quizzes = session.exec(select(Quiz)).all()
-        for quiz in all_db_quizzes:
-            if quiz.slug not in yaml_slugs:
+        orphans = [q for q in all_db_quizzes if q.slug not in yaml_slugs]
+        if len(orphans) > len(all_db_quizzes) * 0.5:
+            logger.warning(
+                "Skipping orphan removal: %d of %d quizzes would be deleted (>50%%)",
+                len(orphans),
+                len(all_db_quizzes),
+            )
+        else:
+            for quiz in orphans:
                 logger.info("Removing orphaned quiz: %s", quiz.slug)
                 session.delete(quiz)
 
