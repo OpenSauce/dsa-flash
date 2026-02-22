@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
 const route = useRoute()
@@ -6,6 +7,7 @@ const slug = route.params.slug as string
 const { public: { apiBase } } = useRuntimeConfig()
 const { apiFetch } = useApiFetch()
 const { isLoggedIn } = useAuth()
+const { track } = useAnalytics()
 
 interface QuizQuestion {
   id: number
@@ -68,6 +70,10 @@ const firstPassAnswers = ref<Record<number, number>>({})
 const categoryDisplayName = computed(() =>
   quiz.value?.category ? getCategoryDisplayName(quiz.value.category) : ''
 )
+
+onMounted(() => {
+  track('quiz_start', { category: quiz.value?.category, slug })
+})
 
 // Next lesson navigation after quiz completion
 interface CategoryLessonInfo {
@@ -201,6 +207,7 @@ async function submitQuiz() {
       body: { answers: answersPayload },
     })
     submitResult.value = result
+    track('quiz_complete', { category: quiz.value?.category, slug, score: result.score, total: result.total })
   } catch {
     // non-fatal — show score based on local state
     if (quiz.value) {

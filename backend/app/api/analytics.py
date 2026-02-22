@@ -162,6 +162,24 @@ def analytics_summary(
         """)
     ).one()
 
+    # Anonymous lesson/quiz engagement from event table
+    anon_row = session.exec(
+        text("""
+            SELECT
+                COUNT(*) FILTER (WHERE event_type = 'lesson_view'
+                    AND user_id IS NULL)                                AS anon_lesson_views,
+                COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'lesson_view'
+                    AND user_id IS NULL)                                AS anon_lesson_sessions,
+                COUNT(*) FILTER (WHERE event_type = 'quiz_start'
+                    AND user_id IS NULL)                                AS anon_quiz_starts,
+                COUNT(*) FILTER (WHERE event_type = 'quiz_complete'
+                    AND user_id IS NULL)                                AS anon_quiz_completions,
+                COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'quiz_complete'
+                    AND user_id IS NULL)                                AS anon_quiz_sessions
+            FROM event
+        """)
+    ).one()
+
     # Per-category lesson completions
     category_lessons = session.exec(
         text("""
@@ -189,6 +207,13 @@ def analytics_summary(
             "lesson_users": funnel_row[0] or 0,
             "quiz_users": funnel_row[1] or 0,
             "review_users": funnel_row[2] or 0,
+        },
+        "anonymous_engagement": {
+            "lesson_views": anon_row[0] or 0,
+            "lesson_sessions": anon_row[1] or 0,
+            "quiz_starts": anon_row[2] or 0,
+            "quiz_completions": anon_row[3] or 0,
+            "quiz_sessions": anon_row[4] or 0,
         },
         "category_lesson_completions": {r[0]: r[1] for r in category_lessons},
     }

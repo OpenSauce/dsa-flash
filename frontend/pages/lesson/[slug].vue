@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useMarkdown } from '@/composables/useMarkdown'
 import { useAuth } from '@/composables/useAuth'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
 
 const route = useRoute()
@@ -8,6 +9,7 @@ const slug = route.params.slug as string
 const { public: { apiBase } } = useRuntimeConfig()
 const { isLoggedIn } = useAuth()
 const { apiFetch } = useApiFetch()
+const { track } = useAnalytics()
 const md = useMarkdown()
 
 interface LessonDetail {
@@ -80,6 +82,7 @@ const fetchLinkedQuiz = async () => {
 }
 
 onMounted(async () => {
+  track('lesson_view', { category: lesson.value?.category, slug })
   await fetchCategoryLessons()
   await fetchLinkedQuiz()
 })
@@ -109,6 +112,7 @@ async function markComplete() {
     await apiFetch(`/lessons/${slug}/complete`, { method: 'POST' })
     isCompleted.value = true
     completionSuccess.value = true
+    track('lesson_complete', { category: lesson.value?.category, slug })
   } catch {
     // non-fatal, user can retry
   } finally {
