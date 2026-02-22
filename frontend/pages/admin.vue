@@ -14,6 +14,17 @@ interface AnalyticsSummary {
   median_session_duration_ms: number
   drop_off_distribution: Record<string, number>
   conversion_rate: number
+  lessons_completed: number
+  users_with_lessons: number
+  quizzes_taken: number
+  users_with_quizzes: number
+  avg_quiz_score_pct: number
+  funnel: {
+    lesson_users: number
+    quiz_users: number
+    review_users: number
+  }
+  category_lesson_completions: Record<string, number>
 }
 
 const summary = ref<AnalyticsSummary | null>(null)
@@ -64,6 +75,27 @@ const dropOffBuckets = computed(() => {
     .filter((k) => k in dist)
     .map((k) => ({ label: `${k} cards`, count: dist[k] }))
 })
+
+const funnelSteps = computed(() => {
+  if (!summary.value) return []
+  const f = summary.value.funnel
+  return [
+    { label: 'Completed a lesson', count: f.lesson_users },
+    { label: 'Took a quiz', count: f.quiz_users },
+    { label: 'Reviewed flashcards', count: f.review_users },
+  ]
+})
+
+const maxFunnelCount = computed(() => {
+  if (!funnelSteps.value.length) return 1
+  return Math.max(...funnelSteps.value.map((s) => s.count), 1)
+})
+
+const categoryLessonList = computed(() => {
+  if (!summary.value) return []
+  const entries = Object.entries(summary.value.category_lesson_completions)
+  return entries.sort((a, b) => b[1] - a[1])
+})
 </script>
 
 <template>
@@ -74,7 +106,7 @@ const dropOffBuckets = computed(() => {
     <div v-else-if="error" class="text-red-600">{{ error }}</div>
 
     <template v-else-if="summary">
-      <!-- Stat cards -->
+      <!-- Session stat cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-white rounded-lg shadow p-4">
           <div class="text-sm text-gray-500">Total Sessions</div>
@@ -103,6 +135,67 @@ const dropOffBuckets = computed(() => {
         <div class="bg-white rounded-lg shadow p-4">
           <div class="text-sm text-gray-500 mb-1">Median Session Duration</div>
           <div class="text-2xl font-bold">{{ medianDurationSeconds }}s</div>
+        </div>
+      </div>
+
+      <!-- Learning metrics -->
+      <h2 class="text-xl font-semibold mb-4">Learning Metrics</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Lessons Completed</div>
+          <div class="text-2xl font-bold">{{ summary.lessons_completed }}</div>
+          <div class="text-xs text-gray-500 mt-1">{{ summary.users_with_lessons }} users</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Quizzes Taken</div>
+          <div class="text-2xl font-bold">{{ summary.quizzes_taken }}</div>
+          <div class="text-xs text-gray-500 mt-1">{{ summary.users_with_quizzes }} users</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Avg Quiz Score</div>
+          <div class="text-2xl font-bold">{{ summary.avg_quiz_score_pct }}%</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Quiz Pass Rate</div>
+          <div class="text-2xl font-bold">
+            {{ summary.quizzes_taken > 0 ? ((summary.avg_quiz_score_pct >= 70 ? summary.quizzes_taken : 0) > 0 ? '—' : '—') : '—' }}
+          </div>
+          <div class="text-xs text-gray-500 mt-1">Coming soon</div>
+        </div>
+      </div>
+
+      <!-- Lesson→Quiz→Flashcard Funnel -->
+      <div class="bg-white rounded-lg shadow p-4 mb-8">
+        <h2 class="text-lg font-semibold mb-4">Learning Funnel</h2>
+        <p class="text-sm text-gray-500 mb-4">Unique users who reached each stage</p>
+        <div class="space-y-3">
+          <div v-for="step in funnelSteps" :key="step.label" class="flex items-center gap-3">
+            <span class="text-sm text-gray-600 w-44">{{ step.label }}</span>
+            <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+              <div
+                class="bg-emerald-500 h-full rounded-full transition-all"
+                :style="{ width: `${Math.min((step.count / maxFunnelCount) * 100, 100)}%` }"
+              />
+            </div>
+            <span class="text-sm font-medium w-12 text-right">{{ step.count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category lesson completions -->
+      <div class="bg-white rounded-lg shadow p-4 mb-8" v-if="categoryLessonList.length">
+        <h2 class="text-lg font-semibold mb-4">Lesson Completions by Category</h2>
+        <div class="space-y-2">
+          <div v-for="[category, count] in categoryLessonList" :key="category" class="flex items-center gap-3">
+            <span class="text-sm text-gray-600 w-44 truncate">{{ category }}</span>
+            <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+              <div
+                class="bg-indigo-500 h-full rounded-full transition-all"
+                :style="{ width: `${Math.min((count / categoryLessonList[0][1]) * 100, 100)}%` }"
+              />
+            </div>
+            <span class="text-sm font-medium w-12 text-right">{{ count }}</span>
+          </div>
         </div>
       </div>
 
