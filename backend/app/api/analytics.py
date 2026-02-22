@@ -137,6 +137,42 @@ def analytics_summary(
         authed = total_sessions - anonymous_sessions
         conversion_rate = round(authed / total_sessions, 4)
 
+    # Lesson & quiz metrics
+    learning_row = session.exec(
+        text("""
+            SELECT
+                (SELECT COUNT(*) FROM userlesson)       AS lessons_completed,
+                (SELECT COUNT(DISTINCT user_id) FROM userlesson) AS users_with_lessons,
+                (SELECT COUNT(*) FROM userquizattempt)   AS quizzes_taken,
+                (SELECT COUNT(DISTINCT user_id) FROM userquizattempt) AS users_with_quizzes,
+                COALESCE(
+                    (SELECT ROUND(AVG(score::numeric / NULLIF(total, 0) * 100), 1)
+                     FROM userquizattempt), 0
+                )                                        AS avg_quiz_score_pct
+        """)
+    ).one()
+
+    # Funnel: users who completed a lesson -> took a quiz -> reviewed a flashcard
+    funnel_row = session.exec(
+        text("""
+            SELECT
+                (SELECT COUNT(DISTINCT user_id) FROM userlesson)     AS lesson_users,
+                (SELECT COUNT(DISTINCT user_id) FROM userquizattempt) AS quiz_users,
+                (SELECT COUNT(DISTINCT user_id) FROM userflashcard)  AS review_users
+        """)
+    ).one()
+
+    # Per-category lesson completions
+    category_lessons = session.exec(
+        text("""
+            SELECT l.category, COUNT(*) AS completions
+            FROM userlesson ul
+            JOIN lesson l ON l.id = ul.lesson_id
+            GROUP BY l.category
+            ORDER BY completions DESC
+        """)
+    ).all()
+
     return {
         "total_sessions": total_sessions,
         "anonymous_sessions": anonymous_sessions,
@@ -144,4 +180,15 @@ def analytics_summary(
         "median_session_duration_ms": float(row[3]),
         "drop_off_distribution": drop_off,
         "conversion_rate": conversion_rate,
+        "lessons_completed": learning_row[0] or 0,
+        "users_with_lessons": learning_row[1] or 0,
+        "quizzes_taken": learning_row[2] or 0,
+        "users_with_quizzes": learning_row[3] or 0,
+        "avg_quiz_score_pct": float(learning_row[4] or 0),
+        "funnel": {
+            "lesson_users": funnel_row[0] or 0,
+            "quiz_users": funnel_row[1] or 0,
+            "review_users": funnel_row[2] or 0,
+        },
+        "category_lesson_completions": {r[0]: r[1] for r in category_lessons},
     }
