@@ -133,18 +133,11 @@ const renderedContent = computed(() =>
     </div>
 
     <template v-else-if="lesson">
-      <!-- Breadcrumb -->
-      <nav class="text-sm text-gray-500 mb-6 pt-2">
-        <NuxtLink to="/" class="hover:text-gray-700">Home</NuxtLink>
-        <span class="mx-2">/</span>
-        <NuxtLink
-          v-if="lesson.category"
-          :to="`/category/${lesson.category}`"
-          class="hover:text-gray-700"
-        >{{ categoryDisplayName }}</NuxtLink>
-        <span v-if="lesson.category" class="mx-2">/</span>
-        <span class="text-gray-700">{{ lesson.title }}</span>
-      </nav>
+      <Breadcrumb :items="[
+        { label: 'Home', to: '/' },
+        ...(lesson.category ? [{ label: categoryDisplayName, to: `/category/${lesson.category}` }] : []),
+        { label: lesson.title },
+      ]" />
 
       <!-- Header -->
       <header class="mb-8">
@@ -166,33 +159,58 @@ const renderedContent = computed(() =>
 
       <!-- Completion section -->
       <div class="border-t border-gray-200 pt-8">
-        <div v-if="completionSuccess" class="rounded-lg bg-green-50 border border-green-200 px-5 py-4 mb-6">
-          <p class="font-semibold text-green-800 mb-1">Lesson complete!</p>
-          <p v-if="linkedQuiz" class="text-green-700 text-sm">
-            Ready to test yourself?
-            <NuxtLink :to="`/quiz/${linkedQuiz.slug}`" class="underline font-medium">
+        <!-- Quiz exists: quiz is the completion mechanism -->
+        <template v-if="linkedQuiz">
+          <div v-if="completionSuccess" class="rounded-lg bg-green-50 border border-green-200 px-5 py-4 mb-6">
+            <p class="font-semibold text-green-800 mb-1">Lesson complete!</p>
+            <p class="text-green-700 text-sm">
+              Great work! Your flashcards are unlocked and will appear in your reviews.
+            </p>
+          </div>
+
+          <div v-else-if="isLoggedIn" class="flex flex-col items-center gap-3 mb-6">
+            <NuxtLink
+              :to="`/quiz/${linkedQuiz.slug}`"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition"
+            >
               Take the quiz
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
             </NuxtLink>
-          </p>
-          <p v-else class="text-green-700 text-sm">
-            Great work! Check back tomorrow for flashcard reviews.
-          </p>
-        </div>
+            <p class="text-sm text-gray-500">Complete the quiz to unlock flashcards</p>
+          </div>
 
-        <div v-else-if="isLoggedIn" class="flex justify-center mb-6">
-          <button
-            @click="markComplete"
-            :disabled="completing"
-            class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-60 transition"
-          >
-            {{ completing ? 'Saving...' : 'Mark as complete' }}
-          </button>
-        </div>
+          <div v-else class="text-center text-sm text-gray-500 mb-6">
+            <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
+            to track your progress.
+          </div>
+        </template>
 
-        <div v-else class="text-center text-sm text-gray-500 mb-6">
-          <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
-          to track your progress.
-        </div>
+        <!-- No quiz: mark-as-complete is the completion mechanism -->
+        <template v-else>
+          <div v-if="completionSuccess" class="rounded-lg bg-green-50 border border-green-200 px-5 py-4 mb-6">
+            <p class="font-semibold text-green-800 mb-1">Lesson complete!</p>
+            <p class="text-green-700 text-sm">
+              Great work! Check back tomorrow for flashcard reviews.
+            </p>
+          </div>
+
+          <div v-else-if="isLoggedIn" class="flex justify-center mb-6">
+            <button
+              @click="markComplete"
+              :disabled="completing"
+              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-60 transition"
+            >
+              {{ completing ? 'Saving...' : 'Mark as complete' }}
+            </button>
+          </div>
+
+          <div v-else class="text-center text-sm text-gray-500 mb-6">
+            <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
+            to track your progress.
+          </div>
+        </template>
 
         <!-- Prev / Next navigation -->
         <div v-if="categoryLessons.length > 1" class="flex justify-between gap-4 mt-4">
@@ -216,6 +234,7 @@ const renderedContent = computed(() =>
           </NuxtLink>
           <div v-else class="flex-1" />
         </div>
+        <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-8 text-center">&larr; Back to categories</NuxtLink>
       </div>
     </template>
 

@@ -160,6 +160,7 @@ class CategoryLessonInfo(BaseModel):
     slug: str
     title: str
     completed: bool = False
+    has_quiz: bool = False
 
 
 class StreakOut(BaseModel):
@@ -202,6 +203,7 @@ class CategoryOut(BaseModel):
     mastery_pct: Optional[int] = None
     learned_pct: Optional[int] = None
     lessons_available: Optional[int] = None
+    lessons_completed: Optional[int] = None
     first_lesson_slug: Optional[str] = None
 
 

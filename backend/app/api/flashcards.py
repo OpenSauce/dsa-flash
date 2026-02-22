@@ -15,9 +15,12 @@ from ..models import (
     Flashcard,
     FlashcardWithIntervals,
     Lesson,
+    Quiz,
     StudySession,
     User,
     UserFlashcard,
+    UserLesson,
+    UserQuizAttempt,
     slug_to_display_name,
 )
 from ..spaced import compute_projected_intervals, sm2
@@ -72,6 +75,7 @@ def list_categories(
     new_map: dict[str, int] = {}
     learned_map: dict[str, int] = {}
     mastered_map: dict[str, int] = {}
+    lessons_completed_map: dict[str, int] = {}
 
     if user:
         now = datetime.now(timezone.utc)
@@ -127,6 +131,81 @@ def list_categories(
             learned_map[row.category] = row.learned
             mastered_map[row.category] = int(row.mastered or 0)
 
+        # For categories with lessons: count completed lessons (quiz-based)
+        # A lesson is "completed" if its quiz has been submitted (UserQuizAttempt),
+        # or if no quiz exists and UserLesson exists.
+        if lesson_count_map:
+            # Get all lessons in categories that have lessons
+            all_lessons = session.exec(
+                select(Lesson).where(
+                    col(Lesson.category).in_(list(lesson_count_map.keys()))
+                )
+            ).all()
+
+            # Map lesson_slug -> quiz_id
+            lesson_slugs = [l.slug for l in all_lessons]
+            quiz_map: dict[str, int] = {}
+            if lesson_slugs:
+                for q in session.exec(
+                    select(Quiz).where(col(Quiz.lesson_slug).in_(lesson_slugs))
+                ).all():
+                    if q.lesson_slug:
+                        quiz_map[q.lesson_slug] = q.id
+
+            # User's completed quiz IDs
+            completed_quiz_ids: set[int] = set()
+            if quiz_map:
+                completed_quiz_ids = set(
+                    session.exec(
+                        select(UserQuizAttempt.quiz_id).where(
+                            UserQuizAttempt.user_id == user.id,
+                            col(UserQuizAttempt.quiz_id).in_(
+                                list(quiz_map.values())
+                            ),
+                        )
+                    ).all()
+                )
+
+            # User's completed lesson IDs (fallback for lessons without quizzes)
+            completed_lesson_ids = {
+                ul.lesson_id
+                for ul in session.exec(
+                    select(UserLesson).where(UserLesson.user_id == user.id)
+                ).all()
+            }
+
+            for les in all_lessons:
+                has_quiz = les.slug in quiz_map
+                if has_quiz:
+                    done = quiz_map[les.slug] in completed_quiz_ids
+                else:
+                    done = les.id in completed_lesson_ids
+                if done and les.category:
+                    lessons_completed_map[les.category] = (
+                        lessons_completed_map.get(les.category, 0) + 1
+                    )
+
+    def _learned(cat_slug: str, total: int) -> int:
+        """For categories with lessons, learned = lessons completed.
+        For categories without, learned = flashcards seen (UserFlashcard count).
+        """
+        if cat_slug in lesson_count_map:
+            return lessons_completed_map.get(cat_slug, 0)
+        return learned_map.get(cat_slug, 0)
+
+    def _learned_pct(cat_slug: str, total: int) -> int:
+        """Percentage based on lesson or flashcard progress."""
+        if cat_slug in lesson_count_map:
+            lesson_total = lesson_count_map[cat_slug]
+            if lesson_total > 0:
+                return floor(
+                    lessons_completed_map.get(cat_slug, 0) / lesson_total * 100
+                )
+            return 0
+        if total > 0:
+            return floor(learned_map.get(cat_slug, 0) / total * 100)
+        return 0
+
     return [
         CategoryOut(
             slug=row.category,
@@ -135,7 +214,7 @@ def list_categories(
             has_language=row.category in lang_categories,
             due=due_map.get(row.category, 0) if user else None,
             new=new_map.get(row.category, 0) if user else None,
-            learned=learned_map.get(row.category, 0) if user else None,
+            learned=_learned(row.category, row.total) if user else None,
             mastered=mastered_map.get(row.category, 0) if user else None,
             mastery_pct=(
                 floor(mastered_map.get(row.category, 0) / row.total * 100)
@@ -143,11 +222,12 @@ def list_categories(
                 else None
             ),
             learned_pct=(
-                floor(learned_map.get(row.category, 0) / row.total * 100)
-                if user and row.total > 0
-                else None
+                _learned_pct(row.category, row.total) if user else None
             ),
             lessons_available=lesson_count_map.get(row.category, 0),
+            lessons_completed=(
+                lessons_completed_map.get(row.category, 0) if user else None
+            ),
             first_lesson_slug=first_lesson_map.get(row.category),
         )
         for row in rows

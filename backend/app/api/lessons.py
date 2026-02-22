@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from ..database import get_session
 from ..models import (
@@ -11,9 +11,11 @@ from ..models import (
     Lesson,
     LessonDetailOut,
     LessonOut,
+    Quiz,
     User,
     UserFlashcard,
     UserLesson,
+    UserQuizAttempt,
 )
 from .users import get_current_user, get_optional_user
 
@@ -38,29 +40,69 @@ def lessons_for_category(
     session: Session = Depends(get_session),
     user: Optional[User] = Depends(get_optional_user),
 ):
-    """Get lesson list for a category with completion status."""
+    """Get lesson list for a category with completion status.
+
+    Completion is quiz-based: if a lesson has a quiz, completed = quiz submitted.
+    If no quiz exists, completed = lesson marked complete (UserLesson).
+    """
     lessons = session.exec(
         select(Lesson).where(Lesson.category == category).order_by(Lesson.order)
     ).all()
 
+    lesson_slugs = [l.slug for l in lessons]
+
+    # Map lesson_slug -> quiz_id for lessons that have quizzes
+    quiz_map: dict[str, int] = {}
+    if lesson_slugs:
+        for q in session.exec(
+            select(Quiz).where(col(Quiz.lesson_slug).in_(lesson_slugs))
+        ).all():
+            if q.lesson_slug:
+                quiz_map[q.lesson_slug] = q.id
+
     if not user:
         return [
-            CategoryLessonInfo(slug=lesson.slug, title=lesson.title, completed=False)
+            CategoryLessonInfo(
+                slug=lesson.slug, title=lesson.title, completed=False,
+                has_quiz=lesson.slug in quiz_map,
+            )
             for lesson in lessons
         ]
 
+    # Lessons marked complete (fallback for lessons without quizzes)
     completed_ids = {
         ul.lesson_id
         for ul in session.exec(
             select(UserLesson).where(UserLesson.user_id == user.id)
         ).all()
     }
-    return [
-        CategoryLessonInfo(
-            slug=lesson.slug, title=lesson.title, completed=lesson.id in completed_ids
+
+    # Quiz attempts for this user
+    completed_quiz_ids: set[int] = set()
+    if quiz_map:
+        completed_quiz_ids = set(
+            session.exec(
+                select(UserQuizAttempt.quiz_id).where(
+                    UserQuizAttempt.user_id == user.id,
+                    col(UserQuizAttempt.quiz_id).in_(list(quiz_map.values())),
+                )
+            ).all()
         )
-        for lesson in lessons
-    ]
+
+    result = []
+    for lesson in lessons:
+        has_quiz = lesson.slug in quiz_map
+        if has_quiz:
+            completed = quiz_map[lesson.slug] in completed_quiz_ids
+        else:
+            completed = lesson.id in completed_ids
+        result.append(
+            CategoryLessonInfo(
+                slug=lesson.slug, title=lesson.title,
+                completed=completed, has_quiz=has_quiz,
+            )
+        )
+    return result
 
 
 @router.get("/{slug}", response_model=LessonDetailOut)
@@ -83,7 +125,12 @@ def complete_lesson(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Mark a lesson as completed. Auth required. Idempotent."""
+    """Mark a lesson as read. Auth required. Idempotent.
+
+    If the lesson has a quiz, flashcards are NOT seeded here — the quiz
+    submission handles that. If no quiz exists, flashcards are seeded
+    immediately.
+    """
     lesson = session.exec(
         select(Lesson).where(Lesson.slug == slug)
     ).first()
@@ -101,6 +148,14 @@ def complete_lesson(
 
     user_lesson = UserLesson(user_id=user.id, lesson_id=lesson.id)
     session.add(user_lesson)
+
+    # If a quiz exists for this lesson, let quiz submission seed flashcards
+    has_quiz = session.exec(
+        select(Quiz).where(Quiz.lesson_slug == slug)
+    ).first()
+    if has_quiz:
+        session.commit()
+        return
 
     linked_cards = session.exec(
         select(Flashcard).where(Flashcard.lesson_slug == slug)

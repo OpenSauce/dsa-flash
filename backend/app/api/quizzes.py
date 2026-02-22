@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from ..database import get_session
 from ..models import (
     Flashcard,
+    Lesson,
     Quiz,
     QuizAnswerResult,
     QuizDetailOut,
@@ -18,6 +19,7 @@ from ..models import (
     QuizSubmitOut,
     User,
     UserFlashcard,
+    UserLesson,
     UserQuizAttempt,
 )
 from .users import get_optional_user
@@ -136,6 +138,7 @@ def submit_quiz(
     if user:
         _upsert_attempt(session, user.id, quiz.id, score, total)
         if quiz.lesson_slug:
+            _mark_lesson_complete(session, user.id, quiz.lesson_slug)
             _seed_flashcards_for_lesson(session, user.id, quiz.lesson_slug)
 
     return QuizSubmitOut(score=score, total=total, results=results)
@@ -182,6 +185,29 @@ def _upsert_attempt(
                 existing.total = total
                 existing.completed_at = now
                 session.add(existing)
+    session.commit()
+
+
+def _mark_lesson_complete(
+    session: Session, user_id: int, lesson_slug: str
+) -> None:
+    """Create UserLesson entry when quiz is submitted. Idempotent."""
+    lesson = session.exec(
+        select(Lesson).where(Lesson.slug == lesson_slug)
+    ).first()
+    if not lesson or not lesson.id:
+        return
+
+    existing = session.exec(
+        select(UserLesson).where(
+            UserLesson.user_id == user_id,
+            UserLesson.lesson_id == lesson.id,
+        )
+    ).first()
+    if existing:
+        return
+
+    session.add(UserLesson(user_id=user_id, lesson_id=lesson.id))
     session.commit()
 
 

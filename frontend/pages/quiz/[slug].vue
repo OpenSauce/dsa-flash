@@ -69,6 +69,33 @@ const categoryDisplayName = computed(() =>
   quiz.value?.category ? getCategoryDisplayName(quiz.value.category) : ''
 )
 
+// Next lesson navigation after quiz completion
+interface CategoryLessonInfo {
+  slug: string
+  title: string
+  completed: boolean
+  has_quiz: boolean
+}
+const nextLesson = ref<CategoryLessonInfo | null>(null)
+
+async function fetchNextLesson() {
+  if (!quiz.value?.category || !quiz.value?.lesson_slug) return
+  try {
+    const headers: Record<string, string> = {}
+    if (tokenCookie.value) headers['Authorization'] = `Bearer ${tokenCookie.value}`
+    const lessons = await $fetch<CategoryLessonInfo[]>(
+      `${apiBase}/lessons/by-category/${quiz.value.category}`,
+      { headers }
+    )
+    const currentIdx = lessons.findIndex(l => l.slug === quiz.value!.lesson_slug)
+    if (currentIdx >= 0 && currentIdx < lessons.length - 1) {
+      nextLesson.value = lessons[currentIdx + 1]
+    }
+  } catch {
+    // non-fatal
+  }
+}
+
 const activeQuestions = computed(() =>
   inRetryRound.value ? retryQuestions.value : (quiz.value?.questions ?? [])
 )
@@ -170,6 +197,7 @@ async function submitQuiz() {
   } finally {
     submitting.value = false
     quizComplete.value = true
+    await fetchNextLesson()
   }
 }
 
@@ -199,18 +227,11 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
     </div>
 
     <template v-else-if="quiz">
-      <!-- Breadcrumb -->
-      <nav class="text-sm text-gray-500 mb-6 pt-2">
-        <NuxtLink to="/" class="hover:text-gray-700">Home</NuxtLink>
-        <span class="mx-2">/</span>
-        <NuxtLink
-          v-if="quiz.category"
-          :to="`/category/${quiz.category}`"
-          class="hover:text-gray-700"
-        >{{ categoryDisplayName }}</NuxtLink>
-        <span v-if="quiz.category" class="mx-2">/</span>
-        <span class="text-gray-700">{{ quiz.title }}</span>
-      </nav>
+      <Breadcrumb :items="[
+        { label: 'Home', to: '/' },
+        ...(quiz.category ? [{ label: categoryDisplayName, to: `/category/${quiz.category}` }] : []),
+        { label: quiz.title },
+      ]" />
 
       <!-- Score summary screen -->
       <template v-if="quizComplete && submitResult">
@@ -274,18 +295,18 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
               Try again
             </button>
             <NuxtLink
-              v-if="quiz.lesson_slug"
-              :to="`/lesson/${quiz.lesson_slug}`"
-              class="px-6 py-3 border border-indigo-300 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition text-center"
+              v-if="nextLesson"
+              :to="`/lesson/${nextLesson.slug}`"
+              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition text-center"
             >
-              Back to lesson
+              Next lesson
             </NuxtLink>
             <NuxtLink
               v-if="quiz.category"
               :to="`/category/${quiz.category}`"
-              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition text-center"
+              class="px-6 py-3 border border-indigo-300 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition text-center"
             >
-              Review with flashcards
+              Back to {{ categoryDisplayName || 'category' }}
             </NuxtLink>
           </div>
         </div>
@@ -308,8 +329,8 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
           <!-- Progress bar -->
           <div class="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
-              class="h-full bg-indigo-500 rounded-full transition-all duration-300"
-              :style="{ width: `${((currentIndex + (showResult ? 1 : 0)) / totalQuestions) * 100}%` }"
+              class="h-full bg-green-500 rounded-full transition-all duration-300"
+              :style="{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }"
             />
           </div>
         </header>
@@ -374,6 +395,7 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
           </div>
         </div>
       </template>
+      <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-8 text-center">&larr; Back to categories</NuxtLink>
     </template>
 
     <div v-else class="py-16 text-center text-gray-400">Loading...</div>
