@@ -12,7 +12,7 @@ from testcontainers.postgres import PostgresContainer
 import app.models  # noqa: F401
 from app.api.users import User, get_password_hash
 from app.limiter import limiter
-from app.models import Flashcard, Lesson, StudySession, UserFlashcard
+from app.models import Flashcard, Lesson, Quiz, QuizQuestion, StudySession, UserFlashcard
 
 
 @pytest.fixture(scope="session")
@@ -41,7 +41,8 @@ def clear_db(engine):
     with engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE TABLE userlesson, lesson, studysession, event,"
+                "TRUNCATE TABLE userquizattempt, quizquestion, quiz,"
+                " userlesson, lesson, studysession, event,"
                 ' userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
@@ -108,6 +109,38 @@ def create_lesson(session):
         session.commit()
         session.refresh(lesson)
         return lesson
+
+    return _create
+
+
+@pytest.fixture
+def create_quiz(session):
+    def _create(**kwargs):
+        kwargs.setdefault("title", "Test Quiz")
+        kwargs.setdefault("slug", "test-quiz")
+        kwargs.setdefault("category", "test-cat")
+        quiz = Quiz(**kwargs)
+        session.add(quiz)
+        session.commit()
+        session.refresh(quiz)
+        return quiz
+
+    return _create
+
+
+@pytest.fixture
+def create_quiz_question(session):
+    def _create(quiz_id, **kwargs):
+        kwargs.setdefault("question", "What is 1+1?")
+        kwargs.setdefault("options", ["1", "2", "3", "4"])
+        kwargs.setdefault("correct_index", 1)
+        kwargs.setdefault("explanation", "Basic math.")
+        kwargs.setdefault("order", 0)
+        q = QuizQuestion(quiz_id=quiz_id, **kwargs)
+        session.add(q)
+        session.commit()
+        session.refresh(q)
+        return q
 
     return _create
 

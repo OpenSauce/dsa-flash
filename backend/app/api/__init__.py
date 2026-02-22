@@ -6,6 +6,7 @@ from .dashboard import router as dashboard_router
 from .flashcards import categories_router
 from .flashcards import router as flashcards_router
 from .lessons import router as lessons_router
+from .quizzes import router as quizzes_router
 from .users import router as users_router
 
 api_router = APIRouter()
@@ -15,5 +16,6 @@ api_router.include_router(dashboard_router)
 api_router.include_router(flashcards_router)
 api_router.include_router(categories_router)
 api_router.include_router(lessons_router)
+api_router.include_router(quizzes_router)
 api_router.include_router(events_router)
 api_router.include_router(analytics_router)

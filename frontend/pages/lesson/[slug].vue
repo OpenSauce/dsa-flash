@@ -48,6 +48,7 @@ const categoryLessons = ref<CategoryLessonInfo[]>([])
 const isCompleted = ref(false)
 const completing = ref(false)
 const completionSuccess = ref(false)
+const linkedQuiz = ref<{ slug: string; title: string } | null>(null)
 
 const fetchCategoryLessons = async () => {
   if (!lesson.value?.category) return
@@ -68,7 +69,21 @@ const fetchCategoryLessons = async () => {
   }
 }
 
-onMounted(fetchCategoryLessons)
+const fetchLinkedQuiz = async () => {
+  try {
+    const quizzes = await $fetch<Array<{ slug: string; title: string }>>(
+      `${apiBase}/quizzes?lesson_slug=${slug}`
+    )
+    if (quizzes.length) linkedQuiz.value = quizzes[0]
+  } catch {
+    // non-fatal
+  }
+}
+
+onMounted(async () => {
+  await fetchCategoryLessons()
+  await fetchLinkedQuiz()
+})
 
 const prevLesson = computed<CategoryLessonInfo | null>(() => {
   if (!lesson.value) return null
@@ -153,14 +168,14 @@ const renderedContent = computed(() =>
       <div class="border-t border-gray-200 pt-8">
         <div v-if="completionSuccess" class="rounded-lg bg-green-50 border border-green-200 px-5 py-4 mb-6">
           <p class="font-semibold text-green-800 mb-1">Lesson complete!</p>
-          <p class="text-green-700 text-sm">
-            Ready to test yourself? Head to the
-            <NuxtLink
-              v-if="lesson.category"
-              :to="`/category/${lesson.category}`"
-              class="underline font-medium"
-            >{{ categoryDisplayName }} flashcards</NuxtLink>
-            to reinforce what you learned.
+          <p v-if="linkedQuiz" class="text-green-700 text-sm">
+            Ready to test yourself?
+            <NuxtLink :to="`/quiz/${linkedQuiz.slug}`" class="underline font-medium">
+              Take the quiz
+            </NuxtLink>
+          </p>
+          <p v-else class="text-green-700 text-sm">
+            Great work! Check back tomorrow for flashcard reviews.
           </p>
         </div>
 
