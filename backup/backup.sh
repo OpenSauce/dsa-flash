@@ -6,7 +6,7 @@ FILENAME="dsa-flash-${TIMESTAMP}.sql.gz"
 LOCAL_PATH="/backups/${FILENAME}"
 
 echo "[backup] Starting pg_dump at $(date)"
-TEMP_SQL=$(mktemp "/backups/dsa-flash-${TIMESTAMP}.XXXXXX.sql")
+TEMP_SQL=$(mktemp "/backups/dump-XXXXXX")
 PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
   -h "${POSTGRES_HOST:-db}" \
   -U "${POSTGRES_USER:-user}" \
