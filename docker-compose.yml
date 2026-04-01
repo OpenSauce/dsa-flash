@@ -70,6 +70,26 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  backup:
+    profiles: ["prod"]
+    build:
+      context: ./backup
+    depends_on:
+      - db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-flashcards}
+      POSTGRES_HOST: db
+      S3_BUCKET: ${S3_BACKUP_BUCKET:-}
+      S3_PREFIX: ${S3_BACKUP_PREFIX:-backups/}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-west-2}
+    restart: unless-stopped
+
   pgadmin:
     profiles: ["dev"]
     image: dpage/pgadmin4:latest
