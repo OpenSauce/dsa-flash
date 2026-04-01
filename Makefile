@@ -6,6 +6,7 @@ dev:
 
 prod:
 	docker compose --profile prod pull
+	docker compose --profile prod build backup
 	docker compose --profile prod up -d
 
 down:
