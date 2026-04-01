@@ -1,3 +1,16 @@
+x-judge0-env: &judge0-env
+  RAILS_ENV: production
+  RAILS_MAX_THREADS: 5
+  SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
+  POSTGRES_HOST: judge0-db
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
+  POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
+  POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
+  REDIS_URL: redis://judge0-redis:6379
+  AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
+  AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
+
 services:
   backend:
     profiles: ["prod"]
@@ -114,29 +127,27 @@ services:
       POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
     volumes:
       - judge0_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${JUDGE0_DB_USER:-judge0}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   judge0-redis:
     profiles: ["prod", "dev"]
     image: redis:7
+    restart: unless-stopped
 
   judge0-server:
     profiles: ["prod", "dev"]
     image: judge0/judge0-ce:1.13.1
     depends_on:
-      - judge0-db
-      - judge0-redis
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
     environment:
-      RAILS_ENV: production
-      RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
-      POSTGRES_HOST: judge0-db
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
-      POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
-      POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
-      REDIS_URL: redis://judge0-redis:6379
-      AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
-      AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
+      <<: *judge0-env
     restart: unless-stopped
 
   judge0-workers:
@@ -144,21 +155,13 @@ services:
     image: judge0/judge0-ce:1.13.1
     command: ["./scripts/workers"]
     depends_on:
-      - judge0-db
-      - judge0-redis
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
     environment:
-      RAILS_ENV: production
-      RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
-      POSTGRES_HOST: judge0-db
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
-      POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
-      POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
-      REDIS_URL: redis://judge0-redis:6379
-      AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
-      AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
+      <<: *judge0-env
     restart: unless-stopped
+    # Required by Judge0 CE for isolate sandbox (cgroups)
     privileged: true
 
 volumes:
