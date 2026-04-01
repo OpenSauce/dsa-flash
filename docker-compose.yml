@@ -128,7 +128,7 @@ services:
     environment:
       RAILS_ENV: production
       RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:?JUDGE0_SECRET_KEY_BASE must be set}
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
       POSTGRES_HOST: judge0-db
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
@@ -149,7 +149,7 @@ services:
     environment:
       RAILS_ENV: production
       RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:?JUDGE0_SECRET_KEY_BASE must be set}
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
       POSTGRES_HOST: judge0-db
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
