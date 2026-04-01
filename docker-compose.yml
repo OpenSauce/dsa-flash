@@ -11,7 +11,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-flashcards}"
       SECRET_KEY: "${SECRET_KEY:-}"
-      JUDGE0_URL: "http://judge0-server:2358"
+      JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
     volumes:
       - ./dsa-flash-cards:/data/flashcards
 
@@ -29,7 +29,7 @@ services:
       DEV_MODE: "${DEV_MODE:-}"
       SECRET_KEY: "${SECRET_KEY:-}"
       RESET_DB: "${RESET_DB:-}"
-      JUDGE0_URL: "http://judge0-server:2358"
+      JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
     volumes:
       - ./backend/app:/usr/src/app/app
       - ./backend/alembic:/usr/src/app/alembic
@@ -107,7 +107,7 @@ services:
 
   judge0-db:
     profiles: ["prod", "dev"]
-    image: postgres:13
+    image: postgres:15
     environment:
       POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
       POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
@@ -128,7 +128,7 @@ services:
     environment:
       RAILS_ENV: production
       RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-default_secret_key_base}
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:?JUDGE0_SECRET_KEY_BASE must be set}
       POSTGRES_HOST: judge0-db
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
@@ -149,7 +149,7 @@ services:
     environment:
       RAILS_ENV: production
       RAILS_MAX_THREADS: 5
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-default_secret_key_base}
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:?JUDGE0_SECRET_KEY_BASE must be set}
       POSTGRES_HOST: judge0-db
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
