@@ -27,7 +27,7 @@ RETENTION_DAYS="${RETENTION_DAYS:-7}"
 NOW_EPOCH=$(date +%s)
 CUTOFF_EPOCH=$((NOW_EPOCH - RETENTION_DAYS * 86400))
 aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX:-backups/}" | while read -r line; do
-  FILE_DATE=$(echo "$line" | awk '{print $1}')
+  FILE_DATETIME=$(echo "$line" | awk '{print $1 " " $2}')
   FILE_NAME=$(echo "$line" | awk '{print $4}')
   if [ -z "$FILE_NAME" ]; then
     continue
@@ -36,7 +36,7 @@ aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX:-backups/}" | while read -r line; do
     dsa-flash-*.sql.gz) ;;
     *) continue ;;
   esac
-  FILE_EPOCH=$(date -d "$FILE_DATE" +%s 2>/dev/null || echo "")
+  FILE_EPOCH=$(date -d "$FILE_DATETIME" +%s 2>/dev/null || echo "")
   if [ -n "$FILE_EPOCH" ] && [ "$FILE_EPOCH" -lt "$CUTOFF_EPOCH" ]; then
     echo "[backup] Deleting old backup: ${FILE_NAME}"
     aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX:-backups/}${FILE_NAME}"

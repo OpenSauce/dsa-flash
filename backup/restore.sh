@@ -16,11 +16,15 @@ echo "[restore] Downloading s3://${S3_BUCKET}/${S3_PREFIX:-backups/}${FILENAME}"
 aws s3 cp "s3://${S3_BUCKET}/${S3_PREFIX:-backups/}${FILENAME}" "${LOCAL_PATH}"
 
 echo "[restore] Restoring to ${POSTGRES_DB:-flashcards}..."
-gunzip -c "${LOCAL_PATH}" | PGPASSWORD="${POSTGRES_PASSWORD}" psql \
+TEMP_SQL=$(mktemp "/backups/restore.XXXXXX.sql")
+gunzip -c "${LOCAL_PATH}" > "${TEMP_SQL}"
+PGPASSWORD="${POSTGRES_PASSWORD}" psql \
   -h "${POSTGRES_HOST:-db}" \
   -U "${POSTGRES_USER:-user}" \
   -d "${POSTGRES_DB:-flashcards}" \
-  --single-transaction
+  --single-transaction -v ON_ERROR_STOP=1 \
+  < "${TEMP_SQL}"
+rm -f "${TEMP_SQL}"
 
 rm -f "${LOCAL_PATH}"
 echo "[restore] Done at $(date)"
