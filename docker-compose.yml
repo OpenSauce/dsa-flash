@@ -9,7 +9,7 @@ services:
     depends_on:
       - db
     environment:
-      DEV_MODE: "${DEV_MODE:-}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-flashcards}"
       SECRET_KEY: "${SECRET_KEY:-}"
     volumes:
       - ./dsa-flash-cards:/data/flashcards
@@ -24,6 +24,7 @@ services:
     depends_on:
       - db
     environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-flashcards}"
       DEV_MODE: "${DEV_MODE:-}"
       SECRET_KEY: "${SECRET_KEY:-}"
       RESET_DB: "${RESET_DB:-}"
@@ -63,11 +64,9 @@ services:
     profiles: ["prod", "dev"]
     image: postgres:15
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: flashcards
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-flashcards}
     volumes:
       - db_data:/var/lib/postgresql/data
 
