@@ -409,7 +409,7 @@ useSeoMeta({
         <!-- Submission error (Judge0 down, runtime error, TLE, etc.) -->
         <div v-else-if="submission" class="mt-4">
           <div class="bg-red-50 border border-red-200 rounded-md p-4">
-            <p class="text-sm font-semibold text-red-700 mb-1">{{ submission.status === 'error' ? 'Submission failed' : submission.status }}</p>
+            <p class="text-sm font-semibold text-red-700 mb-1">Submission failed</p>
             <p class="text-sm text-red-600">{{ submission.stderr || 'Something went wrong. Please try again.' }}</p>
           </div>
         </div>
