@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from .api import api_router
 from .database import run_migrations
 from .limiter import limiter
-from .loader import load_lessons, load_quizzes, load_yaml_flashcards
+from .loader import load_coding_problems, load_lessons, load_quizzes, load_yaml_flashcards
 
 
 @asynccontextmanager
@@ -16,6 +16,7 @@ async def lifespan(_):
     load_yaml_flashcards()
     load_lessons()
     load_quizzes()
+    load_coding_problems()
     yield
 
 

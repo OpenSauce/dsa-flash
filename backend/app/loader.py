@@ -7,7 +7,7 @@ import yaml
 from sqlmodel import Session, select
 
 from .database import engine
-from .models import Flashcard, Lesson, Quiz, QuizQuestion
+from .models import CodingProblem, Flashcard, Lesson, Quiz, QuizQuestion
 
 logger = logging.getLogger(__name__)
 
@@ -319,5 +319,93 @@ def load_quizzes() -> None:
             for quiz in orphans:
                 logger.info("Removing orphaned quiz: %s", quiz.slug)
                 session.delete(quiz)
+
+        session.commit()
+
+
+def upsert_coding_problem(problem: CodingProblem, session: Session) -> None:
+    """Insert or update by (title, category) composite key."""
+    existing = session.exec(
+        select(CodingProblem).where(
+            CodingProblem.title == problem.title,
+            CodingProblem.category == problem.category,
+        )
+    ).first()
+    if existing:
+        existing.difficulty = problem.difficulty
+        existing.tags = problem.tags
+        existing.description = problem.description
+        existing.examples = problem.examples
+        existing.constraints = problem.constraints
+        existing.starter_code = problem.starter_code
+        existing.test_cases = problem.test_cases
+        existing.solution = problem.solution
+        existing.hints = problem.hints
+        existing.updated_at = datetime.now(timezone.utc)
+    else:
+        session.add(problem)
+
+
+def load_coding_problems() -> None:
+    """Walk {category}/problems/*.yaml under ROOT and upsert coding problems."""
+    problem_files = list(ROOT.rglob("problems/*.yaml")) + list(ROOT.rglob("problems/*.yml"))
+    yaml_keys: set[tuple[str, str]] = set()
+
+    with Session(engine) as session:
+        for file in problem_files:
+            if ".github" in file.parts:
+                continue
+
+            # Derive category from path: ROOT/{category}/problems/{slug}.yaml
+            rel = file.relative_to(ROOT)
+            parts = rel.parts  # e.g., ("data-structures", "problems", "two-sum.yaml")
+            if len(parts) < 3 or parts[-2] != "problems":
+                continue
+            category = parts[0].replace(" ", "-")
+
+            try:
+                data = yaml.safe_load(file.read_text()) or {}
+            except Exception as e:
+                logger.warning("Skipping %s: YAML parse error: %s", file, e)
+                continue
+
+            if not isinstance(data, dict):
+                logger.warning("Skipping %s: root is %s, not dict", file, type(data).__name__)
+                continue
+
+            title = data.get("title")
+            if not title:
+                logger.warning("Skipping %s: missing title", file)
+                continue
+
+            problem = CodingProblem(
+                title=title,
+                difficulty=data.get("difficulty", "medium"),
+                category=category,
+                tags=data.get("tags") or [],
+                description=data.get("description", ""),
+                examples=data.get("examples") or [],
+                constraints=data.get("constraints") or [],
+                starter_code=data.get("starter_code") or {},
+                test_cases=data.get("test_cases") or [],
+                solution=data.get("solution") or {},
+                hints=data.get("hints") or [],
+            )
+            upsert_coding_problem(problem, session)
+            yaml_keys.add((title, category))
+
+        # Remove orphan problems no longer in files
+        all_db_problems = session.exec(select(CodingProblem)).all()
+        orphans = [p for p in all_db_problems if (p.title, p.category) not in yaml_keys]
+        if len(orphans) > len(all_db_problems) * 0.5:
+            logger.warning(
+                "Skipping orphan removal: %d of %d problems would be deleted (>50%%)",
+                len(orphans),
+                len(all_db_problems),
+            )
+        else:
+            for problem in orphans:
+                logger.info("Removing orphaned problem: %s (%s)", problem.title, problem.category)
+                session.delete(problem)
 
         session.commit()
