@@ -12,7 +12,7 @@ from testcontainers.postgres import PostgresContainer
 import app.models  # noqa: F401
 from app.api.users import User, get_password_hash
 from app.limiter import limiter
-from app.models import Flashcard, Lesson, Quiz, QuizQuestion, StudySession, UserFlashcard
+from app.models import CodingProblem, Flashcard, Lesson, Quiz, QuizQuestion, StudySession, UserFlashcard
 
 
 @pytest.fixture(scope="session")
@@ -41,7 +41,8 @@ def clear_db(engine):
     with engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE TABLE userquizattempt, quizquestion, quiz,"
+                "TRUNCATE TABLE usercodingproblem, codingproblem,"
+                " userquizattempt, quizquestion, quiz,"
                 " userlesson, lesson, studysession, event,"
                 ' userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
@@ -141,6 +142,39 @@ def create_quiz_question(session):
         session.commit()
         session.refresh(q)
         return q
+
+    return _create
+
+
+@pytest.fixture
+def create_coding_problem(session):
+    def _create(**kwargs):
+        kwargs.setdefault("title", "Two Sum")
+        kwargs.setdefault("difficulty", "easy")
+        kwargs.setdefault("category", "data-structures")
+        kwargs.setdefault("tags", ["hash-map", "array"])
+        kwargs.setdefault("description", "Given an array, return indices of two numbers that add to target.")
+        kwargs.setdefault("examples", [{"input": "nums=[2,7], target=9", "output": "[0,1]"}])
+        kwargs.setdefault("constraints", ["2 <= nums.length <= 10^4"])
+        kwargs.setdefault("starter_code", {"python": "def two_sum(nums, target):\n    pass\n"})
+        kwargs.setdefault("test_cases", [
+            {"input": {"nums": [2, 7, 11, 15], "target": 9}, "expected": [0, 1]},
+        ])
+        solution_code = (
+            "def two_sum(nums, target):\n"
+            "    seen = {}\n"
+            "    for i, n in enumerate(nums):\n"
+            "        if target - n in seen:\n"
+            "            return [seen[target - n], i]\n"
+            "        seen[n] = i\n"
+        )
+        kwargs.setdefault("solution", {"python": solution_code})
+        kwargs.setdefault("hints", ["Think about using a hash map.", "For each number, what complement do you need?"])
+        problem = CodingProblem(**kwargs)
+        session.add(problem)
+        session.commit()
+        session.refresh(problem)
+        return problem
 
     return _create
 

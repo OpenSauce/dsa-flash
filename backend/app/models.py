@@ -361,3 +361,96 @@ class QuizSubmitOut(BaseModel):
 
 class QuizSubmitIn(BaseModel):
     answers: dict[str, int]
+
+
+class CodingProblem(SQLModel, table=True):
+    __tablename__ = "codingproblem"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    difficulty: str
+    category: str = Field(index=True)
+    tags: List[str] = Field(
+        default_factory=list, sa_column=Column(ARRAY(String), nullable=False)
+    )
+    description: str
+    examples: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    constraints: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    starter_code: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    test_cases: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    solution: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    hints: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class UserCodingProblem(SQLModel, table=True):
+    __tablename__ = "usercodingproblem"
+
+    user_id: Optional[int] = Field(foreign_key="user.id", primary_key=True)
+    coding_problem_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("codingproblem.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+
+    repetitions: int = Field(default=0)
+    interval: int = Field(default=0)
+    easiness: float = Field(default=2.5)
+    next_review: Optional[datetime] = None
+    last_reviewed: Optional[datetime] = None
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class CodingProblemOut(BaseModel):
+    id: int
+    title: str
+    difficulty: str
+    category: str
+    tags: List[str]
+    due_status: Optional[str] = None  # "due", "new", "review"
+
+
+class CodingProblemDetailOut(BaseModel):
+    id: int
+    title: str
+    difficulty: str
+    category: str
+    tags: List[str]
+    description: str
+    examples: list
+    constraints: list
+    starter_code: dict
+    hints_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class TestCaseResult(BaseModel):
+    input: str
+    expected: str
+    actual: str
+    passed: bool
+
+
+class SubmissionOut(BaseModel):
+    passed: bool
+    test_results: List[TestCaseResult]
+    stdout: Optional[str] = None
+    stderr: Optional[str] = None
+    status: str
+    solve_time_ms: Optional[int] = None
+
+
+class HintOut(BaseModel):
+    hint: str
+    total: int
+    index: int

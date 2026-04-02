@@ -1,11 +1,18 @@
 from datetime import datetime, timedelta, timezone
+from typing import Protocol
 
-from .models import UserFlashcard
+
+class SM2Record(Protocol):
+    easiness: float
+    repetitions: int
+    interval: int
+    next_review: datetime | None
+    last_reviewed: datetime | None
 
 
-def sm2(review: UserFlashcard, quality: int) -> None:
+def sm2(review: SM2Record, quality: int) -> None:
     """
-    Update a UserFlashcard in-place given quality (0-5).
+    Update an SM-2 record in-place given quality (0-5).
     ── Raises ValueError if quality ∉ 0‥5.
     """
     if quality not in range(6):
