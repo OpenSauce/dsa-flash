@@ -48,6 +48,10 @@ function onKeydown(e: KeyboardEvent) {
 
         <!-- Right‑side nav -->
         <nav class="flex items-center gap-6 text-sm font-medium h-8">
+          <NuxtLink to="/problems"
+            class="hidden sm:inline-flex items-center text-white hover:opacity-80 transition-opacity font-medium">
+            Problems
+          </NuxtLink>
           <NuxtLink to="https://github.com/OpenSauce/dsa-flash-cards" target="_blank"
             class="hidden sm:inline-flex items-center text-white hover:opacity-80 transition-opacity">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -125,6 +129,13 @@ function onKeydown(e: KeyboardEvent) {
             </svg>
             <span>{{ streak.current_streak }} day streak</span>
           </div>
+          <NuxtLink
+            to="/problems"
+            class="px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+            @click="closeMobileMenu"
+          >
+            Problems
+          </NuxtLink>
           <NuxtLink
             to="/dashboard"
             class="px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
