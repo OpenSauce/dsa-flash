@@ -13,7 +13,6 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@guolao/vue-monaco-editor": "^1.6.0",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "monaco-editor": "^0.55.1",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue'
+import { shallowRef } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   modelValue: string
   language?: string
   readonly?: boolean

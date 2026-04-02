@@ -23,7 +23,7 @@ export interface CodingProblemDetailOut {
   description: string
   examples: ProblemExample[]
   constraints: string[]
-  starter_code: string
+  starter_code: Record<string, string>
   hints_count: number
   created_at: string
   updated_at: string

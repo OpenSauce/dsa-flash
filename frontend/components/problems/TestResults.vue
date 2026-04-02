@@ -35,7 +35,7 @@ function formatTime(ms: number): string {
           {{ results.filter(r => r.passed).length }}/{{ results.length }}
         </span>
       </div>
-      <span v-if="solveTime" class="text-xs text-gray-500 font-mono">
+      <span v-if="solveTime != null" class="text-xs text-gray-500 font-mono">
         Solved in {{ formatTime(solveTime) }}
       </span>
     </div>

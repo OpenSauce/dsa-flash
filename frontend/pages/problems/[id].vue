@@ -36,6 +36,7 @@ const showLoginPrompt = ref(false)
 // Toast
 const toast = ref<string | null>(null)
 let toastTimeout: ReturnType<typeof setTimeout> | null = null
+let autoAdvanceTimeout: ReturnType<typeof setTimeout> | null = null
 
 function showToast(message: string) {
   toast.value = message
@@ -43,12 +44,17 @@ function showToast(message: string) {
   toastTimeout = setTimeout(() => { toast.value = null }, 3000)
 }
 
+onBeforeUnmount(() => {
+  if (toastTimeout) clearTimeout(toastTimeout)
+  if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout)
+})
+
 async function fetchProblem() {
   loading.value = true
   error.value = null
   try {
     problem.value = await apiFetch<CodingProblemDetailOut>(`/problems/${problemId.value}`)
-    code.value = problem.value.starter_code || ''
+    code.value = problem.value.starter_code?.python || ''
     startTime.value = Date.now()
     // Reset state
     submission.value = null
@@ -80,7 +86,7 @@ async function submitCode() {
       body: { code: code.value },
     })
     submission.value = result
-    if (result.solve_time_ms) {
+    if (result.solve_time_ms != null) {
       solveTimeMs.value = result.solve_time_ms
     } else {
       solveTimeMs.value = Date.now() - startTime.value
@@ -102,7 +108,12 @@ async function submitCode() {
 
 // Run (same as submit for now — backend decides behavior)
 async function runCode() {
-  await submitCode()
+  running.value = true
+  try {
+    await submitCode()
+  } finally {
+    running.value = false
+  }
 }
 
 // Request hint
@@ -144,9 +155,9 @@ async function rate(quality: number) {
     showToast(`Scheduled for ${dateStr}`)
 
     // Auto-advance to next due problem after delay
-    setTimeout(async () => {
+    autoAdvanceTimeout = setTimeout(async () => {
       try {
-        const problems = await apiFetch<Array<{ id: number }>>('/problems?due_only=true')
+        const problems = await apiFetch<Array<{ id: number }>>('/problems/due')
         const next = problems.find(p => p.id !== problemId.value)
         if (next) {
           router.push(`/problems/${next.id}`)
@@ -231,7 +242,7 @@ useSeoMeta({
     <!-- Problem detail -->
     <div v-else-if="problem" class="flex flex-col md:flex-row gap-4 md:gap-6">
       <!-- Left pane: problem statement -->
-      <div class="w-full md:w-1/2 md:max-h-[calc(100vh-160px)] md:overflow-y-auto md:pr-2 max-h-[40vh] overflow-y-auto md:max-h-none">
+      <div class="w-full md:w-1/2 md:max-h-[calc(100vh-160px)] md:overflow-y-auto md:pr-2 max-h-[40vh] overflow-y-auto">
         <!-- Header -->
         <div class="mb-4">
           <div class="flex items-center gap-3 flex-wrap mb-2">
