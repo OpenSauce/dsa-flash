@@ -229,8 +229,8 @@ useSeoMeta({
       { label: problem?.title || 'Loading...' },
     ]" />
 
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="flex flex-col md:flex-row gap-4 md:gap-6 animate-pulse">
+    <!-- Loading skeleton (only show after auth is ready to avoid double-flash) -->
+    <div v-if="!authReady || loading" class="flex flex-col md:flex-row gap-4 md:gap-6 animate-pulse">
       <div class="w-full md:w-2/5 space-y-4">
         <div class="h-7 bg-gray-200 rounded w-48" />
         <div class="flex gap-2">
@@ -371,8 +371,8 @@ useSeoMeta({
           </button>
         </div>
 
-        <!-- Test results -->
-        <div v-if="submission && submission.status !== 'error'" class="mt-4">
+        <!-- Test results (only when we have actual test data) -->
+        <div v-if="submission && submission.test_results.length > 0" class="mt-4">
           <ProblemsTestResults
             :results="submission.test_results"
             :passed="submission.passed"
@@ -406,8 +406,8 @@ useSeoMeta({
           </div>
         </div>
 
-        <!-- Submission error (Judge0 down, network error, etc.) -->
-        <div v-else-if="submission && submission.status === 'error'" class="mt-4">
+        <!-- Submission error (Judge0 down, runtime error, TLE, etc.) -->
+        <div v-else-if="submission" class="mt-4">
           <div class="bg-red-50 border border-red-200 rounded-md p-4">
             <p class="text-sm font-semibold text-red-700 mb-1">Submission failed</p>
             <p class="text-sm text-red-600">{{ submission.stderr || 'Something went wrong. Please try again.' }}</p>
