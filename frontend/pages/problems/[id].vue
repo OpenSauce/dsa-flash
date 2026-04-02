@@ -229,9 +229,28 @@ useSeoMeta({
       { label: problem?.title || 'Loading...' },
     ]" />
 
-    <!-- Loading -->
-    <div v-if="loading" class="py-16 text-center text-gray-400 text-sm">
-      Loading problem...
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="flex flex-col md:flex-row gap-4 md:gap-6 animate-pulse">
+      <div class="w-full md:w-2/5 space-y-4">
+        <div class="h-7 bg-gray-200 rounded w-48" />
+        <div class="flex gap-2">
+          <div class="h-5 bg-gray-200 rounded w-14" />
+          <div class="h-5 bg-gray-200 rounded w-20" />
+        </div>
+        <div class="space-y-2">
+          <div class="h-4 bg-gray-200 rounded w-full" />
+          <div class="h-4 bg-gray-200 rounded w-5/6" />
+          <div class="h-4 bg-gray-200 rounded w-4/6" />
+        </div>
+        <div class="h-24 bg-gray-100 rounded-lg border border-gray-200" />
+        <div class="space-y-2">
+          <div class="h-4 bg-gray-200 rounded w-full" />
+          <div class="h-4 bg-gray-200 rounded w-3/4" />
+        </div>
+      </div>
+      <div class="w-full md:w-3/5">
+        <div class="h-[400px] bg-[#1e1e1e] rounded-lg" />
+      </div>
     </div>
 
     <!-- Error -->
@@ -242,7 +261,7 @@ useSeoMeta({
     <!-- Problem detail -->
     <div v-else-if="problem" class="flex flex-col md:flex-row gap-4 md:gap-6">
       <!-- Left pane: problem statement -->
-      <div class="w-full md:w-1/2 md:max-h-[calc(100vh-160px)] md:overflow-y-auto md:pr-2 max-h-[40vh] overflow-y-auto">
+      <div class="w-full md:w-2/5 md:max-h-[calc(100vh-160px)] md:overflow-y-auto md:pr-2 max-h-[40vh] overflow-y-auto">
         <!-- Header -->
         <div class="mb-4">
           <div class="flex items-center gap-3 flex-wrap mb-2">
@@ -315,7 +334,7 @@ useSeoMeta({
       </div>
 
       <!-- Right pane: editor + results -->
-      <div class="w-full md:w-1/2 flex flex-col">
+      <div class="w-full md:w-3/5 flex flex-col">
         <!-- Editor -->
         <div class="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e1e] flex-1 min-h-[300px] md:min-h-[400px]">
           <ProblemsCodeEditor
@@ -353,7 +372,7 @@ useSeoMeta({
         </div>
 
         <!-- Test results -->
-        <div v-if="submission" class="mt-4">
+        <div v-if="submission && submission.status !== 'error'" class="mt-4">
           <ProblemsTestResults
             :results="submission.test_results"
             :passed="submission.passed"
@@ -384,6 +403,14 @@ useSeoMeta({
           <!-- Rated confirmation -->
           <div v-if="rated" class="mt-4 text-center text-sm text-gray-500">
             Loading next problem...
+          </div>
+        </div>
+
+        <!-- Submission error (Judge0 down, network error, etc.) -->
+        <div v-else-if="submission && submission.status === 'error'" class="mt-4">
+          <div class="bg-red-50 border border-red-200 rounded-md p-4">
+            <p class="text-sm font-semibold text-red-700 mb-1">Submission failed</p>
+            <p class="text-sm text-red-600">{{ submission.stderr || 'Something went wrong. Please try again.' }}</p>
           </div>
         </div>
       </div>
