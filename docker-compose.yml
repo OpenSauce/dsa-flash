@@ -7,7 +7,8 @@ x-judge0-env: &judge0-env
   POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
   POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
   POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
-  REDIS_URL: redis://judge0-redis:6379
+  REDIS_HOST: judge0-redis
+  REDIS_PORT: 6379
   AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
   AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
 
@@ -92,11 +93,11 @@ services:
     depends_on:
       - db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set for prod backups}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set for prod backups}
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set for prod backups}
+      POSTGRES_USER: ${POSTGRES_USER:-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-}
       POSTGRES_HOST: db
-      S3_BUCKET: ${S3_BACKUP_BUCKET:?S3_BACKUP_BUCKET must be set for prod backups}
+      S3_BUCKET: ${S3_BACKUP_BUCKET:-}
       S3_PREFIX: ${S3_BACKUP_PREFIX:-backups/}
       RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
@@ -141,23 +142,25 @@ services:
 
   judge0-server:
     profiles: ["prod", "dev"]
-    image: judge0/judge0-ce:1.13.1
+    image: judge0/judge0:1.13.1
     depends_on:
       judge0-db:
         condition: service_healthy
       judge0-redis:
+        condition: service_started
     environment:
       <<: *judge0-env
     restart: unless-stopped
 
   judge0-workers:
     profiles: ["prod", "dev"]
-    image: judge0/judge0-ce:1.13.1
+    image: judge0/judge0:1.13.1
     command: ["./scripts/workers"]
     depends_on:
       judge0-db:
         condition: service_healthy
       judge0-redis:
+        condition: service_started
     environment:
       <<: *judge0-env
     restart: unless-stopped

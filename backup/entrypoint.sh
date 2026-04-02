@@ -3,10 +3,13 @@ set -e
 
 INTERVAL=${BACKUP_INTERVAL_SECONDS:-86400}
 
-if [ -z "${S3_BUCKET}" ]; then
-  echo "[backup] ERROR: S3_BUCKET is not set. Exiting."
-  exit 1
-fi
+for var in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB S3_BUCKET; do
+  eval val=\$$var
+  if [ -z "$val" ]; then
+    echo "[backup] ERROR: $var is not set. Exiting."
+    exit 1
+  fi
+done
 
 echo "[backup] Starting backup service (interval: ${INTERVAL}s)"
 echo "[backup] Bucket: s3://${S3_BUCKET}/${S3_PREFIX:-backups/}"
