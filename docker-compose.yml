@@ -1,3 +1,16 @@
+x-judge0-env: &judge0-env
+  RAILS_ENV: production
+  RAILS_MAX_THREADS: 5
+  SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE:-dev_only_change_me_in_prod}
+  POSTGRES_HOST: judge0-db
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
+  POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
+  POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
+  REDIS_URL: redis://judge0-redis:6379
+  AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
+  AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
+
 services:
   backend:
     profiles: ["prod"]
@@ -11,6 +24,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-flashcards}"
       SECRET_KEY: "${SECRET_KEY:-}"
+      JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
     volumes:
       - ./dsa-flash-cards:/data/flashcards
 
@@ -28,6 +42,7 @@ services:
       DEV_MODE: "${DEV_MODE:-}"
       SECRET_KEY: "${SECRET_KEY:-}"
       RESET_DB: "${RESET_DB:-}"
+      JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
     volumes:
       - ./backend/app:/usr/src/app/app
       - ./backend/alembic:/usr/src/app/alembic
@@ -103,6 +118,53 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  judge0-db:
+    profiles: ["prod", "dev"]
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${JUDGE0_DB_USER:-judge0}
+      POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD:-judge0password}
+      POSTGRES_DB: ${JUDGE0_DB_NAME:-judge0}
+    volumes:
+      - judge0_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${JUDGE0_DB_USER:-judge0}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  judge0-redis:
+    profiles: ["prod", "dev"]
+    image: redis:7
+    restart: unless-stopped
+
+  judge0-server:
+    profiles: ["prod", "dev"]
+    image: judge0/judge0-ce:1.13.1
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+    environment:
+      <<: *judge0-env
+    restart: unless-stopped
+
+  judge0-workers:
+    profiles: ["prod", "dev"]
+    image: judge0/judge0-ce:1.13.1
+    command: ["./scripts/workers"]
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+    environment:
+      <<: *judge0-env
+    restart: unless-stopped
+    # Required by Judge0 CE for isolate sandbox (cgroups)
+    privileged: true
+
 volumes:
   db_data:
   pgadmin_data:
+  judge0_db_data:
