@@ -1,4 +1,6 @@
 import json
+import os
+import re
 import time
 from datetime import datetime, timezone
 from typing import Optional
@@ -15,6 +17,7 @@ from ..models import (
     CodingProblem,
     CodingProblemDetailOut,
     CodingProblemOut,
+    HintOut,
     StudySession,
     SubmissionOut,
     TestCaseResult,
@@ -26,9 +29,14 @@ from .users import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/problems", tags=["problems"])
 
-JUDGE0_URL = "http://judge0-server:2358"
-PYTHON_LANGUAGE_ID = 71
+JUDGE0_URL = os.getenv("JUDGE0_URL", "http://judge0-server:2358")
+PYTHON_LANGUAGE_ID = 71  # Judge0 CE: Python 3
 MAX_CODE_BYTES = 10 * 1024  # 10KB
+
+# Judge0 status codes
+JUDGE0_ACCEPTED = 3
+JUDGE0_TLE = 5
+JUDGE0_COMPILE_ERROR = 6
 
 
 class ProblemReviewIn(BaseModel):
@@ -52,10 +60,9 @@ def list_problems(
         stmt = stmt.where(CodingProblem.category == category)
     if difficulty:
         stmt = stmt.where(CodingProblem.difficulty == difficulty)
-    problems = session.exec(stmt).all()
-
     if tag:
-        problems = [p for p in problems if tag in p.tags]
+        stmt = stmt.where(col(CodingProblem.tags).contains([tag]))
+    problems = session.exec(stmt).all()
 
     due_status_map: dict[int, str] = {}
     if user:
@@ -152,14 +159,32 @@ def get_problem(
     )
 
 
-def _build_test_harness(user_code: str, test_cases: list) -> str:
+def _extract_func_name(starter_code: dict) -> str | None:
+    """Extract the function name from starter_code's Python def line."""
+    python_code = starter_code.get("python", "")
+    match = re.search(r"def\s+(\w+)\s*\(", python_code)
+    return match.group(1) if match else None
+
+
+def _build_test_harness(user_code: str, test_cases: list, func_name: str) -> str:
     """Build a Python test harness script that exec()s user code and runs test cases."""
     harness = f"""
-import json, sys, traceback
+import json, sys
 
-user_code = {json.dumps(user_code)}
-exec(user_code, globals())
+user_ns = {{}}
+try:
+    exec({json.dumps(user_code)}, user_ns)
+except Exception as e:
+    print(json.dumps([{{"input": "", "expected": "", "actual": f"CODE ERROR: {{e}}", "passed": False}}]))
+    sys.exit(0)
 
+func_name = {json.dumps(func_name)}
+if func_name not in user_ns or not callable(user_ns[func_name]):
+    err = f"Function '{{func_name}}' not found"
+    print(json.dumps([{{"input": "", "expected": "", "actual": err, "passed": False}}]))
+    sys.exit(0)
+
+func = user_ns[func_name]
 test_cases = {json.dumps(test_cases)}
 results = []
 
@@ -167,15 +192,6 @@ for tc in test_cases:
     inp = tc.get("input", {{}})
     expected = tc.get("expected")
     try:
-        # Find the function defined in user_code
-        func_name = None
-        for name, obj in list(globals().items()):
-            if callable(obj) and not name.startswith("_") and name not in ("json", "sys", "traceback"):
-                func_name = name
-                break
-        if func_name is None:
-            raise RuntimeError("No callable function found in submitted code")
-        func = globals()[func_name]
         if isinstance(inp, dict):
             actual = func(**inp)
         else:
@@ -216,13 +232,17 @@ def submit_code(
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    harness = _build_test_harness(body.code, problem.test_cases)
+    func_name = _extract_func_name(problem.starter_code)
+    if not func_name:
+        raise HTTPException(status_code=500, detail="Problem has no valid starter code")
+
+    harness = _build_test_harness(body.code, problem.test_cases, func_name)
 
     start_ms = int(time.time() * 1000)
 
     try:
-        with httpx.Client(timeout=30.0) as client:
-            resp = client.post(
+        with httpx.Client(timeout=30.0) as http:
+            resp = http.post(
                 f"{JUDGE0_URL}/submissions",
                 params={"base64_encoded": "false", "wait": "true"},
                 json={
@@ -234,12 +254,10 @@ def submit_code(
             )
             resp.raise_for_status()
             judge0_result = resp.json()
-    except httpx.ConnectError:
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError):
         raise HTTPException(status_code=503, detail="Code execution service unavailable")
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=503, detail="Code execution service unavailable")
-    except httpx.HTTPError:
-        raise HTTPException(status_code=503, detail="Code execution service unavailable")
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(status_code=503, detail="Code execution service returned invalid response")
 
     solve_time_ms = int(time.time() * 1000) - start_ms
 
@@ -252,14 +270,13 @@ def submit_code(
     test_results: list[TestCaseResult] = []
     all_passed = False
 
-    if status_id == 3:
-        # Accepted — parse JSON output from harness
+    if status_id == JUDGE0_ACCEPTED:
         try:
             raw_results = json.loads(stdout.strip())
             test_results = [
                 TestCaseResult(
                     input=r["input"],
-                    expected=r["expected"],
+                    expected=r["expected"] if r["passed"] else "[hidden]",
                     actual=r["actual"],
                     passed=r["passed"],
                 )
@@ -268,21 +285,22 @@ def submit_code(
             all_passed = all(r.passed for r in test_results)
         except (json.JSONDecodeError, KeyError):
             all_passed = False
-    elif status_id == 5:
+    elif status_id == JUDGE0_TLE:
         status_desc = "Time Limit Exceeded"
-    elif status_id == 6:
+    elif status_id == JUDGE0_COMPILE_ERROR:
         status_desc = "Compilation Error"
         stderr = compile_output or stderr
     else:
         status_desc = f"Runtime Error (status {status_id})"
 
     # On first successful submission, create UserCodingProblem if not exists
-    if status_id == 3:
-        ucp = session.get(UserCodingProblem, (user.id, problem_id))
-        if ucp is None:
-            ucp = UserCodingProblem(user_id=user.id, coding_problem_id=problem_id)
-            session.add(ucp)
-            session.commit()
+    if status_id == JUDGE0_ACCEPTED:
+        stmt = pg_insert(UserCodingProblem).values(
+            user_id=user.id,
+            coding_problem_id=problem_id,
+        ).on_conflict_do_nothing()
+        session.execute(stmt)
+        session.commit()
 
     return SubmissionOut(
         passed=all_passed,
@@ -305,12 +323,15 @@ def review_problem(
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    ucp = session.get(UserCodingProblem, (user.id, problem_id))
-    if ucp is None:
-        ucp = UserCodingProblem(user_id=user.id, coding_problem_id=problem_id)
-        session.add(ucp)
-        session.flush()
+    # Ensure UserCodingProblem exists (race-safe upsert)
+    stmt = pg_insert(UserCodingProblem).values(
+        user_id=user.id,
+        coding_problem_id=problem_id,
+    ).on_conflict_do_nothing()
+    session.execute(stmt)
+    session.flush()
 
+    ucp = session.get(UserCodingProblem, (user.id, problem_id))
     sm2(ucp, body.quality)
 
     today = datetime.now(timezone.utc).date()
@@ -327,7 +348,7 @@ def review_problem(
     session.commit()
 
 
-@router.get("/{problem_id}/hints/{index}")
+@router.get("/{problem_id}/hints/{index}", response_model=HintOut)
 def get_hint(
     problem_id: int,
     index: int,
@@ -338,8 +359,4 @@ def get_hint(
         raise HTTPException(status_code=404, detail="Problem not found")
     if index < 0 or index >= len(problem.hints):
         raise HTTPException(status_code=404, detail="Hint index out of range")
-    return {
-        "hint": problem.hints[index],
-        "total": len(problem.hints),
-        "index": index,
-    }
+    return HintOut(hint=problem.hints[index], total=len(problem.hints), index=index)

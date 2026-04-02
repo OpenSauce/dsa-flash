@@ -64,9 +64,17 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "coding_problem_id"),
         if_not_exists=True,
     )
+    op.create_index(
+        "ix_usercodingproblem_coding_problem_id",
+        "usercodingproblem",
+        ["coding_problem_id"],
+        unique=False,
+        if_not_exists=True,
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_usercodingproblem_coding_problem_id", table_name="usercodingproblem")
     op.drop_table("usercodingproblem")
     op.drop_index(op.f("ix_codingproblem_category"), table_name="codingproblem")
     op.drop_table("codingproblem")

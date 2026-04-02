@@ -12,7 +12,7 @@ class SM2Record(Protocol):
 
 def sm2(review: SM2Record, quality: int) -> None:
     """
-    Update a UserFlashcard in-place given quality (0-5).
+    Update an SM-2 record in-place given quality (0-5).
     ── Raises ValueError if quality ∉ 0‥5.
     """
     if quality not in range(6):

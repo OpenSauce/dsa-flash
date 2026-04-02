@@ -448,3 +448,9 @@ class SubmissionOut(BaseModel):
     stderr: Optional[str] = None
     status: str
     solve_time_ms: Optional[int] = None
+
+
+class HintOut(BaseModel):
+    hint: str
+    total: int
+    index: int

@@ -10,7 +10,7 @@ from app.api.problems import router as problems_router
 from app.api.users import get_current_user, get_optional_user
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import UserCodingProblem
+from app.models import User, UserCodingProblem
 from tests.conftest import get_test_session
 
 
@@ -210,7 +210,7 @@ def test_review_problem(client, session, create_coding_problem, create_user):
     assert resp.status_code == 204
 
     # Verify UserCodingProblem was created with SM-2 data
-    user = session.exec(select(__import__("app.models", fromlist=["User"]).User)).first()
+    user = session.exec(select(User)).first()
     ucp = session.get(UserCodingProblem, (user.id, problem.id))
     assert ucp is not None
     assert ucp.repetitions == 1
@@ -259,7 +259,7 @@ def test_hints_problem_not_found(client):
 
 def test_due_problems(client, session, create_coding_problem, create_user):
     problem = create_coding_problem()
-    user = session.exec(select(__import__("app.models", fromlist=["User"]).User)).first()
+    user = session.exec(select(User)).first()
 
     # Create a UserCodingProblem that is due
     past = datetime.now(timezone.utc) - timedelta(days=1)
