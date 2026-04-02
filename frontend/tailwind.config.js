@@ -13,6 +13,7 @@ module.exports = {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         headline: ['"Space Grotesk"', 'sans-serif'], // optional alias
         tektur: ['Tektur', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },
