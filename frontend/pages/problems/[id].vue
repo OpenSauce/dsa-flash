@@ -22,6 +22,9 @@ const submitting = ref(false)
 const running = ref(false)
 const submission = ref<SubmissionOut | null>(null)
 
+// View state: 'editor' | 'results' | 'error'
+const viewState = ref<'editor' | 'results' | 'error'>('editor')
+
 // Hints
 const hints = ref<string[]>([])
 const hintLoading = ref(false)
@@ -32,12 +35,15 @@ const solveTimeMs = ref<number | null>(null)
 
 // Rating state
 const rated = ref(false)
+const nextReviewDate = ref<string | null>(null)
 const showLoginPrompt = ref(false)
 
 // Toast
 const toast = ref<string | null>(null)
 let toastTimeout: ReturnType<typeof setTimeout> | null = null
-let autoAdvanceTimeout: ReturnType<typeof setTimeout> | null = null
+
+// Banner ref for focus management
+const bannerRef = ref<HTMLElement | null>(null)
 
 function showToast(message: string) {
   toast.value = message
@@ -47,7 +53,6 @@ function showToast(message: string) {
 
 onBeforeUnmount(() => {
   if (toastTimeout) clearTimeout(toastTimeout)
-  if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout)
 })
 
 async function fetchProblem() {
@@ -61,8 +66,10 @@ async function fetchProblem() {
     submission.value = null
     hints.value = []
     rated.value = false
+    nextReviewDate.value = null
     solveTimeMs.value = null
     showLoginPrompt.value = false
+    viewState.value = 'editor'
     track('problem_view', {
       problem_id: problem.value.id,
       category: problem.value.category,
@@ -103,16 +110,25 @@ async function submitCode() {
       passed: result.passed,
       solve_time_ms: solveTimeMs.value,
     })
+    if (result.test_results.length > 0) {
+      viewState.value = 'results'
+    } else {
+      viewState.value = 'error'
+    }
+    await nextTick()
+    bannerRef.value?.focus()
   } catch (e: any) {
-    // Show inline error
     submission.value = {
       passed: false,
       test_results: [],
       stdout: '',
       stderr: e?.data?.detail || 'Submission failed',
-      status: 'error',
+      status: 'Submission failed',
       solve_time_ms: 0,
     }
+    viewState.value = 'error'
+    await nextTick()
+    bannerRef.value?.focus()
   } finally {
     submitting.value = false
   }
@@ -149,6 +165,21 @@ const suggestedRating = computed<'again' | 'good' | 'easy'>(() => {
   return 'easy'
 })
 
+// Navigate to next due problem
+async function goToNextProblem() {
+  try {
+    const problems = await apiFetch<Array<{ id: number }>>('/problems/due')
+    const next = problems.find(p => p.id !== problemId.value)
+    if (next) {
+      router.push(`/problems/${next.id}`)
+    } else {
+      router.push('/problems')
+    }
+  } catch {
+    router.push('/problems')
+  }
+}
+
 // Rate
 async function rate(quality: number) {
   try {
@@ -164,28 +195,15 @@ async function rate(quality: number) {
     })
     rated.value = true
 
-    // Calculate projected next review date
     const daysMap: Record<number, number> = { 1: 1, 3: 4, 5: 10 }
     const days = daysMap[quality] || 4
     const nextDate = new Date()
     nextDate.setDate(nextDate.getDate() + days)
-    const dateStr = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    showToast(`Scheduled for ${dateStr}`)
+    nextReviewDate.value = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
-    // Auto-advance to next due problem after delay
-    autoAdvanceTimeout = setTimeout(async () => {
-      try {
-        const problems = await apiFetch<Array<{ id: number }>>('/problems/due')
-        const next = problems.find(p => p.id !== problemId.value)
-        if (next) {
-          router.push(`/problems/${next.id}`)
-        } else {
-          router.push('/problems')
-        }
-      } catch {
-        router.push('/problems')
-      }
-    }, 1500)
+    await nextTick()
+    const nextBtn = document.querySelector<HTMLElement>('.next-problem-btn')
+    nextBtn?.focus()
   } catch {
     // ignore rating errors
   }
@@ -351,86 +369,147 @@ useSeoMeta({
         </div>
       </div>
 
-      <!-- Right pane: editor + results -->
+      <!-- Right pane: editor OR results -->
       <div class="w-full md:w-3/5 flex flex-col">
-        <!-- Editor -->
-        <div class="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e1e] flex-1 min-h-[300px] md:min-h-[400px]">
-          <ProblemsCodeEditor
-            v-model="code"
-            language="python"
-            @run="runCode"
-            @submit="submitCode"
-          />
-        </div>
-
-        <!-- Action buttons -->
-        <div class="flex items-center gap-3 mt-3">
-          <button
-            class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200"
-            :disabled="running || submitting"
-            @click="runCode"
-          >
-            <span v-if="running" class="inline-flex items-center gap-1.5">
-              <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-              Running...
-            </span>
-            <span v-else>Run <kbd class="text-[10px] bg-gray-200 px-1 rounded ml-1">&#x2318;'</kbd></span>
-          </button>
-          <button
-            class="px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            :disabled="submitting || running"
-            @click="submitCode"
-          >
-            <span v-if="submitting" class="inline-flex items-center gap-1.5">
-              <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
-              Submitting...
-            </span>
-            <span v-else>Submit <kbd class="text-[10px] bg-purple-500 px-1 rounded ml-1">&#x2318;&#x23CE;</kbd></span>
-          </button>
-        </div>
-
-        <!-- Test results (only when we have actual test data) -->
-        <div v-if="submission && submission.test_results.length > 0" class="mt-4">
-          <ProblemsTestResults
-            :results="submission.test_results"
-            :passed="submission.passed"
-            :solve-time="solveTimeMs"
-          />
-
-          <!-- Stderr output -->
-          <div v-if="submission.stderr" class="mt-3 bg-red-50 border border-red-200 rounded-md p-3">
-            <p class="text-xs font-semibold text-red-600 mb-1">Error output</p>
-            <pre class="text-xs text-red-800 font-mono whitespace-pre-wrap">{{ submission.stderr }}</pre>
-          </div>
-
-          <!-- Stdout output -->
-          <div v-if="submission.stdout" class="mt-3 bg-gray-50 border border-gray-200 rounded-md p-3">
-            <p class="text-xs font-semibold text-gray-600 mb-1">Console output</p>
-            <pre class="text-xs text-gray-800 font-mono whitespace-pre-wrap">{{ submission.stdout }}</pre>
-          </div>
-
-          <!-- SM-2 Rating (only after successful submission, when logged in) -->
-          <div v-if="submission.passed && isLoggedIn && !rated" class="mt-5 pt-4 border-t border-gray-200">
-            <ProblemsReviewRating
-              :suggested="suggestedRating"
-              :hints-used="hints.length"
-              @rate="rate"
+        <!-- Editor view -->
+        <div v-if="viewState === 'editor'">
+          <div class="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e1e] flex-1 min-h-[300px] md:min-h-[400px]">
+            <ProblemsCodeEditor
+              v-model="code"
+              language="python"
+              @run="runCode"
+              @submit="submitCode"
             />
           </div>
 
-          <!-- Rated confirmation -->
-          <div v-if="rated" class="mt-4 text-center text-sm text-gray-500">
-            Loading next problem...
+          <!-- Action buttons -->
+          <div class="flex items-center gap-3 mt-3">
+            <button
+              class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200"
+              :disabled="running || submitting"
+              @click="runCode"
+            >
+              <span v-if="running" class="inline-flex items-center gap-1.5">
+                <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                Running...
+              </span>
+              <span v-else>Run <kbd class="text-[10px] bg-gray-200 px-1 rounded ml-1">&#x2318;'</kbd></span>
+            </button>
+            <button
+              class="px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              :disabled="submitting || running"
+              @click="submitCode"
+            >
+              <span v-if="submitting" class="inline-flex items-center gap-1.5">
+                <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                Submitting...
+              </span>
+              <span v-else>Submit <kbd class="text-[10px] bg-purple-500 px-1 rounded ml-1">&#x2318;&#x23CE;</kbd></span>
+            </button>
           </div>
         </div>
 
-        <!-- Submission error (Judge0 down, runtime error, TLE, etc.) -->
-        <div v-else-if="submission" class="mt-4">
-          <div class="bg-red-50 border border-red-200 rounded-md p-4">
-            <p class="text-sm font-semibold text-red-700 mb-1">Submission failed</p>
-            <p class="text-sm text-red-600">{{ submission.stderr || 'Something went wrong. Please try again.' }}</p>
+        <!-- Results view -->
+        <Transition name="fade">
+          <div v-if="viewState === 'results' && submission" aria-live="polite">
+            <!-- Pass banner -->
+            <div
+              v-if="submission.passed"
+              ref="bannerRef"
+              tabindex="-1"
+              class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4 outline-none"
+            >
+              <svg class="w-5 h-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span class="text-sm font-semibold text-green-800">All tests passed!</span>
+              <span v-if="solveTimeMs != null" class="ml-auto text-xs text-green-600 font-mono">
+                {{ (solveTimeMs / 1000).toFixed(1) }}s
+              </span>
+            </div>
+
+            <!-- Fail banner -->
+            <div
+              v-else
+              ref="bannerRef"
+              tabindex="-1"
+              class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 outline-none"
+            >
+              <svg class="w-5 h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span class="text-sm font-semibold text-red-800">
+                {{ submission.test_results.filter(r => r.passed).length }} of {{ submission.test_results.length }} tests passed
+              </span>
+              <span v-if="solveTimeMs != null" class="ml-auto text-xs text-red-600 font-mono">
+                {{ (solveTimeMs / 1000).toFixed(1) }}s
+              </span>
+            </div>
+
+            <!-- Test case breakdown -->
+            <ProblemsTestResults
+              :results="submission.test_results"
+              :passed="submission.passed"
+              :solve-time="solveTimeMs"
+            />
+
+            <!-- Stderr output -->
+            <div v-if="submission.stderr" class="mt-3 bg-red-50 border border-red-200 rounded-md p-3">
+              <p class="text-xs font-semibold text-red-600 mb-1">Error output</p>
+              <pre class="text-xs text-red-800 font-mono whitespace-pre-wrap">{{ submission.stderr }}</pre>
+            </div>
+
+            <!-- Stdout output -->
+            <div v-if="submission.stdout" class="mt-3 bg-gray-50 border border-gray-200 rounded-md p-3">
+              <p class="text-xs font-semibold text-gray-600 mb-1">Console output</p>
+              <pre class="text-xs text-gray-800 font-mono whitespace-pre-wrap">{{ submission.stdout }}</pre>
+            </div>
+
+            <!-- SM-2 Rating (only after successful submission, when logged in) -->
+            <div v-if="submission.passed && isLoggedIn" class="mt-5 pt-4 border-t border-gray-200">
+              <ProblemsReviewRating
+                :suggested="suggestedRating"
+                :hints-used="hints.length"
+                :rated="rated"
+                :next-review-date="nextReviewDate"
+                @rate="rate"
+                @next-problem="goToNextProblem"
+              />
+            </div>
+
+            <!-- Try again button (for failed submissions) -->
+            <div v-if="!submission.passed" class="mt-4">
+              <button
+                class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200"
+                @click="viewState = 'editor'"
+              >
+                Try again
+              </button>
+            </div>
           </div>
-        </div>
+        </Transition>
+
+        <!-- Error view -->
+        <Transition name="fade">
+          <div v-if="viewState === 'error' && submission">
+            <div
+              ref="bannerRef"
+              tabindex="-1"
+              class="bg-red-50 border border-red-200 rounded-lg p-4 outline-none"
+            >
+              <p class="text-sm font-semibold text-red-700 mb-2">{{ submission.status || 'Submission failed' }}</p>
+              <pre class="text-xs text-red-800 font-mono whitespace-pre-wrap">{{ submission.stderr || submission.status || 'Something went wrong. Please try again.' }}</pre>
+            </div>
+            <div class="mt-4">
+              <button
+                class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors border border-gray-200"
+                @click="viewState = 'editor'"
+              >
+                Back to editor
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
     </div>
   </div>
@@ -450,5 +529,12 @@ useSeoMeta({
 .toast-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.fade-enter-active {
+  transition: opacity 200ms ease-out;
+}
+.fade-enter-from {
+  opacity: 0;
 }
 </style>

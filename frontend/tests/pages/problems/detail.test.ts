@@ -28,6 +28,7 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('watch', watch)
 vi.stubGlobal('onMounted', onMounted)
 vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
+vi.stubGlobal('nextTick', nextTick)
 
 // useMarkdown is an explicit import in [id].vue
 vi.mock('@/composables/useMarkdown', () => ({
@@ -93,8 +94,9 @@ const globalStubs = {
     props: ['results', 'passed', 'solveTime'],
   },
   ProblemsReviewRating: {
-    template: '<div class="review-rating"><button class="rate-btn" @click="$emit(\'rate\', 5)">Easy</button></div>',
-    props: ['suggested', 'hintsUsed'],
+    template: '<div class="review-rating"><button class="rate-btn" @click="$emit(\'rate\', 5)">Easy</button><button class="next-btn" @click="$emit(\'next-problem\')">Next problem</button></div>',
+    props: ['suggested', 'hintsUsed', 'rated', 'nextReviewDate'],
+    emits: ['rate', 'next-problem'],
   },
   NuxtLink: { template: '<a><slot /></a>', props: ['to'] },
   Transition: { template: '<div><slot /></div>' },
@@ -287,8 +289,7 @@ describe('Problem Detail Page', () => {
     expect(wrapper.text()).toContain('Try using a hash map')
   })
 
-  it('rating calls review API and shows confirmation', async () => {
-    vi.useFakeTimers()
+  it('rating calls review API and does not auto-advance', async () => {
     mockApiFetch.mockImplementation((path: string) => {
       if (path === '/problems/42') return Promise.resolve(MOCK_PROBLEM)
       if (path === '/problems/42/submit') return Promise.resolve(MOCK_SUBMISSION_PASS)
@@ -298,7 +299,6 @@ describe('Problem Detail Page', () => {
     const wrapper = mountPage({ loggedIn: true })
 
     mockAuthReady.value = true
-    await vi.advanceTimersByTimeAsync(0)
     await flushPromises()
 
     // Submit first
@@ -315,7 +315,115 @@ describe('Problem Detail Page', () => {
       method: 'POST',
       body: { quality: 5 },
     })
-    expect(wrapper.text()).toContain('Loading next problem')
+    // No auto-advance — user stays on page, router.push not called
+    expect(mockRouterPush).not.toHaveBeenCalled()
+  })
+
+  it('"Next problem" button navigates to next due problem', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/problems/42') return Promise.resolve(MOCK_PROBLEM)
+      if (path === '/problems/42/submit') return Promise.resolve(MOCK_SUBMISSION_PASS)
+      if (path === '/problems/42/review') return Promise.resolve(undefined)
+      if (path === '/problems/due') return Promise.resolve([{ id: 99 }])
+      return Promise.resolve(undefined)
+    })
+    const wrapper = mountPage({ loggedIn: true })
+
+    mockAuthReady.value = true
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('Submit'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    const rateBtn = wrapper.find('.rate-btn')
+    await rateBtn.trigger('click')
+    await flushPromises()
+
+    const nextBtn = wrapper.find('.next-btn')
+    await nextBtn.trigger('click')
+    await flushPromises()
+
+    expect(mockApiFetch).toHaveBeenCalledWith('/problems/due')
+    expect(mockRouterPush).toHaveBeenCalledWith('/problems/99')
+  })
+
+  it('"Next problem" falls back to /problems when no due problems', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/problems/42') return Promise.resolve(MOCK_PROBLEM)
+      if (path === '/problems/42/submit') return Promise.resolve(MOCK_SUBMISSION_PASS)
+      if (path === '/problems/42/review') return Promise.resolve(undefined)
+      if (path === '/problems/due') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    const wrapper = mountPage({ loggedIn: true })
+
+    mockAuthReady.value = true
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('Submit'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    const rateBtn = wrapper.find('.rate-btn')
+    await rateBtn.trigger('click')
+    await flushPromises()
+
+    const nextBtn = wrapper.find('.next-btn')
+    await nextBtn.trigger('click')
+    await flushPromises()
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/problems')
+  })
+
+  it('"Try again" returns to editor with code preserved', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/problems/42') return Promise.resolve(MOCK_PROBLEM)
+      if (path === '/problems/42/submit') return Promise.resolve(MOCK_SUBMISSION_FAIL)
+      return Promise.resolve(undefined)
+    })
+    const wrapper = mountPage({ loggedIn: true })
+
+    mockAuthReady.value = true
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('Submit'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    // Results view should be showing
+    expect(wrapper.find('.test-results').exists()).toBe(true)
+
+    const tryAgainBtn = wrapper.findAll('button').find(b => b.text().includes('Try again'))
+    await tryAgainBtn!.trigger('click')
+    await nextTick()
+
+    // Editor should be showing again
+    expect(wrapper.find('.code-editor').exists()).toBe(true)
+  })
+
+  it('error view shows "Back to editor" button that returns to editor', async () => {
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path === '/problems/42') return Promise.resolve(MOCK_PROBLEM)
+      if (path === '/problems/42/submit') return Promise.reject({ data: { detail: 'Judge0 unavailable' } })
+      return Promise.resolve(undefined)
+    })
+    const wrapper = mountPage({ loggedIn: true })
+
+    mockAuthReady.value = true
+    await flushPromises()
+
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('Submit'))
+    await submitBtn!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Submission failed')
+
+    const backBtn = wrapper.findAll('button').find(b => b.text().includes('Back to editor'))
+    await backBtn!.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.code-editor').exists()).toBe(true)
   })
 
   it('hides review rating for anonymous users', async () => {
