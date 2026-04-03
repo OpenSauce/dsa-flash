@@ -104,6 +104,7 @@ class StudySession(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     study_date: date
     cards_reviewed: int = Field(default=0)
+    problems_reviewed: int = Field(default=0)
 
 
 class Lesson(SQLModel, table=True):
@@ -168,6 +169,7 @@ class StreakOut(BaseModel):
     current_streak: int
     longest_streak: int
     today_reviewed: int
+    today_problems_reviewed: int = 0
 
 
 class FlashcardWithIntervals(BaseModel):
@@ -220,6 +222,8 @@ class DashboardKnowledgeSummary(BaseModel):
     total_concepts_learned: int
     concepts_mastered: int
     domains_explored: int
+    problems_due: int = 0
+    problems_mastered: int = 0
 
 
 class DashboardDomain(BaseModel):
@@ -234,12 +238,15 @@ class DashboardDomain(BaseModel):
     lessons_completed: int = 0
     quiz_best_score: Optional[int] = None
     quiz_total_questions: Optional[int] = None
+    problems_total: int = 0
+    problems_due: int = 0
 
 
 class DashboardStreak(BaseModel):
     current: int
     longest: int
     today_reviewed: int
+    today_problems_reviewed: int = 0
 
 
 class DashboardWeek(BaseModel):

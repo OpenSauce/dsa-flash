@@ -202,7 +202,8 @@ def compute_streak(session: Session, user_id: int) -> StreakOut:
             StudySession.study_date == today,
         )
     ).first()
-    today_reviewed = today_row.cards_reviewed if today_row else 0
+    today_reviewed = (today_row.cards_reviewed + today_row.problems_reviewed) if today_row else 0
+    today_problems_reviewed = today_row.problems_reviewed if today_row else 0
 
     rows = session.exec(
         select(StudySession.study_date)
@@ -246,6 +247,7 @@ def compute_streak(session: Session, user_id: int) -> StreakOut:
         current_streak=current_streak,
         longest_streak=longest_streak,
         today_reviewed=today_reviewed,
+        today_problems_reviewed=today_problems_reviewed,
     )
 
 

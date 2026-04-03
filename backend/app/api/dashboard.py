@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from ..database import get_session
 from ..models import (
     MASTERY_INTERVAL_DAYS,
+    CodingProblem,
     DashboardDomain,
     DashboardKnowledgeSummary,
     DashboardOut,
@@ -19,6 +20,7 @@ from ..models import (
     Quiz,
     StudySession,
     User,
+    UserCodingProblem,
     UserFlashcard,
     UserLesson,
     UserQuizAttempt,
@@ -54,10 +56,33 @@ def get_dashboard(
         .where(UserFlashcard.user_id == uid, Flashcard.category.isnot(None))
     ).one()
 
+    # Problems due and mastered
+    now = datetime.now(timezone.utc)
+    problems_due_count = session.exec(
+        select(func.count())
+        .select_from(UserCodingProblem)
+        .where(
+            UserCodingProblem.user_id == uid,
+            UserCodingProblem.next_review.isnot(None),
+            UserCodingProblem.next_review <= now,
+        )
+    ).one()
+
+    problems_mastered_count = session.exec(
+        select(func.count())
+        .select_from(UserCodingProblem)
+        .where(
+            UserCodingProblem.user_id == uid,
+            UserCodingProblem.interval > MASTERY_INTERVAL_DAYS,
+        )
+    ).one()
+
     knowledge_summary = DashboardKnowledgeSummary(
         total_concepts_learned=learned_count,
         concepts_mastered=mastered_count,
         domains_explored=domains_explored_count,
+        problems_due=problems_due_count,
+        problems_mastered=problems_mastered_count,
     )
 
     # 2. Per-domain mastery -- all categories with user progress merged in
@@ -151,6 +176,27 @@ def get_dashboard(
     ).all()
     quiz_by_cat = {row.category: (row.best_score, row.total_questions) for row in quiz_scores}
 
+    # Problem totals per category
+    problem_totals = session.exec(
+        select(CodingProblem.category, func.count(CodingProblem.id).label("total"))
+        .group_by(CodingProblem.category)
+    ).all()
+    problem_totals_by_cat = {row.category: row.total for row in problem_totals}
+
+    # Problems due per category for this user
+    problem_due_rows = session.exec(
+        select(CodingProblem.category, func.count(UserCodingProblem.coding_problem_id).label("due"))
+        .select_from(UserCodingProblem)
+        .join(CodingProblem, CodingProblem.id == UserCodingProblem.coding_problem_id)
+        .where(
+            UserCodingProblem.user_id == uid,
+            UserCodingProblem.next_review.isnot(None),
+            UserCodingProblem.next_review <= now,
+        )
+        .group_by(CodingProblem.category)
+    ).all()
+    problem_due_by_cat = {row.category: row.due for row in problem_due_rows}
+
     domains: list[DashboardDomain] = []
     for row in category_totals:
         slug = row.category
@@ -173,6 +219,8 @@ def get_dashboard(
                 lessons_completed=lesson_completed_by_cat.get(slug, 0),
                 quiz_best_score=quiz_score,
                 quiz_total_questions=quiz_total,
+                problems_total=problem_totals_by_cat.get(slug, 0),
+                problems_due=problem_due_by_cat.get(slug, 0),
             )
         )
 
@@ -182,6 +230,7 @@ def get_dashboard(
         current=streak_out.current_streak,
         longest=streak_out.longest_streak,
         today_reviewed=streak_out.today_reviewed,
+        today_problems_reviewed=streak_out.today_problems_reviewed,
     )
 
     # 4. This week (ISO week, Monday start)

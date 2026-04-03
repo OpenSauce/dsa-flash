@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.dashboard import router as dashboard_router
 from app.api.flashcards import router as flashcard_router
+from app.api.problems import router as problems_router
 from app.api.users import router as user_router
 from app.database import get_session
 from tests.conftest import create_user_flashcard, get_test_session, seed_study_session
@@ -17,6 +18,7 @@ def app_fixture(session):
     app.include_router(flashcard_router)
     app.include_router(user_router)
     app.include_router(dashboard_router)
+    app.include_router(problems_router)
     app.dependency_overrides[get_session] = get_test_session(session)
     return app
 
@@ -50,10 +52,13 @@ def test_dashboard_new_user_returns_zeros(client, session, create_user, create_f
     assert ks["total_concepts_learned"] == 0
     assert ks["concepts_mastered"] == 0
     assert ks["domains_explored"] == 0
+    assert ks["problems_due"] == 0
+    assert ks["problems_mastered"] == 0
 
     assert data["streak"]["current"] == 0
     assert data["streak"]["longest"] == 0
     assert data["streak"]["today_reviewed"] == 0
+    assert data["streak"]["today_problems_reviewed"] == 0
 
     tw = data["this_week"]
     assert tw["concepts_learned"] == 0
@@ -283,3 +288,100 @@ def test_dashboard_domain_names_human_readable(client, session, create_user, cre
     domains_by_slug = {d["slug"]: d for d in data["domains"]}
     assert domains_by_slug["system-design"]["name"] == "System Design"
     assert domains_by_slug["big-o-notation"]["name"] == "Big O Notation"
+
+
+def test_dashboard_problems_due_count(client, session, create_user, create_flashcard, get_token, create_coding_problem):
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import UserCodingProblem
+
+    user = create_user("dashuser", "password")
+    token = get_token(client, "dashuser", "password")
+
+    # Need at least one flashcard for the domain to appear
+    create_flashcard(category="data-structures", title="Arrays")
+    problem = create_coding_problem(title="Two Sum", category="data-structures")
+
+    # Create a UserCodingProblem that is due
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+    ucp = UserCodingProblem(
+        user_id=user.id,
+        coding_problem_id=problem.id,
+        next_review=past,
+        interval=5,
+    )
+    session.add(ucp)
+    session.commit()
+
+    r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+
+    ks = data["knowledge_summary"]
+    assert ks["problems_due"] == 1
+
+    domains_by_slug = {d["slug"]: d for d in data["domains"]}
+    ds = domains_by_slug["data-structures"]
+    assert ds["problems_total"] == 1
+    assert ds["problems_due"] == 1
+
+
+def test_dashboard_problems_mastered_count(
+    client, session, create_user, create_flashcard, get_token, create_coding_problem
+):
+    from app.models import MASTERY_INTERVAL_DAYS, UserCodingProblem
+
+    user = create_user("dashuser", "password")
+    token = get_token(client, "dashuser", "password")
+
+    create_flashcard(category="data-structures", title="Arrays")
+    problem = create_coding_problem(title="Two Sum", category="data-structures")
+
+    # Create a mastered UserCodingProblem (interval > MASTERY_INTERVAL_DAYS)
+    ucp = UserCodingProblem(
+        user_id=user.id,
+        coding_problem_id=problem.id,
+        interval=MASTERY_INTERVAL_DAYS + 5,
+    )
+    session.add(ucp)
+    session.commit()
+
+    r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+
+    assert data["knowledge_summary"]["problems_mastered"] == 1
+
+
+def test_dashboard_streak_counts_problem_reviews(client, session, create_user, get_token):
+    user = create_user("dashuser", "password")
+    token = get_token(client, "dashuser", "password")
+
+    today = datetime.now(timezone.utc).date()
+    # Only problem reviews today (no card reviews)
+    seed_study_session(session, user.id, today, cards_reviewed=0, problems_reviewed=2)
+    seed_study_session(session, user.id, today - timedelta(days=1), cards_reviewed=1)
+
+    r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+
+    assert data["streak"]["current"] == 2
+    assert data["streak"]["today_reviewed"] == 2
+    assert data["streak"]["today_problems_reviewed"] == 2
+
+
+def test_dashboard_domain_problems_zero_for_no_problems(client, session, create_user, create_flashcard, get_token):
+    create_user("dashuser", "password")
+    token = get_token(client, "dashuser", "password")
+
+    create_flashcard(category="system-design", title="Card 1")
+
+    r = client.get("/users/dashboard", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    data = r.json()
+
+    domains_by_slug = {d["slug"]: d for d in data["domains"]}
+    sd = domains_by_slug["system-design"]
+    assert sd["problems_total"] == 0
+    assert sd["problems_due"] == 0

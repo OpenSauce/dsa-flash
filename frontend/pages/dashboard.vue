@@ -13,6 +13,8 @@ interface DashboardKnowledgeSummary {
   total_concepts_learned: number
   concepts_mastered: number
   domains_explored: number
+  problems_due: number
+  problems_mastered: number
 }
 
 interface DashboardDomain {
@@ -27,12 +29,15 @@ interface DashboardDomain {
   lessons_completed: number
   quiz_best_score: number | null
   quiz_total_questions: number | null
+  problems_total: number
+  problems_due: number
 }
 
 interface DashboardStreak {
   current: number
   longest: number
   today_reviewed: number
+  today_problems_reviewed: number
 }
 
 interface DashboardWeek {
@@ -165,6 +170,10 @@ const weekSummaryText = computed(() => {
           <span class="font-semibold text-purple-600">{{ dashboard.knowledge_summary.concepts_mastered }}</span>
           mastered
         </p>
+        <p v-if="dashboard.knowledge_summary.problems_due > 0" class="text-gray-500 mt-1 text-base">
+          <span class="font-semibold text-amber-600">{{ dashboard.knowledge_summary.problems_due }}</span>
+          {{ dashboard.knowledge_summary.problems_due === 1 ? 'problem' : 'problems' }} due for review
+        </p>
       </div>
 
       <!-- Streak display -->
@@ -189,6 +198,13 @@ const weekSummaryText = computed(() => {
             <div class="text-2xl font-semibold text-gray-700">{{ dashboard.streak.today_reviewed }}</div>
             <div class="text-sm text-gray-500">reviewed today</div>
           </div>
+          <template v-if="dashboard.streak.today_problems_reviewed > 0">
+            <div class="w-px h-12 bg-gray-200" />
+            <div>
+              <div class="text-2xl font-semibold text-gray-700">{{ dashboard.streak.today_problems_reviewed }}</div>
+              <div class="text-sm text-gray-500">{{ dashboard.streak.today_problems_reviewed === 1 ? 'problem' : 'problems' }} today</div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -218,6 +234,11 @@ const weekSummaryText = computed(() => {
               </div>
               <div class="text-sm text-gray-500 mt-1" v-if="domain.lessons_total > 0">
                 <span class="text-green-600 font-medium">{{ domain.lessons_completed }}</span> of {{ domain.lessons_total }} lessons
+              </div>
+              <div class="text-sm text-gray-500 mt-1" v-if="domain.problems_total > 0">
+                <span class="font-medium" :class="domain.problems_due > 0 ? 'text-amber-600' : 'text-gray-600'">{{ domain.problems_total }}</span>
+                {{ domain.problems_total === 1 ? 'problem' : 'problems' }}
+                <span v-if="domain.problems_due > 0" class="text-amber-600">&middot; {{ domain.problems_due }} due</span>
               </div>
             </div>
           </NuxtLink>
@@ -307,6 +328,12 @@ const weekSummaryText = computed(() => {
           class="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
         >
           Start studying
+        </NuxtLink>
+        <NuxtLink
+          to="/problems"
+          class="inline-block bg-white border border-indigo-300 text-indigo-700 font-semibold px-6 py-3 rounded-lg hover:bg-indigo-50 transition-colors"
+        >
+          Practice problems
         </NuxtLink>
       </div>
     </template>
