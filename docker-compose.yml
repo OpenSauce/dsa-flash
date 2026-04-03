@@ -151,6 +151,8 @@ services:
     environment:
       <<: *judge0-env
     restart: unless-stopped
+    # Required for isolate sandbox on sync submissions (?wait=true)
+    privileged: true
 
   judge0-workers:
     profiles: ["prod", "dev"]
