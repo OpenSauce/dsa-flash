@@ -109,6 +109,10 @@ function mountPage(opts: { loggedIn?: boolean } = {}) {
 }
 
 describe('Problem Detail Page', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     mockApiFetch.mockReset()
     mockRouterPush.mockReset()
@@ -312,10 +316,9 @@ describe('Problem Detail Page', () => {
       body: { quality: 5 },
     })
     expect(wrapper.text()).toContain('Loading next problem')
-    vi.useRealTimers()
   })
 
-  it('does not show review rating for anonymous user even after pass', async () => {
+  it('hides review rating for anonymous users', async () => {
     mockApiFetch.mockResolvedValueOnce(MOCK_PROBLEM)
     const wrapper = mountPage({ loggedIn: false })
 

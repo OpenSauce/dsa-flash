@@ -37,7 +37,7 @@ const MOCK_PROBLEMS = [
 
 const globalStubs = {
   Breadcrumb: { template: '<nav />' },
-  ProblemsTagChip: { template: '<span class="tag-chip" @click="$emit(\'click\')"><slot /></span>', props: ['tag', 'active'] },
+  ProblemsTagChip: { name: 'ProblemsTagChip', template: '<span class="tag-chip" @click="$emit(\'click\')">{{ tag }}</span>', props: ['tag', 'active'], emits: ['click'] },
   ProblemsDifficultyBadge: { template: '<span class="badge" />', props: ['difficulty'] },
   NuxtLink: { template: '<a><slot /></a>', props: ['to'] },
 }
@@ -176,23 +176,45 @@ describe('Problems Index Page', () => {
     expect(wrapper.text()).toContain('No problems match your filters')
   })
 
-  it('shows status column only when logged in', async () => {
+  it('hides status column for anonymous users', async () => {
     mockApiFetch.mockResolvedValue(MOCK_PROBLEMS)
+    const wrapper = mountPage({ loggedIn: false })
 
-    // Anonymous: no status column
-    const anonWrapper = mountPage({ loggedIn: false })
     mockAuthReady.value = true
     await flushPromises()
-    const anonHeaders = anonWrapper.findAll('th').map(th => th.text())
-    expect(anonHeaders).not.toContain('Status')
 
-    // Logged in: status column present
+    const headers = wrapper.findAll('th').map(th => th.text())
+    expect(headers).not.toContain('Status')
+  })
+
+  it('shows status column for logged-in users', async () => {
     mockApiFetch.mockResolvedValue(MOCK_PROBLEMS)
-    mockAuthReady.value = false
-    const authWrapper = mountPage({ loggedIn: true })
+    const wrapper = mountPage({ loggedIn: true })
+
     mockAuthReady.value = true
     await flushPromises()
-    const authHeaders = authWrapper.findAll('th').map(th => th.text())
-    expect(authHeaders).toContain('Status')
+
+    const headers = wrapper.findAll('th').map(th => th.text())
+    expect(headers).toContain('Status')
+  })
+
+  it('filters by tag chip click', async () => {
+    mockApiFetch.mockResolvedValue(MOCK_PROBLEMS)
+    const wrapper = mountPage()
+
+    mockAuthReady.value = true
+    await flushPromises()
+
+    // Verify all tags render
+    const tagChips = wrapper.findAll('.tag-chip')
+    expect(tagChips.length).toBe(3) // divide-conquer, hash-map, linked-list
+
+    const tagComponents = wrapper.findAllComponents({ name: 'ProblemsTagChip' })
+    const linkedList = tagComponents.find(c => c.props('tag') === 'linked-list')
+    await linkedList!.vm.$emit('click')
+    await nextTick()
+
+    expect(wrapper.text()).toContain('LRU Cache')
+    expect(wrapper.text()).not.toContain('Merge Sort')
   })
 })
