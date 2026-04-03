@@ -391,6 +391,7 @@ def review_card(
         user_id=user.id,
         study_date=today,
         cards_reviewed=1,
+        problems_reviewed=0,
     ).on_conflict_do_update(
         constraint="uq_studysession_user_date",
         set_={"cards_reviewed": StudySession.__table__.c.cards_reviewed + 1},

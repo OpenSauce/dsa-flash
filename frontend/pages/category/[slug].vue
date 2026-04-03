@@ -121,14 +121,11 @@ const ctaDismissed = ref(false)
 
 const showFlipHint = computed(() => !hasFlippedOnce.value && !hasFlippedEver.value)
 
-const hasCodingProblems = ref(false)
 const { data: problemsData } = useAsyncData(
   `category-problems-count-${category}`,
   () => apiFetch<{ id: number }[]>(`/problems?category=${category}`),
 )
-watch(problemsData, (data) => {
-  hasCodingProblems.value = Array.isArray(data) && data.length > 0
-}, { immediate: true })
+const hasCodingProblems = computed(() => Array.isArray(problemsData.value) && problemsData.value.length > 0)
 
 async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
