@@ -26,6 +26,7 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-flashcards}"
       SECRET_KEY: "${SECRET_KEY:-}"
       JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
+      JUDGE0_AUTHN_TOKEN: "${JUDGE0_AUTHN_TOKEN:-}"
     volumes:
       - ./dsa-flash-cards:/data/flashcards
 
@@ -44,6 +45,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:-}"
       RESET_DB: "${RESET_DB:-}"
       JUDGE0_URL: "${JUDGE0_URL:-http://judge0-server:2358}"
+      JUDGE0_AUTHN_TOKEN: "${JUDGE0_AUTHN_TOKEN:-}"
     volumes:
       - ./backend/app:/usr/src/app/app
       - ./backend/alembic:/usr/src/app/alembic
