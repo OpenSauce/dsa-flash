@@ -153,9 +153,7 @@ services:
     environment:
       <<: *judge0-env
     restart: unless-stopped
-    # Least-privilege caps for isolate sandbox (namespaces, mounts, cgroups)
-    cap_add:
-      - SYS_ADMIN
+    privileged: true
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
@@ -171,9 +169,7 @@ services:
     environment:
       <<: *judge0-env
     restart: unless-stopped
-    # Least-privilege caps for isolate sandbox (namespaces, mounts, cgroups)
-    cap_add:
-      - SYS_ADMIN
+    privileged: true
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
