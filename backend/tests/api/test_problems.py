@@ -359,9 +359,7 @@ def test_build_test_harness_boolean_expected():
         test_cases,
         "contains_duplicate",
     )
-    # Must not contain bare JSON-style true/false
-    assert "expected: true" not in harness.lower().replace(" ", "")
-    # Must compile and run without NameError
+    # Must compile and run without NameError (json.dumps would emit true/false)
     exec(compile(harness, "<test_harness>", "exec"))
 
 
