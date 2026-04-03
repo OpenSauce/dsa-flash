@@ -30,6 +30,7 @@ from .users import get_current_user, get_optional_user
 router = APIRouter(prefix="/problems", tags=["problems"])
 
 JUDGE0_URL = os.getenv("JUDGE0_URL", "http://judge0-server:2358")
+JUDGE0_AUTHN_TOKEN = os.getenv("JUDGE0_AUTHN_TOKEN", "")
 PYTHON_LANGUAGE_ID = 71  # Judge0 CE: Python 3
 MAX_CODE_BYTES = 10 * 1024  # 10KB
 
@@ -244,10 +245,14 @@ def submit_code(
     start_ms = int(time.time() * 1000)
 
     try:
+        headers = {}
+        if JUDGE0_AUTHN_TOKEN:
+            headers["X-Auth-Token"] = JUDGE0_AUTHN_TOKEN
         with httpx.Client(timeout=30.0) as http:
             resp = http.post(
                 f"{JUDGE0_URL}/submissions",
                 params={"base64_encoded": "false", "wait": "true"},
+                headers=headers,
                 json={
                     "language_id": PYTHON_LANGUAGE_ID,
                     "source_code": harness,
