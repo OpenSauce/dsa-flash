@@ -188,7 +188,7 @@ except NameError:
     print(json.dumps([{{"input": "", "expected": "", "actual": "Function '{func_name}' not found", "passed": False}}]))
     sys.exit(0)
 
-_test_cases = {json.dumps(test_cases)}
+_test_cases = {repr(test_cases)}
 _results = []
 
 for _tc in _test_cases:

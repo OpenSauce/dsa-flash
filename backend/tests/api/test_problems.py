@@ -344,3 +344,37 @@ def test_list_problems_naive_next_review(client, session, create_coding_problem,
 def test_due_problems_requires_auth(anon_client):
     resp = anon_client.get("/problems/due")
     assert resp.status_code == 401
+
+
+def test_build_test_harness_boolean_expected():
+    """Regression: boolean expected values must use Python True/False, not JSON true/false."""
+    from app.api.problems import _build_test_harness
+
+    test_cases = [
+        {"input": {"nums": [1, 2, 3, 1]}, "expected": True},
+        {"input": {"nums": [1, 2, 3, 4]}, "expected": False},
+    ]
+    harness = _build_test_harness(
+        "def contains_duplicate(nums): return len(nums) != len(set(nums))",
+        test_cases,
+        "contains_duplicate",
+    )
+    # Must not contain bare JSON-style true/false
+    assert "expected: true" not in harness.lower().replace(" ", "")
+    # Must compile and run without NameError
+    exec(compile(harness, "<test_harness>", "exec"))
+
+
+def test_build_test_harness_none_expected():
+    """None values in test cases must serialize as Python None, not JSON null."""
+    from app.api.problems import _build_test_harness
+
+    test_cases = [
+        {"input": {"x": 1}, "expected": None},
+    ]
+    harness = _build_test_harness(
+        "def identity(x): return None",
+        test_cases,
+        "identity",
+    )
+    exec(compile(harness, "<test_harness>", "exec"))
