@@ -7,7 +7,7 @@ from app.api.lessons import router as lessons_router
 from app.api.users import get_current_user, get_optional_user
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import UserFlashcard, UserLesson
+from app.models import LessonRating, UserFlashcard, UserLesson
 from tests.conftest import get_test_session
 
 
@@ -302,5 +302,88 @@ def test_complete_lesson_no_linked_flashcards(client, session, create_user, crea
         select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
     ).all()
     assert len(ufs) == 0
+
+    _ = lesson
+
+
+# --- Rating tests ---
+
+def test_rate_lesson(client, session, create_user, create_lesson):
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="rate-me")
+
+    response = client.post("/lessons/rate-me/rate", json={"rating": 3})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["lesson_id"] == lesson.id
+    assert data["rating"] == 3
+
+    rows = session.exec(
+        select(LessonRating).where(
+            LessonRating.user_id == FakeUser.id,
+            LessonRating.lesson_id == lesson.id,
+        )
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].rating == 3
+
+
+def test_rate_lesson_updates_existing(client, session, create_user, create_lesson):
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="rate-upsert")
+
+    r1 = client.post("/lessons/rate-upsert/rate", json={"rating": 3})
+    r2 = client.post("/lessons/rate-upsert/rate", json={"rating": 1})
+
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    assert r2.json()["rating"] == 1
+
+    rows = session.exec(
+        select(LessonRating).where(
+            LessonRating.user_id == FakeUser.id,
+            LessonRating.lesson_id == lesson.id,
+        )
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].rating == 1
+
+
+def test_rate_lesson_not_found(client):
+    response = client.post("/lessons/no-such-lesson/rate", json={"rating": 2})
+    assert response.status_code == 404
+
+
+def test_rate_lesson_requires_auth(anon_client, create_lesson):
+    create_lesson(slug="auth-rate")
+    response = anon_client.post("/lessons/auth-rate/rate", json={"rating": 3})
+    assert response.status_code == 401
+
+
+def test_rate_lesson_invalid_rating_zero(client, create_lesson):
+    create_lesson(slug="invalid-rating-zero")
+    response = client.post("/lessons/invalid-rating-zero/rate", json={"rating": 0})
+    assert response.status_code == 422
+
+
+def test_rate_lesson_invalid_rating_four(client, create_lesson):
+    create_lesson(slug="invalid-rating-four")
+    response = client.post("/lessons/invalid-rating-four/rate", json={"rating": 4})
+    assert response.status_code == 422
+
+
+def test_lesson_detail_includes_rating(client, session, create_user, create_lesson):
+    create_user(username="user", password="password")
+    lesson = create_lesson(slug="detail-rating-test")
+
+    get_before = client.get("/lessons/detail-rating-test")
+    assert get_before.status_code == 200
+    assert get_before.json()["user_rating"] is None
+
+    client.post("/lessons/detail-rating-test/rate", json={"rating": 2})
+
+    get_after = client.get("/lessons/detail-rating-test")
+    assert get_after.status_code == 200
+    assert get_after.json()["user_rating"] == 2
 
     _ = lesson

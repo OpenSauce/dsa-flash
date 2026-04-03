@@ -11,6 +11,9 @@ from ..models import (
     Lesson,
     LessonDetailOut,
     LessonOut,
+    LessonRating,
+    LessonRatingIn,
+    LessonRatingOut,
     Quiz,
     User,
     UserFlashcard,
@@ -109,6 +112,7 @@ def lessons_for_category(
 def get_lesson(
     slug: str,
     session: Session = Depends(get_session),
+    user: Optional[User] = Depends(get_optional_user),
 ):
     """Get a single lesson with full markdown content. No auth required."""
     lesson = session.exec(
@@ -116,7 +120,31 @@ def get_lesson(
     ).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-    return lesson
+
+    user_rating: Optional[int] = None
+    if user:
+        existing_rating = session.exec(
+            select(LessonRating).where(
+                LessonRating.user_id == user.id,
+                LessonRating.lesson_id == lesson.id,
+            )
+        ).first()
+        if existing_rating:
+            user_rating = existing_rating.rating
+
+    return LessonDetailOut(
+        id=lesson.id,
+        title=lesson.title,
+        slug=lesson.slug,
+        category=lesson.category,
+        order=lesson.order,
+        summary=lesson.summary,
+        reading_time_minutes=lesson.reading_time_minutes,
+        created_at=lesson.created_at,
+        updated_at=lesson.updated_at,
+        content=lesson.content,
+        user_rating=user_rating,
+    )
 
 
 @router.post("/{slug}/complete", status_code=204)
@@ -190,3 +218,43 @@ def complete_lesson(
         session.add(uf)
 
     session.commit()
+
+
+@router.post("/{slug}/rate", response_model=LessonRatingOut)
+def rate_lesson(
+    slug: str,
+    body: LessonRatingIn,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Rate a lesson as helpful (3), neutral (2), or not helpful (1). Auth required. Upserts."""
+    lesson = session.exec(
+        select(Lesson).where(Lesson.slug == slug)
+    ).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    existing = session.exec(
+        select(LessonRating).where(
+            LessonRating.user_id == user.id,
+            LessonRating.lesson_id == lesson.id,
+        )
+    ).first()
+
+    now = datetime.now(timezone.utc)
+    if existing:
+        existing.rating = body.rating
+        existing.updated_at = now
+        session.add(existing)
+    else:
+        new_rating = LessonRating(
+            user_id=user.id,
+            lesson_id=lesson.id,
+            rating=body.rating,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(new_rating)
+
+    session.commit()
+    return LessonRatingOut(lesson_id=lesson.id, rating=body.rating)
