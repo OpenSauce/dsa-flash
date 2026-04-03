@@ -7,8 +7,12 @@ const defaultProps = {
   hintsUsed: 0,
 }
 
+const globalStubs = {
+  NuxtLink: { template: '<a><slot /></a>', props: ['to'] },
+}
+
 function mountRating(props = {}) {
-  return mount(ReviewRating, { props: { ...defaultProps, ...props } })
+  return mount(ReviewRating, { props: { ...defaultProps, ...props }, global: { stubs: globalStubs } })
 }
 
 describe('ReviewRating', () => {
@@ -75,5 +79,44 @@ describe('ReviewRating', () => {
     expect(wrapper.text()).toContain('~1d')
     expect(wrapper.text()).toContain('~4d')
     expect(wrapper.text()).toContain('~10d')
+  })
+
+  it('hides rating buttons when rated is true', () => {
+    const wrapper = mountRating({ rated: true, nextReviewDate: 'Apr 8' })
+    const buttons = wrapper.findAll('button')
+    const ratingButtons = buttons.filter(b =>
+      b.text().includes('Again') || b.text().includes('Good') || b.text().includes('Easy')
+    )
+    expect(ratingButtons).toHaveLength(0)
+  })
+
+  it('shows next review date when rated', () => {
+    const wrapper = mountRating({ rated: true, nextReviewDate: 'Apr 8' })
+    expect(wrapper.text()).toContain('Apr 8')
+    expect(wrapper.text()).toContain('Next review')
+  })
+
+  it('shows "Next problem" button when rated', () => {
+    const wrapper = mountRating({ rated: true, nextReviewDate: 'Apr 8' })
+    expect(wrapper.text()).toContain('Next problem')
+  })
+
+  it('emits next-problem when Next problem button clicked', async () => {
+    const wrapper = mountRating({ rated: true, nextReviewDate: 'Apr 8' })
+    const nextBtn = wrapper.findAll('button').find(b => b.text().includes('Next problem'))
+    await nextBtn!.trigger('click')
+    expect(wrapper.emitted('next-problem')).toBeTruthy()
+  })
+
+  it('shows fallback text when nextReviewDate is null', () => {
+    const wrapper = mountRating({ rated: true, nextReviewDate: null })
+    expect(wrapper.text()).toContain('Scheduled for review')
+  })
+
+  it('Easy button uses green color scheme', () => {
+    const wrapper = mountRating({ suggested: 'again' })
+    const buttons = wrapper.findAll('button')
+    const easyBtn = buttons.find(b => b.text().includes('Easy'))
+    expect(easyBtn!.classes().some(c => c.includes('green'))).toBe(true)
   })
 })
