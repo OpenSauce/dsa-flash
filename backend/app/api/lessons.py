@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session, col, select
 
 from ..database import get_session
@@ -234,27 +235,17 @@ def rate_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    existing = session.exec(
-        select(LessonRating).where(
-            LessonRating.user_id == user.id,
-            LessonRating.lesson_id == lesson.id,
-        )
-    ).first()
-
     now = datetime.now(timezone.utc)
-    if existing:
-        existing.rating = body.rating
-        existing.updated_at = now
-        session.add(existing)
-    else:
-        new_rating = LessonRating(
-            user_id=user.id,
-            lesson_id=lesson.id,
-            rating=body.rating,
-            created_at=now,
-            updated_at=now,
-        )
-        session.add(new_rating)
-
+    stmt = pg_insert(LessonRating).values(
+        user_id=user.id,
+        lesson_id=lesson.id,
+        rating=body.rating,
+        created_at=now,
+        updated_at=now,
+    ).on_conflict_do_update(
+        constraint="uq_lessonrating_user_lesson",
+        set_={"rating": body.rating, "updated_at": now},
+    )
+    session.exec(stmt)
     session.commit()
     return LessonRatingOut(lesson_id=lesson.id, rating=body.rating)

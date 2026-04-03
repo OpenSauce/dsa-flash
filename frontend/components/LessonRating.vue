@@ -45,6 +45,7 @@ async function submitRating(rating: number) {
       <template v-for="item in RATINGS" :key="item.value">
         <button
           v-if="currentRating === null || currentRating === item.value"
+          type="button"
           :aria-label="item.label"
           :aria-pressed="currentRating === item.value"
           class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
