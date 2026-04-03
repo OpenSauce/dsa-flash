@@ -50,6 +50,7 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True)
     hashed_password: str
     is_admin: bool = Field(default=False)
+    last_login: Optional[datetime] = Field(default=None, nullable=True)
 
 
 class UserCreate(BaseModel):
