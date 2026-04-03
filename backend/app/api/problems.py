@@ -37,6 +37,22 @@ MAX_CODE_BYTES = 10 * 1024  # 10KB
 # Judge0 status codes
 JUDGE0_ACCEPTED = 3
 JUDGE0_TLE = 5
+
+
+class DifficultyBreakdown(BaseModel):
+    easy: int = 0
+    medium: int = 0
+    hard: int = 0
+
+
+class ProblemCategoryOut(BaseModel):
+    category: str
+    total: int
+    solved: Optional[int] = None
+    due: Optional[int] = None
+    mastered: Optional[int] = None
+    difficulty: DifficultyBreakdown
+    languages: list[str]
 JUDGE0_COMPILE_ERROR = 6
 
 
@@ -138,7 +154,7 @@ def due_problems(
     ]
 
 
-@router.get("/categories")
+@router.get("/categories", response_model=list[ProblemCategoryOut])
 def list_problem_categories(
     session: Session = Depends(get_session),
     user: Optional[User] = Depends(get_optional_user),

@@ -94,7 +94,20 @@ const activeTab = ref<'concepts' | 'problems'>(
 )
 
 watch(activeTab, (tab) => {
-  router.replace({ query: tab === 'problems' ? { view: 'problems' } : {} })
+  if (tab === 'problems') {
+    router.replace({ query: { ...route.query, view: 'problems' } })
+  } else {
+    const { view, ...rest } = route.query
+    router.replace({ query: rest })
+  }
+  if (tab === 'problems' && !problemCategories.value) {
+    refreshProblemCategories()
+  }
+})
+
+watch(() => route.query.view, (view) => {
+  const nextTab = view === 'problems' ? 'problems' : 'concepts'
+  if (activeTab.value !== nextTab) activeTab.value = nextTab
 })
 
 const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
@@ -102,10 +115,10 @@ const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
   () => apiFetch<CategoryFromAPI[]>('/categories'),
 )
 
-const { data: problemCategories, refresh: refreshProblemCategories } = useAsyncData(
+const { data: problemCategories, refresh: refreshProblemCategories, status: problemCategoriesStatus } = useAsyncData(
   'problem-categories',
   () => apiFetch<ProblemCategory[]>('/problems/categories'),
-  { lazy: true },
+  { lazy: true, immediate: route.query.view === 'problems' },
 )
 
 const categories = computed<CategoryDisplay[]>(() => {
@@ -248,7 +261,10 @@ watch(isLoggedIn, () => {
 
     <!-- Problems tab -->
     <template v-if="activeTab === 'problems'">
-      <div v-if="!visibleProblemCategories.length" class="text-center text-gray-400 py-12">
+      <div v-if="problemCategoriesStatus === 'pending'" class="text-center text-gray-400 py-12">
+        Loading problem categories...
+      </div>
+      <div v-else-if="!visibleProblemCategories.length" class="text-center text-gray-400 py-12">
         No problem categories available yet.
       </div>
       <div v-else class="grid sm:grid-cols-2 gap-6">
