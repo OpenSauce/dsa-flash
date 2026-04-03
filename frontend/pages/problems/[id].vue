@@ -8,6 +8,7 @@ const problemId = computed(() => Number(route.params.id))
 
 const { isLoggedIn, authReady } = useAuth()
 const { apiFetch } = useApiFetch()
+const { track } = useAnalytics()
 const md = useMarkdown()
 
 // Problem data
@@ -62,6 +63,11 @@ async function fetchProblem() {
     rated.value = false
     solveTimeMs.value = null
     showLoginPrompt.value = false
+    track('problem_view', {
+      problem_id: problem.value.id,
+      category: problem.value.category,
+      difficulty: problem.value.difficulty,
+    })
   } catch (e: any) {
     error.value = e?.data?.detail || 'Failed to load problem'
   } finally {
@@ -91,6 +97,12 @@ async function submitCode() {
     } else {
       solveTimeMs.value = Date.now() - startTime.value
     }
+    track('problem_submit', {
+      problem_id: problemId.value,
+      category: problem.value?.category,
+      passed: result.passed,
+      solve_time_ms: solveTimeMs.value,
+    })
   } catch (e: any) {
     // Show inline error
     submission.value = {
@@ -143,6 +155,12 @@ async function rate(quality: number) {
     await apiFetch(`/problems/${problemId.value}/review`, {
       method: 'POST',
       body: { quality },
+    })
+    track('problem_review', {
+      problem_id: problemId.value,
+      category: problem.value?.category,
+      quality,
+      grade: quality === 1 ? 'again' : quality === 3 ? 'good' : 'easy',
     })
     rated.value = true
 

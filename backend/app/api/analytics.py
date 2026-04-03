@@ -152,13 +152,14 @@ def analytics_summary(
         """)
     ).one()
 
-    # Funnel: users who completed a lesson -> took a quiz -> reviewed a flashcard
+    # Funnel: users who completed a lesson -> took a quiz -> reviewed a flashcard -> solved a problem
     funnel_row = session.exec(
         text("""
             SELECT
                 (SELECT COUNT(DISTINCT user_id) FROM userlesson)     AS lesson_users,
                 (SELECT COUNT(DISTINCT user_id) FROM userquizattempt) AS quiz_users,
-                (SELECT COUNT(DISTINCT user_id) FROM userflashcard)  AS review_users
+                (SELECT COUNT(DISTINCT user_id) FROM userflashcard)  AS review_users,
+                (SELECT COUNT(DISTINCT user_id) FROM usercodingproblem) AS problem_users
         """)
     ).one()
 
@@ -191,6 +192,39 @@ def analytics_summary(
         """)
     ).all()
 
+    # Problem metrics from event table
+    problem_row = session.exec(
+        text("""
+            SELECT
+                COUNT(*) FILTER (WHERE event_type = 'problem_submit')     AS total_submissions,
+                COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'problem_submit') AS unique_submitters,
+                COUNT(*) FILTER (WHERE event_type = 'problem_submit'
+                    AND (payload->>'passed')::boolean = true)             AS passed_submissions,
+                COUNT(*) FILTER (WHERE event_type = 'problem_review')     AS problems_reviewed
+            FROM event
+        """)
+    ).one()
+
+    total_subs = problem_row[0] or 0
+    problem_solve_rate = round(float(problem_row[2] or 0) / total_subs, 4) if total_subs > 0 else 0.0
+
+    # Users with problem reviews (from usercodingproblem table)
+    problem_user_row = session.exec(
+        text("SELECT COUNT(DISTINCT user_id) FROM usercodingproblem")
+    ).one()
+
+    # Per-category problem submissions
+    category_problems = session.exec(
+        text("""
+            SELECT payload->>'category' AS cat, COUNT(*) AS cnt
+            FROM event
+            WHERE event_type = 'problem_submit'
+              AND payload->>'category' IS NOT NULL
+            GROUP BY cat
+            ORDER BY cnt DESC
+        """)
+    ).all()
+
     return {
         "total_sessions": total_sessions,
         "anonymous_sessions": anonymous_sessions,
@@ -207,6 +241,7 @@ def analytics_summary(
             "lesson_users": funnel_row[0] or 0,
             "quiz_users": funnel_row[1] or 0,
             "review_users": funnel_row[2] or 0,
+            "problem_users": funnel_row[3] or 0,
         },
         "anonymous_engagement": {
             "lesson_views": anon_row[0] or 0,
@@ -216,4 +251,12 @@ def analytics_summary(
             "quiz_sessions": anon_row[4] or 0,
         },
         "category_lesson_completions": {r[0]: r[1] for r in category_lessons},
+        "problem_metrics": {
+            "total_submissions": total_subs,
+            "unique_submitters": problem_row[1] or 0,
+            "problem_solve_rate": problem_solve_rate,
+            "problems_reviewed": problem_row[3] or 0,
+            "users_with_problem_reviews": problem_user_row[0] or 0,
+        },
+        "category_problem_submissions": {r[0]: r[1] for r in category_problems},
     }
