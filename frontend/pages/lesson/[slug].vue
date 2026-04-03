@@ -23,6 +23,7 @@ interface LessonDetail {
   content: string
   created_at: string
   updated_at: string
+  user_rating: number | null
 }
 
 interface CategoryLessonInfo {
@@ -156,6 +157,13 @@ const renderedContent = computed(() =>
 
       <!-- Lesson content -->
       <article class="prose prose-gray max-w-none mb-12" v-html="renderedContent" />
+
+      <!-- Lesson rating -->
+      <LessonRating
+        v-if="isLoggedIn && lesson"
+        :lesson-slug="lesson.slug"
+        :initial-rating="lesson.user_rating ?? null"
+      />
 
       <!-- Completion section -->
       <div class="border-t border-gray-200 pt-8">

@@ -109,3 +109,17 @@ def test_rate_limit_does_not_affect_other_endpoints(session):
     for _ in range(10):
         resp = client.get("/users/me")
         assert resp.status_code in (200, 401, 403)
+
+
+def test_login_sets_last_login(session):
+    user = User(username="loginuser", hashed_password=get_password_hash("pass1234"))
+    session.add(user)
+    session.commit()
+    assert user.last_login is None
+
+    client = TestClient(anon_app(session))
+    resp = client.post("/token", data={"username": "loginuser", "password": "pass1234"})
+    assert resp.status_code == 200
+
+    session.refresh(user)
+    assert user.last_login is not None

@@ -50,6 +50,7 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True)
     hashed_password: str
     is_admin: bool = Field(default=False)
+    last_login: Optional[datetime] = Field(default=None, nullable=True)
 
 
 class UserCreate(BaseModel):
@@ -142,6 +143,30 @@ class UserLesson(SQLModel, table=True):
     )
 
 
+class LessonRating(SQLModel, table=True):
+    __tablename__ = "lessonrating"
+    __table_args__ = (
+        UniqueConstraint("user_id", "lesson_id", name="uq_lessonrating_user_lesson"),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    lesson_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("lesson.id", ondelete="CASCADE"), nullable=False)
+    )
+    rating: int  # 1=not helpful, 2=neutral, 3=helpful
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class LessonRatingIn(BaseModel):
+    rating: int = PydanticField(ge=1, le=3)
+
+
+class LessonRatingOut(BaseModel):
+    lesson_id: int
+    rating: int
+
+
 class LessonOut(BaseModel):
     id: int
     title: str
@@ -156,6 +181,7 @@ class LessonOut(BaseModel):
 
 class LessonDetailOut(LessonOut):
     content: str
+    user_rating: Optional[int] = None
 
 
 class CategoryLessonInfo(BaseModel):

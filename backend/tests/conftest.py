@@ -43,7 +43,7 @@ def clear_db(engine):
             text(
                 "TRUNCATE TABLE usercodingproblem, codingproblem,"
                 " userquizattempt, quizquestion, quiz,"
-                " userlesson, lesson, studysession, event,"
+                " lessonrating, userlesson, lesson, studysession, event,"
                 ' userflashcard, flashcard, "user" RESTART IDENTITY CASCADE;'
             )
         )
