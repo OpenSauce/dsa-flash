@@ -102,7 +102,6 @@ async function submitCode() {
       category: problem.value?.category,
       passed: result.passed,
       solve_time_ms: solveTimeMs.value,
-      anonymous: !isLoggedIn.value,
     })
   } catch (e: any) {
     // Show inline error

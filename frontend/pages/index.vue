@@ -133,7 +133,7 @@ watch(isLoggedIn, () => {
     >
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl">💻</span>
+          <span class="text-2xl" aria-hidden="true">💻</span>
           <h2 class="text-lg font-semibold text-gray-900">Coding Problems</h2>
         </div>
         <p class="text-sm text-gray-500">Write and run code with spaced repetition scheduling. LeetCode-style problems, Anki-style review.</p>

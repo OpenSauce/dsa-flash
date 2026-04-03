@@ -19,17 +19,15 @@ const selectedCategory = ref<string>('')
 const selectedDifficulty = ref<string>('')
 const selectedTag = ref<string>('')
 
-let tracked = false
+onMounted(() => {
+  track('problem_list_view')
+})
 
 async function fetchProblems() {
   loading.value = true
   error.value = null
   try {
     problems.value = await apiFetch<CodingProblemOut[]>('/problems')
-    if (!tracked) {
-      track('problem_list_view', { category: selectedCategory.value })
-      tracked = true
-    }
   } catch (e: any) {
     error.value = e?.data?.detail || 'Failed to load problems'
   } finally {
