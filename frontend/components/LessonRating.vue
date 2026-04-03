@@ -13,6 +13,11 @@ const { apiFetch } = useApiFetch()
 const currentRating = ref<number | null>(props.initialRating)
 const showThanks = ref(props.initialRating !== null)
 
+watch(() => props.lessonSlug, () => {
+  currentRating.value = props.initialRating ?? null
+  showThanks.value = props.initialRating !== null
+})
+
 const RATINGS = [
   { value: 3, label: 'Helpful', activeColor: '#16a34a' },
   { value: 2, label: 'Neutral', activeColor: '#9ca3af' },
