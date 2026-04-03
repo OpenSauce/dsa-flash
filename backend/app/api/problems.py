@@ -76,7 +76,10 @@ def list_problems(
                 )
             ).all()
             for ucp in ucp_rows:
-                if ucp.next_review and ucp.next_review <= now:
+                nr = ucp.next_review
+                if nr and nr.tzinfo is None:
+                    nr = nr.replace(tzinfo=timezone.utc)
+                if nr and nr <= now:
                     due_status_map[ucp.coding_problem_id] = "due"
                 else:
                     due_status_map[ucp.coding_problem_id] = "review"
@@ -167,51 +170,51 @@ def _extract_func_name(starter_code: dict) -> str | None:
 
 
 def _build_test_harness(user_code: str, test_cases: list, func_name: str) -> str:
-    """Build a Python test harness script that exec()s user code and runs test cases."""
-    harness = f"""
+    """Build a Python test harness that runs user code at module top-level.
+
+    User code is placed at module scope (not exec'd) so that
+    `from __future__ import annotations` works correctly on Python 3.7
+    (Judge0 CE). Typing imports are injected for runtime subscript compat.
+    """
+    harness = f"""from __future__ import annotations
+from typing import List, Dict, Tuple, Set, Optional, Any, Union
 import json, sys
 
-user_ns = {{}}
+{user_code}
+
 try:
-    exec({json.dumps(user_code)}, user_ns)
-except Exception as e:
-    print(json.dumps([{{"input": "", "expected": "", "actual": f"CODE ERROR: {{e}}", "passed": False}}]))
+    _func = {func_name}
+except NameError:
+    print(json.dumps([{{"input": "", "expected": "", "actual": "Function '{func_name}' not found", "passed": False}}]))
     sys.exit(0)
 
-func_name = {json.dumps(func_name)}
-if func_name not in user_ns or not callable(user_ns[func_name]):
-    err = f"Function '{{func_name}}' not found"
-    print(json.dumps([{{"input": "", "expected": "", "actual": err, "passed": False}}]))
-    sys.exit(0)
+_test_cases = {json.dumps(test_cases)}
+_results = []
 
-func = user_ns[func_name]
-test_cases = {json.dumps(test_cases)}
-results = []
-
-for tc in test_cases:
-    inp = tc.get("input", {{}})
-    expected = tc.get("expected")
+for _tc in _test_cases:
+    _inp = _tc.get("input", {{}})
+    _expected = _tc.get("expected")
     try:
-        if isinstance(inp, dict):
-            actual = func(**inp)
+        if isinstance(_inp, dict):
+            _actual = _func(**_inp)
         else:
-            actual = func(inp)
-        passed = actual == expected
-        results.append({{
-            "input": str(inp),
-            "expected": str(expected),
-            "actual": str(actual),
-            "passed": passed,
+            _actual = _func(_inp)
+        _passed = _actual == _expected
+        _results.append({{
+            "input": str(_inp),
+            "expected": str(_expected),
+            "actual": str(_actual),
+            "passed": _passed,
         }})
-    except Exception as e:
-        results.append({{
-            "input": str(inp),
-            "expected": str(expected),
-            "actual": f"ERROR: {{e}}",
+    except Exception as _e:
+        _results.append({{
+            "input": str(_inp),
+            "expected": str(_expected),
+            "actual": f"ERROR: {{_e}}",
             "passed": False,
         }})
 
-print(json.dumps(results))
+print(json.dumps(_results))
 """
     return harness
 
@@ -250,6 +253,8 @@ def submit_code(
                     "source_code": harness,
                     "cpu_time_limit": 5,
                     "memory_limit": 128000,
+                    "enable_per_process_and_thread_time_limit": True,
+                    "enable_per_process_and_thread_memory_limit": True,
                 },
             )
             resp.raise_for_status()
