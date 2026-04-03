@@ -187,11 +187,12 @@ def get_test_session(session):
     return _get_test_session
 
 
-def seed_study_session(session, user_id, study_date, cards_reviewed=1):
+def seed_study_session(session, user_id, study_date, cards_reviewed=1, problems_reviewed=0):
     ss = StudySession(
         user_id=user_id,
         study_date=study_date,
         cards_reviewed=cards_reviewed,
+        problems_reviewed=problems_reviewed,
     )
     session.add(ss)
     session.commit()

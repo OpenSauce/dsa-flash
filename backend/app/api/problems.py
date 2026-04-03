@@ -343,10 +343,11 @@ def review_problem(
     stmt = pg_insert(StudySession).values(
         user_id=user.id,
         study_date=today,
-        cards_reviewed=1,
+        cards_reviewed=0,
+        problems_reviewed=1,
     ).on_conflict_do_update(
         constraint="uq_studysession_user_date",
-        set_={"cards_reviewed": StudySession.__table__.c.cards_reviewed + 1},
+        set_={"problems_reviewed": StudySession.__table__.c.problems_reviewed + 1},
     )
     session.execute(stmt)
 

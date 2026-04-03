@@ -204,6 +204,10 @@ def test_submit_judge0_unavailable(client, create_coding_problem):
 
 
 def test_review_problem(client, session, create_coding_problem, create_user):
+    from datetime import date
+
+    from app.models import StudySession
+
     problem = create_coding_problem()
 
     resp = client.post(f"/problems/{problem.id}/review", json={"quality": 3})
@@ -215,6 +219,42 @@ def test_review_problem(client, session, create_coding_problem, create_user):
     assert ucp is not None
     assert ucp.repetitions == 1
     assert ucp.next_review is not None
+
+    # Verify StudySession uses problems_reviewed (not cards_reviewed)
+    today = date.today()
+    ss = session.exec(
+        select(StudySession).where(
+            StudySession.user_id == user.id,
+            StudySession.study_date == today,
+        )
+    ).first()
+    assert ss is not None
+    assert ss.problems_reviewed == 1
+    assert ss.cards_reviewed == 0
+
+
+def test_review_problem_increments_problems_reviewed(client, session, create_coding_problem, create_user):
+    from datetime import date
+
+    from app.models import StudySession
+
+    problem = create_coding_problem()
+
+    # Review twice
+    client.post(f"/problems/{problem.id}/review", json={"quality": 3})
+    client.post(f"/problems/{problem.id}/review", json={"quality": 5})
+
+    user = session.exec(select(User)).first()
+    today = date.today()
+    ss = session.exec(
+        select(StudySession).where(
+            StudySession.user_id == user.id,
+            StudySession.study_date == today,
+        )
+    ).first()
+    assert ss is not None
+    assert ss.problems_reviewed == 2
+    assert ss.cards_reviewed == 0
 
 
 def test_review_requires_auth(anon_client, create_coding_problem):

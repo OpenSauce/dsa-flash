@@ -121,6 +121,15 @@ const ctaDismissed = ref(false)
 
 const showFlipHint = computed(() => !hasFlippedOnce.value && !hasFlippedEver.value)
 
+const hasCodingProblems = ref(false)
+const { data: problemsData } = useAsyncData(
+  `category-problems-count-${category}`,
+  () => apiFetch<{ id: number }[]>(`/problems?category=${category}`),
+)
+watch(problemsData, (data) => {
+  hasCodingProblems.value = Array.isArray(data) && data.length > 0
+}, { immediate: true })
+
 async function startSession(selectedMode: StudyMode) {
   mode.value = selectedMode
   await nextTick()
@@ -181,6 +190,14 @@ async function startSession(selectedMode: StudyMode) {
             Sign up — it's free
           </NuxtLink>
         </div>
+
+        <NuxtLink
+          v-if="hasCodingProblems"
+          :to="`/problems?category=${category}`"
+          class="block max-w-sm mx-auto text-center text-sm font-medium text-violet-600 hover:text-violet-800 mb-4"
+        >
+          Try related coding problems &rarr;
+        </NuxtLink>
 
         <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 text-center">&larr; Back to categories</NuxtLink>
       </template>
@@ -243,6 +260,19 @@ async function startSession(selectedMode: StudyMode) {
           <div v-else-if="stats.due === 0 && stats.new === 0 && categoryLessons.length > 0" class="text-gray-500 text-center text-sm mt-2">
             <p>No cards due. Complete more lessons to build your review queue.</p>
           </div>
+
+          <!-- Try related problems CTA -->
+          <NuxtLink
+            v-if="hasCodingProblems"
+            :to="`/problems?category=${category}`"
+            class="flex items-center gap-4 px-6 py-4 border-2 border-violet-500 rounded-xl text-left hover:bg-violet-50 transition mt-2"
+          >
+            <span class="text-2xl flex-shrink-0">&#128187;</span>
+            <div>
+              <span class="block font-semibold text-violet-700">Try related problems</span>
+              <span class="block text-sm text-gray-500 mt-0.5">Practice with coding challenges</span>
+            </div>
+          </NuxtLink>
 
           <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-6 text-center">&larr; Back to categories</NuxtLink>
         </div>
