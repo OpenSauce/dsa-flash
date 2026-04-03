@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
 from app.api.users import ALGORITHM, SECRET_KEY, User, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
