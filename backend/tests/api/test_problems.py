@@ -376,3 +376,90 @@ def test_build_test_harness_none_expected():
         "identity",
     )
     exec(compile(harness, "<test_harness>", "exec"))
+
+
+def test_list_problem_categories(client, create_coding_problem):
+    create_coding_problem(title="Two Sum", category="data-structures", difficulty="easy")
+    create_coding_problem(title="Merge Sort", category="algorithms", difficulty="medium")
+    create_coding_problem(title="Quick Sort", category="algorithms", difficulty="hard")
+
+    resp = client.get("/problems/categories")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    categories = {item["category"]: item for item in data}
+    assert "data-structures" in categories
+    assert "algorithms" in categories
+
+    ds = categories["data-structures"]
+    assert ds["total"] == 1
+    assert ds["difficulty"]["easy"] == 1
+    assert ds["difficulty"]["medium"] == 0
+    assert ds["languages"] == ["python"]
+
+    alg = categories["algorithms"]
+    assert alg["total"] == 2
+    assert alg["difficulty"]["medium"] == 1
+    assert alg["difficulty"]["hard"] == 1
+
+
+def test_list_problem_categories_with_user_stats(client, session, create_coding_problem, create_user):
+    from datetime import timedelta
+
+    problem1 = create_coding_problem(title="Two Sum", category="data-structures", difficulty="easy")
+    problem2 = create_coding_problem(title="Binary Search", category="algorithms", difficulty="easy")
+
+    user = session.exec(select(User)).first()
+
+    # solved + mastered (interval >= 21)
+    ucp1 = UserCodingProblem(
+        user_id=user.id,
+        coding_problem_id=problem1.id,
+        interval=25,
+        next_review=datetime.now(timezone.utc) - timedelta(days=1),
+    )
+    # solved but not mastered, and due
+    ucp2 = UserCodingProblem(
+        user_id=user.id,
+        coding_problem_id=problem2.id,
+        interval=5,
+        next_review=datetime.now(timezone.utc) - timedelta(hours=1),
+    )
+    session.add(ucp1)
+    session.add(ucp2)
+    session.commit()
+
+    resp = client.get("/problems/categories")
+    assert resp.status_code == 200
+    data = resp.json()
+    categories = {item["category"]: item for item in data}
+
+    ds = categories["data-structures"]
+    assert ds["solved"] == 1
+    assert ds["mastered"] == 1
+    assert ds["due"] == 1
+
+    alg = categories["algorithms"]
+    assert alg["solved"] == 1
+    assert alg["mastered"] == 0
+    assert alg["due"] == 1
+
+
+def test_list_problem_categories_anonymous(anon_client, create_coding_problem):
+    create_coding_problem(title="Two Sum", category="data-structures")
+
+    resp = anon_client.get("/problems/categories")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    item = data[0]
+    assert item["solved"] is None
+    assert item["due"] is None
+    assert item["mastered"] is None
+    assert item["total"] == 1
+
+
+def test_list_problem_categories_empty(client):
+    resp = client.get("/problems/categories")
+    assert resp.status_code == 200
+    assert resp.json() == []

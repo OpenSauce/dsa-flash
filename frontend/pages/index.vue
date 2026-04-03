@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
@@ -72,14 +72,40 @@ interface CategoryDisplay extends CategoryFromAPI {
   section: string
 }
 
+interface ProblemCategory {
+  category: string
+  total: number
+  solved: number | null
+  due: number | null
+  mastered: number | null
+  difficulty: { easy: number; medium: number; hard: number }
+  languages: string[]
+}
+
 const { apiFetch } = useApiFetch()
+const route = useRoute()
+const router = useRouter()
 
 const { isLoggedIn } = useAuth()
 const { track } = useAnalytics()
 
+const activeTab = ref<'concepts' | 'problems'>(
+  route.query.view === 'problems' ? 'problems' : 'concepts'
+)
+
+watch(activeTab, (tab) => {
+  router.replace({ query: tab === 'problems' ? { view: 'problems' } : {} })
+})
+
 const { data: rawCategories, refresh: refreshCategories, error } = useAsyncData(
   'categories',
   () => apiFetch<CategoryFromAPI[]>('/categories'),
+)
+
+const { data: problemCategories, refresh: refreshProblemCategories } = useAsyncData(
+  'problem-categories',
+  () => apiFetch<ProblemCategory[]>('/problems/categories'),
+  { lazy: true },
 )
 
 const categories = computed<CategoryDisplay[]>(() => {
@@ -102,8 +128,27 @@ const sections = computed(() => {
     .map(s => ({ name: s, categories: grouped[s] }))
 })
 
+const visibleProblemCategories = computed<ProblemCategory[]>(() => {
+  if (!problemCategories.value) return []
+  return problemCategories.value.filter(c => c.total > 0)
+})
+
 function categoryTileTo(cat: CategoryDisplay): string {
   return `/category/${cat.slug}`
+}
+
+function problemCategoryLink(cat: ProblemCategory): string {
+  return `/problems?category=${encodeURIComponent(cat.category)}`
+}
+
+function solvedPct(cat: ProblemCategory): number {
+  if (!cat.total || cat.solved === null) return 0
+  return Math.round((cat.solved / cat.total) * 100)
+}
+
+function masteredPct(cat: ProblemCategory): number {
+  if (!cat.total || cat.mastered === null) return 0
+  return Math.round((cat.mastered / cat.total) * 100)
 }
 
 onMounted(() => {
@@ -112,6 +157,7 @@ onMounted(() => {
 
 watch(isLoggedIn, () => {
   refreshCategories()
+  refreshProblemCategories()
 })
 </script>
 
@@ -126,65 +172,115 @@ watch(isLoggedIn, () => {
     </p>
     <p v-if="!isLoggedIn" class="text-sm text-center text-gray-400 mb-6">Pick a topic below to start learning.</p>
 
-    <!-- Coding Problems CTA -->
-    <NuxtLink
-      to="/problems"
-      class="flex items-center justify-between gap-4 border rounded-xl shadow hover:shadow-lg transition bg-white px-6 py-4 mb-8"
+    <!-- Concepts / Problems toggle -->
+    <div
+      role="tablist"
+      class="flex bg-gray-100 rounded-lg p-1 mb-8 w-full sm:max-w-xs sm:mx-auto"
     >
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl" aria-hidden="true">💻</span>
-          <h2 class="text-lg font-semibold text-gray-900">Coding Problems</h2>
-        </div>
-        <p class="text-sm text-gray-500">Write and run code with spaced repetition scheduling. LeetCode-style problems, Anki-style review.</p>
-      </div>
-      <span class="flex-shrink-0 px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition whitespace-nowrap">
-        Start solving
-      </span>
-    </NuxtLink>
+      <button
+        role="tab"
+        :aria-selected="activeTab === 'concepts'"
+        :class="activeTab === 'concepts' ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'"
+        class="flex-1 px-4 py-2 text-sm font-semibold rounded-md transition"
+        @click="activeTab = 'concepts'"
+      >
+        Concepts
+      </button>
+      <button
+        role="tab"
+        :aria-selected="activeTab === 'problems'"
+        :class="activeTab === 'problems' ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'"
+        class="flex-1 px-4 py-2 text-sm font-semibold rounded-md transition"
+        @click="activeTab = 'problems'"
+      >
+        Problems
+      </button>
+    </div>
 
-    <template v-for="(section, index) in sections" :key="section.name">
-      <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
-        {{ section.name }}
-      </h3>
-      <div class="grid sm:grid-cols-2 gap-6">
-        <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="categoryTileTo(cat)"
-          class="border p-6 rounded-xl shadow hover:shadow-lg transition"
-          :class="cat.due !== null && cat.due === 0 && cat.new === 0 ? 'bg-gray-100/80 opacity-60' : 'bg-white'">
-          <div class="flex items-start justify-between">
-            <div class="text-3xl mb-2">{{ cat.emoji }}</div>
-            <div v-if="cat.learned_pct !== null" class="flex-shrink-0">
+    <!-- Concepts tab -->
+    <template v-if="activeTab === 'concepts'">
+      <template v-for="(section, index) in sections" :key="section.name">
+        <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
+          {{ section.name }}
+        </h3>
+        <div class="grid sm:grid-cols-2 gap-6">
+          <NuxtLink v-for="cat in section.categories" :key="cat.slug" :to="categoryTileTo(cat)"
+            class="border p-6 rounded-xl shadow hover:shadow-lg transition"
+            :class="cat.due !== null && cat.due === 0 && cat.new === 0 ? 'bg-gray-100/80 opacity-60' : 'bg-white'">
+            <div class="flex items-start justify-between">
+              <div class="text-3xl mb-2">{{ cat.emoji }}</div>
+              <div v-if="cat.learned_pct !== null" class="flex-shrink-0">
+                <DualProgressRing
+                  :learned-pct="cat.learned_pct"
+                  :mastered-pct="cat.mastery_pct ?? 0"
+                />
+              </div>
+            </div>
+            <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
+            <p class="text-gray-500">{{ cat.description }}</p>
+            <p v-if="cat.learned_pct !== null" class="text-sm text-gray-600 mt-2">
+              <template v-if="cat.lessons_available && cat.lessons_available > 0">
+                <span class="font-medium text-green-600">{{ cat.lessons_completed ?? 0 }}</span> of {{ cat.lessons_available }} lessons
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium text-purple-600">{{ cat.mastered }}</span> concepts mastered
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium text-blue-600">{{ cat.due }}</span> due
+              </template>
+              <template v-else>
+                <span class="font-medium text-green-600">{{ cat.learned }}</span> of {{ cat.total }} learned
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
+                &nbsp;&middot;&nbsp;
+                <span class="font-medium text-blue-600">{{ cat.due }}</span> due
+              </template>
+            </p>
+            <p v-else class="text-sm text-gray-600 mt-2">
+              <template v-if="cat.lessons_available && cat.lessons_available > 0">
+                <span class="font-medium text-green-600">{{ cat.lessons_available }}</span> lessons
+                &nbsp;&middot;&nbsp;
+              </template>
+              <span class="font-medium text-indigo-600">{{ cat.total }}</span> concepts
+            </p>
+          </NuxtLink>
+        </div>
+      </template>
+    </template>
+
+    <!-- Problems tab -->
+    <template v-if="activeTab === 'problems'">
+      <div v-if="!visibleProblemCategories.length" class="text-center text-gray-400 py-12">
+        No problem categories available yet.
+      </div>
+      <div v-else class="grid sm:grid-cols-2 gap-6">
+        <NuxtLink
+          v-for="cat in visibleProblemCategories"
+          :key="cat.category"
+          :to="problemCategoryLink(cat)"
+          class="border bg-white p-6 rounded-xl shadow hover:shadow-lg transition"
+        >
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-semibold">{{ getCategoryDisplayName(cat.category) }}</h2>
+            <div v-if="isLoggedIn && cat.solved !== null" class="flex-shrink-0">
               <DualProgressRing
-                :learned-pct="cat.learned_pct"
-                :mastered-pct="cat.mastery_pct ?? 0"
+                :learned-pct="solvedPct(cat)"
+                :mastered-pct="masteredPct(cat)"
               />
             </div>
           </div>
-          <h2 class="text-xl font-semibold">{{ cat.name }}</h2>
-          <p class="text-gray-500">{{ cat.description }}</p>
-          <p v-if="cat.learned_pct !== null" class="text-sm text-gray-600 mt-2">
-            <template v-if="cat.lessons_available && cat.lessons_available > 0">
-              <span class="font-medium text-green-600">{{ cat.lessons_completed ?? 0 }}</span> of {{ cat.lessons_available }} lessons
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium text-purple-600">{{ cat.mastered }}</span> concepts mastered
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium text-blue-600">{{ cat.due }}</span> due
-            </template>
-            <template v-else>
-              <span class="font-medium text-green-600">{{ cat.learned }}</span> of {{ cat.total }} learned
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
-              &nbsp;&middot;&nbsp;
-              <span class="font-medium text-blue-600">{{ cat.due }}</span> due
-            </template>
+          <p v-if="isLoggedIn && cat.solved !== null" class="text-sm text-gray-600 mb-2">
+            <span class="font-medium text-green-600">{{ cat.solved }}</span> solved
+            &nbsp;&middot;&nbsp;
+            <span class="font-medium text-purple-600">{{ cat.mastered }}</span> mastered
+            &nbsp;&middot;&nbsp;
+            <span class="font-medium text-blue-600">{{ cat.due }}</span> due
           </p>
-          <p v-else class="text-sm text-gray-600 mt-2">
-            <template v-if="cat.lessons_available && cat.lessons_available > 0">
-              <span class="font-medium text-green-600">{{ cat.lessons_available }}</span> lessons
-              &nbsp;&middot;&nbsp;
-            </template>
-            <span class="font-medium text-indigo-600">{{ cat.total }}</span> concepts
+          <p v-else class="text-sm text-gray-600 mb-2">
+            <span class="font-medium text-indigo-600">{{ cat.total }}</span> problems
           </p>
+          <p class="text-sm text-gray-500">
+            Easy {{ cat.difficulty.easy }} / Med {{ cat.difficulty.medium }} / Hard {{ cat.difficulty.hard }}
+          </p>
+          <p class="text-xs text-gray-400 mt-1">{{ cat.languages.join(', ') }}</p>
         </NuxtLink>
       </div>
     </template>

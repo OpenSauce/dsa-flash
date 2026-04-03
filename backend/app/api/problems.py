@@ -138,6 +138,86 @@ def due_problems(
     ]
 
 
+@router.get("/categories")
+def list_problem_categories(
+    session: Session = Depends(get_session),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    rows = session.exec(select(CodingProblem)).all()
+
+    # Group by category
+    category_map: dict[str, dict] = {}
+    for p in rows:
+        cat = p.category or "unknown"
+        if cat not in category_map:
+            category_map[cat] = {"total": 0, "difficulty": {"easy": 0, "medium": 0, "hard": 0}}
+        category_map[cat]["total"] += 1
+        diff = (p.difficulty or "").lower()
+        if diff in category_map[cat]["difficulty"]:
+            category_map[cat]["difficulty"][diff] += 1
+
+    if not category_map:
+        return []
+
+    # Build per-category user stats if authenticated
+    user_stats: dict[str, dict] = {}
+    if user:
+        now = datetime.now(timezone.utc)
+        ucp_rows = session.exec(
+            select(UserCodingProblem).where(UserCodingProblem.user_id == user.id)
+        ).all()
+        # Join with problem to get category
+        problem_ids = [ucp.coding_problem_id for ucp in ucp_rows]
+        if problem_ids:
+            problems_by_id: dict[int, CodingProblem] = {
+                p.id: p for p in session.exec(
+                    select(CodingProblem).where(col(CodingProblem.id).in_(problem_ids))
+                ).all()
+            }
+            for ucp in ucp_rows:
+                prob = problems_by_id.get(ucp.coding_problem_id)
+                if not prob:
+                    continue
+                cat = prob.category or "unknown"
+                if cat not in user_stats:
+                    user_stats[cat] = {"solved": 0, "due": 0, "mastered": 0}
+                user_stats[cat]["solved"] += 1
+                nr = ucp.next_review
+                if nr:
+                    if nr.tzinfo is None:
+                        nr = nr.replace(tzinfo=timezone.utc)
+                    if nr <= now:
+                        user_stats[cat]["due"] += 1
+                if ucp.interval >= 21:
+                    user_stats[cat]["mastered"] += 1
+
+    result = []
+    for cat, stats in category_map.items():
+        if user:
+            ust = user_stats.get(cat, {"solved": 0, "due": 0, "mastered": 0})
+            result.append({
+                "category": cat,
+                "total": stats["total"],
+                "solved": ust["solved"],
+                "due": ust["due"],
+                "mastered": ust["mastered"],
+                "difficulty": stats["difficulty"],
+                "languages": ["python"],
+            })
+        else:
+            result.append({
+                "category": cat,
+                "total": stats["total"],
+                "solved": None,
+                "due": None,
+                "mastered": None,
+                "difficulty": stats["difficulty"],
+                "languages": ["python"],
+            })
+
+    return result
+
+
 @router.get("/{problem_id}", response_model=CodingProblemDetailOut)
 def get_problem(
     problem_id: int,
