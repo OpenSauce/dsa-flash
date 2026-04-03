@@ -123,7 +123,7 @@ async function submitCode() {
       test_results: [],
       stdout: '',
       stderr: e?.data?.detail || 'Submission failed',
-      status: 'error',
+      status: 'Submission failed',
       solve_time_ms: 0,
     }
     viewState.value = 'error'
@@ -370,7 +370,7 @@ useSeoMeta({
       </div>
 
       <!-- Right pane: editor OR results -->
-      <div class="w-full md:w-3/5 flex flex-col" aria-live="polite">
+      <div class="w-full md:w-3/5 flex flex-col">
         <!-- Editor view -->
         <div v-if="viewState === 'editor'">
           <div class="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e1e] flex-1 min-h-[300px] md:min-h-[400px]">
@@ -411,7 +411,7 @@ useSeoMeta({
 
         <!-- Results view -->
         <Transition name="fade">
-          <div v-if="viewState === 'results' && submission">
+          <div v-if="viewState === 'results' && submission" aria-live="polite">
             <!-- Pass banner -->
             <div
               v-if="submission.passed"
@@ -423,7 +423,7 @@ useSeoMeta({
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               <span class="text-sm font-semibold text-green-800">All tests passed!</span>
-              <span v-if="solveTimeMs" class="ml-auto text-xs text-green-600 font-mono">
+              <span v-if="solveTimeMs != null" class="ml-auto text-xs text-green-600 font-mono">
                 {{ (solveTimeMs / 1000).toFixed(1) }}s
               </span>
             </div>
@@ -441,7 +441,7 @@ useSeoMeta({
               <span class="text-sm font-semibold text-red-800">
                 {{ submission.test_results.filter(r => r.passed).length }} of {{ submission.test_results.length }} tests passed
               </span>
-              <span v-if="solveTimeMs" class="ml-auto text-xs text-red-600 font-mono">
+              <span v-if="solveTimeMs != null" class="ml-auto text-xs text-red-600 font-mono">
                 {{ (solveTimeMs / 1000).toFixed(1) }}s
               </span>
             </div>
@@ -497,8 +497,8 @@ useSeoMeta({
               tabindex="-1"
               class="bg-red-50 border border-red-200 rounded-lg p-4 outline-none"
             >
-              <p class="text-sm font-semibold text-red-700 mb-2">Submission failed</p>
-              <pre class="text-xs text-red-800 font-mono whitespace-pre-wrap">{{ submission.stderr || 'Something went wrong. Please try again.' }}</pre>
+              <p class="text-sm font-semibold text-red-700 mb-2">{{ submission.status || 'Submission failed' }}</p>
+              <pre class="text-xs text-red-800 font-mono whitespace-pre-wrap">{{ submission.stderr || submission.status || 'Something went wrong. Please try again.' }}</pre>
             </div>
             <div class="mt-4">
               <button
