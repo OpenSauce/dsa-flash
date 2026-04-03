@@ -279,6 +279,28 @@ def test_due_problems(client, session, create_coding_problem, create_user):
     assert all(p["due_status"] == "due" for p in data)
 
 
+def test_list_problems_naive_next_review(client, session, create_coding_problem, create_user):
+    """Regression: naive datetime (no tzinfo) in next_review must not cause TypeError."""
+    problem = create_coding_problem(title="Naive DT", category="data-structures")
+    user = session.exec(select(User)).first()
+
+    # Insert a UserCodingProblem with a naive datetime (no timezone)
+    past_naive = datetime(2020, 1, 1)
+    ucp = UserCodingProblem(
+        user_id=user.id,
+        coding_problem_id=problem.id,
+        next_review=past_naive,
+    )
+    session.add(ucp)
+    session.commit()
+
+    resp = client.get("/problems")
+    assert resp.status_code == 200
+    data = resp.json()
+    p = next(p for p in data if p["title"] == "Naive DT")
+    assert p["due_status"] == "due"
+
+
 def test_due_problems_requires_auth(anon_client):
     resp = anon_client.get("/problems/due")
     assert resp.status_code == 401
