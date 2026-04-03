@@ -8,6 +8,7 @@ useSeoMeta({
 
 const { isLoggedIn, authReady } = useAuth()
 const { apiFetch } = useApiFetch()
+const { track } = useAnalytics()
 
 const problems = ref<CodingProblemOut[]>([])
 const loading = ref(true)
@@ -18,11 +19,17 @@ const selectedCategory = ref<string>('')
 const selectedDifficulty = ref<string>('')
 const selectedTag = ref<string>('')
 
+let tracked = false
+
 async function fetchProblems() {
   loading.value = true
   error.value = null
   try {
     problems.value = await apiFetch<CodingProblemOut[]>('/problems')
+    if (!tracked) {
+      track('problem_list_view', { category: selectedCategory.value })
+      tracked = true
+    }
   } catch (e: any) {
     error.value = e?.data?.detail || 'Failed to load problems'
   } finally {

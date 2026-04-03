@@ -126,6 +126,23 @@ watch(isLoggedIn, () => {
     </p>
     <p v-if="!isLoggedIn" class="text-sm text-center text-gray-400 mb-6">Pick a topic below to start learning.</p>
 
+    <!-- Coding Problems CTA -->
+    <NuxtLink
+      to="/problems"
+      class="flex items-center justify-between gap-4 border rounded-xl shadow hover:shadow-lg transition bg-white px-6 py-4 mb-8"
+    >
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-2xl">💻</span>
+          <h2 class="text-lg font-semibold text-gray-900">Coding Problems</h2>
+        </div>
+        <p class="text-sm text-gray-500">Write and run code with spaced repetition scheduling. LeetCode-style problems, Anki-style review.</p>
+      </div>
+      <span class="flex-shrink-0 px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition whitespace-nowrap">
+        Start solving
+      </span>
+    </NuxtLink>
+
     <template v-for="(section, index) in sections" :key="section.name">
       <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
         {{ section.name }}

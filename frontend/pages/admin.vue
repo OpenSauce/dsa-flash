@@ -23,6 +23,7 @@ interface AnalyticsSummary {
     lesson_users: number
     quiz_users: number
     review_users: number
+    problem_users: number
   }
   anonymous_engagement: {
     lesson_views: number
@@ -32,6 +33,14 @@ interface AnalyticsSummary {
     quiz_sessions: number
   }
   category_lesson_completions: Record<string, number>
+  problem_metrics: {
+    total_submissions: number
+    unique_submitters: number
+    problem_solve_rate: number
+    problems_reviewed: number
+    users_with_problem_reviews: number
+  }
+  category_problem_submissions: Record<string, number>
 }
 
 const summary = ref<AnalyticsSummary | null>(null)
@@ -90,6 +99,7 @@ const funnelSteps = computed(() => {
     { label: 'Completed a lesson', count: f.lesson_users },
     { label: 'Took a quiz', count: f.quiz_users },
     { label: 'Reviewed flashcards', count: f.review_users },
+    { label: 'Solved coding problems', count: f.problem_users },
   ]
 })
 
@@ -102,6 +112,17 @@ const categoryLessonList = computed(() => {
   if (!summary.value) return []
   const entries = Object.entries(summary.value.category_lesson_completions)
   return entries.sort((a, b) => b[1] - a[1])
+})
+
+const categoryProblemList = computed(() => {
+  if (!summary.value) return []
+  const entries = Object.entries(summary.value.category_problem_submissions)
+  return entries.sort((a, b) => b[1] - a[1])
+})
+
+const problemSolveRatePercent = computed(() => {
+  if (!summary.value) return '0'
+  return (summary.value.problem_metrics.problem_solve_rate * 100).toFixed(1)
 })
 </script>
 
@@ -190,6 +211,31 @@ const categoryLessonList = computed(() => {
         </div>
       </div>
 
+      <!-- Problem Engagement -->
+      <h2 class="text-xl font-semibold mb-4">Problem Engagement</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Total Submissions</div>
+          <div class="text-2xl font-bold">{{ summary.problem_metrics.total_submissions }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Unique Submitters</div>
+          <div class="text-2xl font-bold">{{ summary.problem_metrics.unique_submitters }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Solve Rate</div>
+          <div class="text-2xl font-bold">{{ problemSolveRatePercent }}%</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Problems Reviewed</div>
+          <div class="text-2xl font-bold">{{ summary.problem_metrics.problems_reviewed }}</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="text-sm text-gray-500">Users with Reviews</div>
+          <div class="text-2xl font-bold">{{ summary.problem_metrics.users_with_problem_reviews }}</div>
+        </div>
+      </div>
+
       <!-- Lesson→Quiz→Flashcard Funnel -->
       <div class="bg-white rounded-lg shadow p-4 mb-8">
         <h2 class="text-lg font-semibold mb-4">Learning Funnel</h2>
@@ -218,6 +264,23 @@ const categoryLessonList = computed(() => {
               <div
                 class="bg-indigo-500 h-full rounded-full transition-all"
                 :style="{ width: `${Math.min((count / categoryLessonList[0][1]) * 100, 100)}%` }"
+              />
+            </div>
+            <span class="text-sm font-medium w-12 text-right">{{ count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Problem Submissions by Category -->
+      <div class="bg-white rounded-lg shadow p-4 mb-8" v-if="categoryProblemList.length">
+        <h2 class="text-lg font-semibold mb-4">Problem Submissions by Category</h2>
+        <div class="space-y-2">
+          <div v-for="[category, count] in categoryProblemList" :key="category" class="flex items-center gap-3">
+            <span class="text-sm text-gray-600 w-44 truncate">{{ category }}</span>
+            <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+              <div
+                class="bg-purple-500 h-full rounded-full transition-all"
+                :style="{ width: `${Math.min((count / categoryProblemList[0][1]) * 100, 100)}%` }"
               />
             </div>
             <span class="text-sm font-medium w-12 text-right">{{ count }}</span>

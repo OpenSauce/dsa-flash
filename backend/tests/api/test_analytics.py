@@ -7,7 +7,7 @@ from app.api.analytics import router as events_router
 from app.api.analytics import summary_router
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import Event
+from app.models import CodingProblem, Event, UserCodingProblem
 
 
 @pytest.fixture(name="app")
@@ -160,6 +160,79 @@ def test_summary_with_seeded_events(client, session, create_user, get_token):
     assert data["conversion_rate"] == 0.5
     # drop-off: anon-1 has 2 reviews (bucket "1-3"), auth-1 has 1 review (bucket "1-3")
     assert data["drop_off_distribution"]["1-3"] == 2
+
+
+def test_summary_with_problem_metrics(client, session, create_user, get_token):
+    user = create_user(is_admin=True)
+    token = get_token(client, "user", "password")
+
+    # Create a CodingProblem so we can attach a UserCodingProblem
+    problem = CodingProblem(
+        title="Two Sum",
+        difficulty="easy",
+        category="data-structures",
+        tags=["array"],
+        description="Find two numbers that add to target.",
+        examples=[],
+        constraints=[],
+        starter_code={"python": "def two_sum(nums, target): pass"},
+        test_cases=[],
+        solution={},
+        hints=[],
+    )
+    session.add(problem)
+    session.commit()
+    session.refresh(problem)
+
+    # Create UserCodingProblem row (simulates user having solved a problem)
+    ucp = UserCodingProblem(user_id=user.id, coding_problem_id=problem.id)
+    session.add(ucp)
+    session.commit()
+
+    # Seed problem_submit events (3 total: 2 passed, 1 failed)
+    submit_events = [
+        Event(
+            session_id="s1",
+            user_id=user.id,
+            event_type="problem_submit",
+            payload={"problem_id": problem.id, "category": "data-structures", "passed": True},
+        ),
+        Event(
+            session_id="s1",
+            user_id=user.id,
+            event_type="problem_submit",
+            payload={"problem_id": problem.id, "category": "data-structures", "passed": True},
+        ),
+        Event(
+            session_id="s2",
+            user_id=None,
+            event_type="problem_submit",
+            payload={"problem_id": problem.id, "category": "data-structures", "passed": False},
+        ),
+        Event(
+            session_id="s1",
+            user_id=user.id,
+            event_type="problem_review",
+            payload={"problem_id": problem.id, "quality": 5},
+        ),
+    ]
+    for e in submit_events:
+        session.add(e)
+    session.commit()
+
+    resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    pm = data["problem_metrics"]
+    assert pm["total_submissions"] == 3
+    assert pm["unique_submitters"] == 2
+    assert pm["problem_solve_rate"] == round(2 / 3, 4)
+    assert pm["problems_reviewed"] == 1
+    assert pm["users_with_problem_reviews"] == 1
+
+    assert data["funnel"]["problem_users"] == 1
+    assert data["category_problem_submissions"]["data-structures"] == 3
 
 
 def test_users_me_returns_is_admin_false(client, session, create_user, get_token):
