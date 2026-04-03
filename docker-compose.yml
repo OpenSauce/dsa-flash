@@ -151,6 +151,11 @@ services:
     environment:
       <<: *judge0-env
     restart: unless-stopped
+    # Least-privilege caps for isolate sandbox (namespaces, mounts, cgroups)
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
   judge0-workers:
     profiles: ["prod", "dev"]
@@ -164,8 +169,11 @@ services:
     environment:
       <<: *judge0-env
     restart: unless-stopped
-    # Required by Judge0 CE for isolate sandbox (cgroups)
-    privileged: true
+    # Least-privilege caps for isolate sandbox (namespaces, mounts, cgroups)
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
 volumes:
   db_data:
