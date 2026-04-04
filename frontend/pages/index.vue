@@ -295,6 +295,7 @@ function handleTabKeydown(e: KeyboardEvent) {
           :to="problemCategoryLink(cat)"
           class="border bg-white p-6 rounded-xl shadow hover:shadow-lg transition"
         >
+          <div class="text-3xl mb-2">{{ (CATEGORY_META[cat.category] || DEFAULT_META).emoji }}</div>
           <div class="flex items-start justify-between mb-3">
             <h2 class="text-xl font-semibold">{{ getCategoryDisplayName(cat.category) }}</h2>
             <div v-if="isLoggedIn && cat.solved !== null" class="flex-shrink-0">
