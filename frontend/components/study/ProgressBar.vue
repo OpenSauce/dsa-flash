@@ -16,7 +16,7 @@ defineProps<{
     </div>
     <div class="w-full bg-gray-200 rounded-full h-2">
       <div class="h-2 rounded-full transition-all duration-300"
-           :class="mode === 'new' ? 'bg-green-500' : 'bg-indigo-500'"
+           :class="mode === 'new' ? 'bg-green-500' : 'bg-purple-500'"
            role="progressbar"
            :aria-valuenow="current"
            aria-valuemin="0"

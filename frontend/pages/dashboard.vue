@@ -275,7 +275,7 @@ const weekSummaryText = computed(() => {
               :key="i"
               class="aspect-square flex items-center justify-center rounded-full text-xs font-medium"
               :class="{
-                'bg-indigo-500 text-white': cell.day !== null && cell.studied,
+                'bg-purple-500 text-white': cell.day !== null && cell.studied,
                 'text-gray-400': cell.day !== null && !cell.studied && !cell.future,
                 'text-gray-200': cell.day !== null && cell.future,
                 'invisible': cell.day === null,
@@ -286,7 +286,7 @@ const weekSummaryText = computed(() => {
           </div>
           <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
             <div class="flex items-center gap-1">
-              <div class="w-3 h-3 rounded-full bg-indigo-500" />
+              <div class="w-3 h-3 rounded-full bg-purple-500" />
               <span>Studied</span>
             </div>
             <div class="flex items-center gap-1">
@@ -314,7 +314,7 @@ const weekSummaryText = computed(() => {
             </div>
             <NuxtLink
               :to="`/category/${card.category}`"
-              class="text-sm font-medium text-indigo-600 hover:underline ml-4 flex-shrink-0"
+              class="text-sm font-medium text-purple-600 hover:underline ml-4 flex-shrink-0"
             >
               Study now
             </NuxtLink>
@@ -325,13 +325,13 @@ const weekSummaryText = computed(() => {
       <div class="mt-10 flex flex-wrap items-center gap-4">
         <NuxtLink
           to="/"
-          class="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+          class="inline-block bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
         >
           Start studying
         </NuxtLink>
         <NuxtLink
           to="/problems"
-          class="inline-block bg-white border border-indigo-300 text-indigo-700 font-semibold px-6 py-3 rounded-lg hover:bg-indigo-50 transition-colors"
+          class="inline-block bg-white border border-purple-300 text-purple-700 font-semibold px-6 py-3 rounded-lg hover:bg-purple-50 transition-colors"
         >
           Practice problems
         </NuxtLink>

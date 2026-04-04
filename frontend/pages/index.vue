@@ -187,11 +187,13 @@ function handleTabKeydown(e: KeyboardEvent) {
 
 <template>
   <div class="max-w-4xl mx-auto px-6 pb-6">
-    <h1 class="sr-only">Technical interview flashcards powered by spaced repetition</h1>
+    <h1 class="font-headline text-3xl sm:text-4xl font-bold text-center text-gray-900 mt-2 mb-2">
+      Technical knowledge that sticks
+    </h1>
     <div v-if="error" class="text-center text-red-400 py-8">
       Failed to load categories. Please try again later.
     </div>
-    <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-4">
+    <p class="text-base sm:text-lg text-center text-gray-500 max-w-2xl mx-auto mb-4">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
     <p v-if="!isLoggedIn" class="text-sm text-center text-gray-400 mb-6">Pick a topic below to start learning.</p>
@@ -271,7 +273,7 @@ function handleTabKeydown(e: KeyboardEvent) {
                 <span class="font-medium text-green-600">{{ cat.lessons_available }}</span> lessons
                 &nbsp;&middot;&nbsp;
               </template>
-              <span class="font-medium text-indigo-600">{{ cat.total }}</span> concepts
+              <span class="font-medium text-purple-600">{{ cat.total }}</span> concepts
             </p>
           </NuxtLink>
         </div>
@@ -293,8 +295,8 @@ function handleTabKeydown(e: KeyboardEvent) {
           :to="problemCategoryLink(cat)"
           class="border bg-white p-6 rounded-xl shadow hover:shadow-lg transition"
         >
-          <div class="flex items-start justify-between mb-3">
-            <h2 class="text-xl font-semibold">{{ getCategoryDisplayName(cat.category) }}</h2>
+          <div class="flex items-start justify-between">
+            <div class="text-3xl mb-2">{{ (CATEGORY_META[cat.category] || DEFAULT_META).emoji }}</div>
             <div v-if="isLoggedIn && cat.solved !== null" class="flex-shrink-0">
               <DualProgressRing
                 :learned-pct="solvedPct(cat)"
@@ -302,6 +304,7 @@ function handleTabKeydown(e: KeyboardEvent) {
               />
             </div>
           </div>
+          <h2 class="text-xl font-semibold">{{ getCategoryDisplayName(cat.category) }}</h2>
           <p v-if="isLoggedIn && cat.solved !== null" class="text-sm text-gray-600 mb-2">
             <span class="font-medium text-green-600">{{ cat.solved }}</span> solved
             &nbsp;&middot;&nbsp;
@@ -310,7 +313,7 @@ function handleTabKeydown(e: KeyboardEvent) {
             <span class="font-medium text-blue-600">{{ cat.due }}</span> due
           </p>
           <p v-else class="text-sm text-gray-600 mb-2">
-            <span class="font-medium text-indigo-600">{{ cat.total }}</span> problems
+            <span class="font-medium text-purple-600">{{ cat.total }}</span> problems
           </p>
           <p class="text-sm text-gray-500">
             Easy {{ cat.difficulty.easy }} / Med {{ cat.difficulty.medium }} / Hard {{ cat.difficulty.hard }}
