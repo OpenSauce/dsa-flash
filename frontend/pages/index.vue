@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { useAsyncData } from '#imports'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
@@ -172,6 +172,17 @@ watch(isLoggedIn, () => {
   refreshCategories()
   refreshProblemCategories()
 })
+
+function handleTabKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    activeTab.value = activeTab.value === 'concepts' ? 'problems' : 'concepts'
+    nextTick(() => {
+      const tabId = activeTab.value === 'concepts' ? 'tab-concepts' : 'tab-problems'
+      document.getElementById(tabId)?.focus()
+    })
+  }
+}
 </script>
 
 <template>
@@ -191,27 +202,35 @@ watch(isLoggedIn, () => {
       class="flex bg-gray-100 rounded-lg p-1 mb-8 w-full sm:max-w-xs sm:mx-auto"
     >
       <button
+        id="tab-concepts"
         role="tab"
         :aria-selected="activeTab === 'concepts'"
+        :tabindex="activeTab === 'concepts' ? 0 : -1"
+        aria-controls="panel-concepts"
         :class="activeTab === 'concepts' ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'"
         class="flex-1 px-4 py-2 text-sm font-semibold rounded-md transition"
         @click="activeTab = 'concepts'"
+        @keydown="handleTabKeydown"
       >
         Concepts
       </button>
       <button
+        id="tab-problems"
         role="tab"
         :aria-selected="activeTab === 'problems'"
+        :tabindex="activeTab === 'problems' ? 0 : -1"
+        aria-controls="panel-problems"
         :class="activeTab === 'problems' ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'"
         class="flex-1 px-4 py-2 text-sm font-semibold rounded-md transition"
         @click="activeTab = 'problems'"
+        @keydown="handleTabKeydown"
       >
         Problems
       </button>
     </div>
 
     <!-- Concepts tab -->
-    <template v-if="activeTab === 'concepts'">
+    <div v-if="activeTab === 'concepts'" id="panel-concepts" role="tabpanel" aria-labelledby="tab-concepts">
       <template v-for="(section, index) in sections" :key="section.name">
         <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
           {{ section.name }}
@@ -257,10 +276,10 @@ watch(isLoggedIn, () => {
           </NuxtLink>
         </div>
       </template>
-    </template>
+    </div>
 
     <!-- Problems tab -->
-    <template v-if="activeTab === 'problems'">
+    <div v-if="activeTab === 'problems'" id="panel-problems" role="tabpanel" aria-labelledby="tab-problems">
       <div v-if="problemCategoriesStatus === 'pending'" class="text-center text-gray-400 py-12">
         Loading problem categories...
       </div>
@@ -299,6 +318,6 @@ watch(isLoggedIn, () => {
           <p class="text-xs text-gray-400 mt-1">{{ cat.languages.join(', ') }}</p>
         </NuxtLink>
       </div>
-    </template>
+    </div>
   </div>
 </template>
