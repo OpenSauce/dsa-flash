@@ -12,9 +12,9 @@ const emit = defineEmits<{
 }>()
 
 const buttons = [
-  { label: 'Again', quality: 1, interval: '~1d', color: 'red' },
-  { label: 'Good', quality: 3, interval: '~4d', color: 'amber' },
-  { label: 'Easy', quality: 5, interval: '~10d', color: 'green' },
+  { label: 'Again', quality: 1, interval: '~1d', ariaInterval: 'about 1 day', color: 'red' },
+  { label: 'Good', quality: 3, interval: '~4d', ariaInterval: 'about 4 days', color: 'amber' },
+  { label: 'Easy', quality: 5, interval: '~10d', ariaInterval: 'about 10 days', color: 'green' },
 ] as const
 
 const qualityMap: Record<string, number> = { again: 1, good: 3, easy: 5 }
@@ -55,7 +55,7 @@ function isSuggested(quality: number): boolean {
         <button
           v-for="btn in buttons"
           :key="btn.quality"
-          :aria-label="`Rate as ${btn.label}, review in ${btn.interval}`"
+          :aria-label="`Rate as ${btn.label}, review in ${btn.ariaInterval}`"
           class="min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 border-2"
           :class="[
             btn.color === 'red'

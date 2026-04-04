@@ -230,7 +230,7 @@ function handleTabKeydown(e: KeyboardEvent) {
     </div>
 
     <!-- Concepts tab -->
-    <div v-if="activeTab === 'concepts'" id="panel-concepts" role="tabpanel" aria-labelledby="tab-concepts">
+    <div v-show="activeTab === 'concepts'" id="panel-concepts" role="tabpanel" aria-labelledby="tab-concepts">
       <template v-for="(section, index) in sections" :key="section.name">
         <h3 :class="['text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4', index > 0 ? 'mt-10' : '']">
           {{ section.name }}
@@ -279,7 +279,7 @@ function handleTabKeydown(e: KeyboardEvent) {
     </div>
 
     <!-- Problems tab -->
-    <div v-if="activeTab === 'problems'" id="panel-problems" role="tabpanel" aria-labelledby="tab-problems">
+    <div v-show="activeTab === 'problems'" id="panel-problems" role="tabpanel" aria-labelledby="tab-problems">
       <div v-if="problemCategoriesStatus === 'pending'" class="text-center text-gray-400 py-12">
         Loading problem categories...
       </div>
