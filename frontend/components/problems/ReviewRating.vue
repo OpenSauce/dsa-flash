@@ -12,9 +12,9 @@ const emit = defineEmits<{
 }>()
 
 const buttons = [
-  { label: 'Again', quality: 1, interval: '~1d', color: 'red' },
-  { label: 'Good', quality: 3, interval: '~4d', color: 'amber' },
-  { label: 'Easy', quality: 5, interval: '~10d', color: 'green' },
+  { label: 'Again', quality: 1, interval: '~1d', ariaInterval: 'about 1 day', color: 'red' },
+  { label: 'Good', quality: 3, interval: '~4d', ariaInterval: 'about 4 days', color: 'amber' },
+  { label: 'Easy', quality: 5, interval: '~10d', ariaInterval: 'about 10 days', color: 'green' },
 ] as const
 
 const qualityMap: Record<string, number> = { again: 1, good: 3, easy: 5 }
@@ -34,14 +34,14 @@ function isSuggested(quality: number): boolean {
       </p>
       <div class="flex justify-center gap-3">
         <button
-          class="next-problem-btn px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+          class="next-problem-btn min-h-[44px] px-4 py-2 text-sm font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
           @click="emit('next-problem')"
         >
           Next problem
         </button>
         <NuxtLink
           to="/problems"
-          class="px-4 py-2 text-sm font-semibold border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+          class="min-h-[44px] inline-flex items-center px-4 py-2 text-sm font-semibold border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
         >
           Back to list
         </NuxtLink>
@@ -55,7 +55,8 @@ function isSuggested(quality: number): boolean {
         <button
           v-for="btn in buttons"
           :key="btn.quality"
-          class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 border-2"
+          :aria-label="`Rate as ${btn.label}, review in ${btn.ariaInterval}`"
+          class="min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 border-2"
           :class="[
             btn.color === 'red'
               ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
