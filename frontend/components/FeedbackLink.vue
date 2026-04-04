@@ -17,7 +17,7 @@ const issueUrl = computed(() => {
   <a
     :href="issueUrl"
     target="_blank"
-    rel="noopener"
+    rel="noopener noreferrer"
     class="inline-flex items-center min-h-[44px] text-[13px] text-gray-400 hover:text-gray-600 transition-colors"
   >
     Spotted a problem?
