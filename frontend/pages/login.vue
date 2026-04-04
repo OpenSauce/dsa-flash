@@ -41,14 +41,14 @@ async function onLogin() {
       <input v-model="username" type="text" placeholder="Username" required class="w-full border rounded px-3 py-2" />
       <input v-model="password" type="password" placeholder="Password" required
         class="w-full border rounded px-3 py-2" />
-      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded px-3 py-2">
+      <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-2">
         Continue
       </button>
     </form>
 
     <p class="mt-4 text-sm text-gray-600">
       Need an account?
-      <NuxtLink to="/signup" class="text-indigo-600 hover:underline">Sign up</NuxtLink>
+      <NuxtLink to="/signup" class="text-purple-600 hover:underline">Sign up</NuxtLink>
     </p>
   </div>
 </template>

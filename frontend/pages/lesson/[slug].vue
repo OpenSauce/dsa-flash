@@ -179,7 +179,7 @@ const renderedContent = computed(() =>
           <div v-else class="flex flex-col items-center gap-3 mb-6">
             <NuxtLink
               :to="`/quiz/${linkedQuiz.slug}`"
-              class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition"
             >
               Take the quiz
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -188,7 +188,7 @@ const renderedContent = computed(() =>
             </NuxtLink>
             <p v-if="isLoggedIn" class="text-sm text-gray-500">Complete the quiz to unlock flashcards</p>
             <p v-else class="text-sm text-gray-500">
-              <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
+              <NuxtLink to="/signup" class="underline font-medium text-purple-600">Sign up</NuxtLink>
               to save your progress
             </p>
           </div>
@@ -207,14 +207,14 @@ const renderedContent = computed(() =>
             <button
               @click="markComplete"
               :disabled="completing"
-              class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-60 transition"
+              class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 disabled:opacity-60 transition"
             >
               {{ completing ? 'Saving...' : 'Mark as complete' }}
             </button>
           </div>
 
           <div v-else class="text-center text-sm text-gray-500 mb-6">
-            <NuxtLink to="/signup" class="underline font-medium text-indigo-600">Sign up</NuxtLink>
+            <NuxtLink to="/signup" class="underline font-medium text-purple-600">Sign up</NuxtLink>
             to track your progress.
           </div>
         </template>

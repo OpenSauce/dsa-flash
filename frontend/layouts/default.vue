@@ -68,7 +68,7 @@ function onKeydown(e: KeyboardEvent) {
                   class="px-3 py-1 rounded-md transition-transform hover:scale-105 hover:bg-white/10">Log&nbsp;in
                 </NuxtLink>
                 <NuxtLink to="/signup"
-                  class="bg-white text-indigo-600 font-semibold px-3 py-1 rounded-md transition-transform hover:scale-105 hover:bg-white/90">
+                  class="bg-white text-purple-600 font-semibold px-3 py-1 rounded-md transition-transform hover:scale-105 hover:bg-white/90">
                   Sign&nbsp;up
                 </NuxtLink>
               </div>

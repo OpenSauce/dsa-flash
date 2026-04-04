@@ -273,7 +273,7 @@ function handleTabKeydown(e: KeyboardEvent) {
                 <span class="font-medium text-green-600">{{ cat.lessons_available }}</span> lessons
                 &nbsp;&middot;&nbsp;
               </template>
-              <span class="font-medium text-indigo-600">{{ cat.total }}</span> concepts
+              <span class="font-medium text-purple-600">{{ cat.total }}</span> concepts
             </p>
           </NuxtLink>
         </div>
@@ -312,7 +312,7 @@ function handleTabKeydown(e: KeyboardEvent) {
             <span class="font-medium text-blue-600">{{ cat.due }}</span> due
           </p>
           <p v-else class="text-sm text-gray-600 mb-2">
-            <span class="font-medium text-indigo-600">{{ cat.total }}</span> problems
+            <span class="font-medium text-purple-600">{{ cat.total }}</span> problems
           </p>
           <p class="text-sm text-gray-500">
             Easy {{ cat.difficulty.easy }} / Med {{ cat.difficulty.medium }} / Hard {{ cat.difficulty.hard }}

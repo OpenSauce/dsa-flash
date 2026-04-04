@@ -97,7 +97,7 @@ useHead({
     <div class="mt-10 flex flex-wrap items-center gap-4">
       <NuxtLink
         to="/"
-        class="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+        class="inline-block bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
       >
         Start studying
       </NuxtLink>

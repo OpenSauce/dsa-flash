@@ -64,14 +64,14 @@ async function onSignup() {
           class="w-full border rounded px-3 py-2" />
         <p class="text-xs text-gray-600 mt-1">At least 8 characters</p>
       </div>
-      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded px-3 py-2">
+      <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-2">
         Create Account
       </button>
     </form>
 
     <p class="mt-4 text-sm text-gray-600">
       Already have an account?
-      <NuxtLink to="/login" class="text-indigo-600 hover:underline">Log in</NuxtLink>
+      <NuxtLink to="/login" class="text-purple-600 hover:underline">Log in</NuxtLink>
     </p>
   </div>
 </template>

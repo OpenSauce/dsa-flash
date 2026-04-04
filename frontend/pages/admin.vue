@@ -262,7 +262,7 @@ const problemSolveRatePercent = computed(() => {
             <span class="text-sm text-gray-600 w-44 truncate">{{ category }}</span>
             <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
               <div
-                class="bg-indigo-500 h-full rounded-full transition-all"
+                class="bg-purple-500 h-full rounded-full transition-all"
                 :style="{ width: `${Math.min((count / categoryLessonList[0][1]) * 100, 100)}%` }"
               />
             </div>
@@ -297,7 +297,7 @@ const problemSolveRatePercent = computed(() => {
             <span class="text-sm text-gray-600 w-24">{{ bucket.label }}</span>
             <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
               <div
-                class="bg-indigo-500 h-full rounded-full transition-all"
+                class="bg-purple-500 h-full rounded-full transition-all"
                 :style="{ width: `${Math.min((bucket.count / summary!.total_sessions) * 100, 100)}%` }"
               />
             </div>
