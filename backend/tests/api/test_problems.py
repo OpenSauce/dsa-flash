@@ -258,6 +258,7 @@ def test_submit_javascript(client, session, create_coding_problem):
     )
 
     harness_output = (
+        '===HARNESS_OUTPUT===\n'
         '[{"input": "{\\"nums\\": [2, 7], \\"target\\": 9}",'
         ' "expected": "[0, 1]", "actual": "[0, 1]", "passed": true}]'
     )
@@ -283,6 +284,9 @@ def test_submit_javascript(client, session, create_coding_problem):
         )
 
     assert resp.status_code == 200
+    data = resp.json()
+    assert data["passed"] is True
+    assert len(data["test_results"]) == 1
     call_kwargs = mock_client.post.call_args
     assert call_kwargs[1]["json"]["language_id"] == 63
 
@@ -573,3 +577,46 @@ def test_list_problem_categories_empty(client):
     resp = client.get("/problems/categories")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_submit_defaults_to_python(client, session, create_coding_problem):
+    """Submitting without a language field should default to Python and succeed."""
+    problem = create_coding_problem(
+        title="Default Lang",
+        test_cases=[
+            {"input": {"nums": [1, 2], "target": 3}, "expected": [0, 1]},
+        ],
+    )
+
+    harness_output = (
+        '[{"input": "{\\"nums\\": [1, 2], \\"target\\": 3}",'
+        ' "expected": "[0, 1]", "actual": "[0, 1]", "passed": true}]'
+    )
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "status": {"id": 3, "description": "Accepted"},
+        "stdout": harness_output,
+        "stderr": None,
+        "compile_output": None,
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("app.api.problems.httpx.Client") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        # Omit 'language' — should default to python
+        resp = client.post(
+            f"/problems/{problem.id}/submit",
+            json={"code": "def two_sum(nums, target): return [0, 1]"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["passed"] is True
+    # Verify Python language_id (71) was sent to Judge0
+    call_kwargs = mock_client.post.call_args
+    assert call_kwargs[1]["json"]["language_id"] == 71

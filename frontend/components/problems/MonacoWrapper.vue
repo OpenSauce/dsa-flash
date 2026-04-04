@@ -71,6 +71,15 @@ watch(() => props.value, (newVal) => {
   }
 })
 
+watch(() => props.language, (newLang) => {
+  if (editor && monaco && newLang) {
+    const model = editor.getModel()
+    if (model) {
+      monaco.editor.setModelLanguage(model, newLang)
+    }
+  }
+})
+
 onBeforeUnmount(() => {
   if (editor) {
     editor.dispose()

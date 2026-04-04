@@ -338,7 +338,14 @@ def submit_code(
 
     if status_id == JUDGE0_ACCEPTED:
         try:
-            raw_results = json.loads(stdout.strip())
+            # JS/Go/Java harnesses print ===HARNESS_OUTPUT=== before the JSON
+            raw_output = stdout
+            marker = "===HARNESS_OUTPUT==="
+            if marker in raw_output:
+                raw_output = raw_output.split(marker, 1)[1].strip()
+            else:
+                raw_output = raw_output.strip()
+            raw_results = json.loads(raw_output)
             test_results = [
                 TestCaseResult(
                     input=r["input"],
