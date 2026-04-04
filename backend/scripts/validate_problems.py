@@ -143,18 +143,19 @@ def _parse_results(output: str) -> list[dict] | None:
     if not json_text:
         return None
 
-    # Take only the first line if there are multiple (extra prints from user code)
+    # User code may print extra lines before the final JSON results.
+    # Scan from the end and return the first line that parses to a list.
     lines = [ln for ln in json_text.splitlines() if ln.strip()]
     if not lines:
         return None
 
-    try:
-        results = json.loads(lines[0])
-        if isinstance(results, list):
-            return results
-    except json.JSONDecodeError:
-        pass
-
+    for line in reversed(lines):
+        try:
+            results = json.loads(line)
+            if isinstance(results, list):
+                return results
+        except json.JSONDecodeError:
+            continue
     return None
 
 
@@ -175,6 +176,13 @@ def validate_problem(
     starter_code = data.get("starter_code") or {}
     solution = data.get("solution") or {}
     test_cases = data.get("test_cases") or []
+
+    if not isinstance(starter_code, dict):
+        return {"file": str(problem_file), "error": "starter_code is not a dict", "languages": {}}
+    if not isinstance(solution, dict):
+        return {"file": str(problem_file), "error": "solution is not a dict", "languages": {}}
+    if not isinstance(test_cases, list):
+        return {"file": str(problem_file), "error": "test_cases is not a list", "languages": {}}
 
     languages = set(starter_code.keys()) & set(solution.keys())
     if filter_language:
