@@ -187,11 +187,13 @@ function handleTabKeydown(e: KeyboardEvent) {
 
 <template>
   <div class="max-w-4xl mx-auto px-6 pb-6">
-    <h1 class="sr-only">Technical interview flashcards powered by spaced repetition</h1>
+    <h1 class="font-headline text-3xl sm:text-4xl font-bold text-center text-gray-900 mt-2 mb-2">
+      Technical knowledge that sticks
+    </h1>
     <div v-if="error" class="text-center text-red-400 py-8">
       Failed to load categories. Please try again later.
     </div>
-    <p class="text-base sm:text-lg text-center text-gray-600 max-w-2xl mx-auto mb-4">
+    <p class="text-base sm:text-lg text-center text-gray-500 max-w-2xl mx-auto mb-4">
       Free flashcards powered by spaced repetition. Master data structures, system design, cloud, and more — no signup required.
     </p>
     <p v-if="!isLoggedIn" class="text-sm text-center text-gray-400 mb-6">Pick a topic below to start learning.</p>
