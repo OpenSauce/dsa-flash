@@ -1,5 +1,7 @@
 import re
 
+from .golang import build_test_harness as _go_build
+from .golang import extract_func_name as _go_extract
 from .javascript import build_test_harness as _js_build
 from .javascript import extract_func_name as _js_extract
 from .python import build_test_harness as _python_build
@@ -10,11 +12,13 @@ _FUNC_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 _BUILDERS = {
     "python": _python_build,
     "javascript": _js_build,
+    "go": _go_build,
 }
 
 _EXTRACTORS = {
     "python": _python_extract,
     "javascript": _js_extract,
+    "go": _go_extract,
 }
 
 
