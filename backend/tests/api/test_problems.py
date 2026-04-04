@@ -348,7 +348,7 @@ def test_due_problems_requires_auth(anon_client):
 
 def test_build_test_harness_boolean_expected():
     """Regression: boolean expected values must use Python True/False, not JSON true/false."""
-    from app.api.problems import _build_test_harness
+    from app.harnesses.python import build_test_harness as _build_test_harness
 
     test_cases = [
         {"input": {"nums": [1, 2, 3, 1]}, "expected": True},
@@ -365,7 +365,7 @@ def test_build_test_harness_boolean_expected():
 
 def test_build_test_harness_none_expected():
     """None values in test cases must serialize as Python None, not JSON null."""
-    from app.api.problems import _build_test_harness
+    from app.harnesses.python import build_test_harness as _build_test_harness
 
     test_cases = [
         {"input": {"x": 1}, "expected": None},
