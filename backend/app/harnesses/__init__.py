@@ -2,6 +2,8 @@ import re
 
 from .golang import build_test_harness as _go_build
 from .golang import extract_func_name as _go_extract
+from .java import build_test_harness as _java_build
+from .java import extract_func_name as _java_extract
 from .javascript import build_test_harness as _js_build
 from .javascript import extract_func_name as _js_extract
 from .python import build_test_harness as _python_build
@@ -13,12 +15,14 @@ _BUILDERS = {
     "python": _python_build,
     "javascript": _js_build,
     "go": _go_build,
+    "java": _java_build,
 }
 
 _EXTRACTORS = {
     "python": _python_extract,
     "javascript": _js_extract,
     "go": _go_extract,
+    "java": _java_extract,
 }
 
 
