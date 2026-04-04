@@ -32,8 +32,14 @@ router = APIRouter(prefix="/problems", tags=["problems"])
 
 JUDGE0_URL = os.getenv("JUDGE0_URL", "http://judge0-server:2358")
 JUDGE0_AUTHN_TOKEN = os.getenv("JUDGE0_AUTHN_TOKEN", "")
-PYTHON_LANGUAGE_ID = 71  # Judge0 CE: Python 3
 MAX_CODE_BYTES = 10 * 1024  # 10KB
+
+LANGUAGE_CONFIG = {
+    "python": {"judge0_id": 71, "monaco_mode": "python"},
+    "javascript": {"judge0_id": 63, "monaco_mode": "javascript"},
+    "go": {"judge0_id": 60, "monaco_mode": "go"},
+    "java": {"judge0_id": 62, "monaco_mode": "java"},
+}
 
 # Judge0 status codes
 JUDGE0_ACCEPTED = 3
@@ -63,6 +69,7 @@ class ProblemReviewIn(BaseModel):
 
 class SubmitIn(BaseModel):
     code: str
+    language: str = "python"
 
 
 @router.get("", response_model=list[CodingProblemOut])
@@ -167,11 +174,13 @@ def list_problem_categories(
     for p in rows:
         cat = p.category or "unknown"
         if cat not in category_map:
-            category_map[cat] = {"total": 0, "difficulty": {"easy": 0, "medium": 0, "hard": 0}}
+            category_map[cat] = {"total": 0, "difficulty": {"easy": 0, "medium": 0, "hard": 0}, "languages": set()}
         category_map[cat]["total"] += 1
         diff = (p.difficulty or "").lower()
         if diff in category_map[cat]["difficulty"]:
             category_map[cat]["difficulty"][diff] += 1
+        for lang in (p.starter_code or {}).keys():
+            category_map[cat]["languages"].add(lang)
 
     if not category_map:
         return []
@@ -210,6 +219,7 @@ def list_problem_categories(
 
     result = []
     for cat, stats in category_map.items():
+        languages = sorted(stats["languages"])
         if user:
             ust = user_stats.get(cat, {"solved": 0, "due": 0, "mastered": 0})
             result.append({
@@ -219,7 +229,7 @@ def list_problem_categories(
                 "due": ust["due"],
                 "mastered": ust["mastered"],
                 "difficulty": stats["difficulty"],
-                "languages": ["python"],
+                "languages": languages,
             })
         else:
             result.append({
@@ -229,7 +239,7 @@ def list_problem_categories(
                 "due": None,
                 "mastered": None,
                 "difficulty": stats["difficulty"],
-                "languages": ["python"],
+                "languages": languages,
             })
 
     return result
@@ -272,15 +282,21 @@ def submit_code(
     if len(body.code.encode("utf-8")) > MAX_CODE_BYTES:
         raise HTTPException(status_code=422, detail="Code exceeds 10KB limit")
 
+    if body.language not in LANGUAGE_CONFIG:
+        raise HTTPException(status_code=422, detail=f"Unsupported language: {body.language}")
+
     problem = session.get(CodingProblem, problem_id)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    func_name = extract_func_name("python", problem.starter_code)
+    if not problem.starter_code or body.language not in problem.starter_code:
+        raise HTTPException(status_code=422, detail=f"This problem does not support {body.language} yet")
+
+    func_name = extract_func_name(body.language, problem.starter_code)
     if not func_name:
         raise HTTPException(status_code=500, detail="Problem has no valid starter code")
 
-    harness = build_harness("python", body.code, problem.test_cases, func_name)
+    harness = build_harness(body.language, body.code, problem.test_cases, func_name)
 
     start_ms = int(time.time() * 1000)
 
@@ -294,7 +310,7 @@ def submit_code(
                 params={"base64_encoded": "false", "wait": "true"},
                 headers=headers,
                 json={
-                    "language_id": PYTHON_LANGUAGE_ID,
+                    "language_id": LANGUAGE_CONFIG[body.language]["judge0_id"],
                     "source_code": harness,
                     "cpu_time_limit": 5,
                     "memory_limit": 128000,

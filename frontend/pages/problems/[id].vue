@@ -18,6 +18,7 @@ const error = ref<string | null>(null)
 
 // Editor state
 const code = ref('')
+const selectedLanguage = ref('python')
 const submitting = ref(false)
 const running = ref(false)
 const submission = ref<SubmissionOut | null>(null)
@@ -60,7 +61,9 @@ async function fetchProblem() {
   error.value = null
   try {
     problem.value = await apiFetch<CodingProblemDetailOut>(`/problems/${problemId.value}`)
-    code.value = problem.value.starter_code?.python || ''
+    const starterKeys = Object.keys(problem.value.starter_code || {})
+    selectedLanguage.value = starterKeys.includes('python') ? 'python' : (starterKeys[0] || 'python')
+    code.value = problem.value.starter_code?.[selectedLanguage.value] || ''
     startTime.value = Date.now()
     // Reset state
     submission.value = null
@@ -96,7 +99,7 @@ async function submitCode() {
   try {
     const result = await apiFetch<SubmissionOut>(`/problems/${problemId.value}/submit`, {
       method: 'POST',
-      body: { code: code.value },
+      body: { code: code.value, language: selectedLanguage.value },
     })
     submission.value = result
     if (result.solve_time_ms != null) {
@@ -109,6 +112,7 @@ async function submitCode() {
       category: problem.value?.category,
       passed: result.passed,
       solve_time_ms: solveTimeMs.value,
+      language: selectedLanguage.value,
     })
     if (result.test_results.length > 0) {
       viewState.value = 'results'
@@ -207,6 +211,17 @@ async function rate(quality: number) {
   } catch {
     // ignore rating errors
   }
+}
+
+const availableLanguages = computed(() => Object.keys(problem.value?.starter_code || {}))
+
+function switchLanguage(lang: string) {
+  if (lang === selectedLanguage.value) return
+  if (code.value !== (problem.value?.starter_code?.[selectedLanguage.value] || '')) {
+    if (!window.confirm('Your code will be replaced with starter code. Continue?')) return
+  }
+  selectedLanguage.value = lang
+  code.value = problem.value?.starter_code?.[lang] || ''
 }
 
 // SEO
@@ -378,10 +393,26 @@ useSeoMeta({
       <div class="w-full md:w-3/5 flex flex-col">
         <!-- Editor view -->
         <div v-if="viewState === 'editor'">
+          <!-- Language selector -->
+          <div class="flex items-center gap-2 mb-2">
+            <template v-if="availableLanguages.length > 1">
+              <button
+                v-for="lang in availableLanguages"
+                :key="lang"
+                class="px-3 py-1 text-xs font-semibold rounded border transition-colors"
+                :class="lang === selectedLanguage ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
+                @click="switchLanguage(lang)"
+              >
+                {{ lang }}
+              </button>
+            </template>
+            <span v-else class="text-xs text-gray-500 font-mono">{{ selectedLanguage }}</span>
+          </div>
+
           <div class="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e1e] flex-1 min-h-[300px] md:min-h-[400px]">
             <ProblemsCodeEditor
               v-model="code"
-              language="python"
+              :language="selectedLanguage"
               @run="runCode"
               @submit="submitCode"
             />
