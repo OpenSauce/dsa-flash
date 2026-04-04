@@ -24,9 +24,9 @@ def build_test_harness(user_code: str, test_cases: list, func_name: str) -> str:
     """
     test_cases_json = json.dumps(test_cases).replace("\\", "\\\\").replace('"', '\\"')
 
-    # Detect if user code already has a class declaration
-    has_class = bool(re.search(r"\bclass\s+\w+", user_code))
-    if has_class:
+    # Only skip wrapping if user code already declares class Solution
+    has_solution_class = bool(re.search(r"\bclass\s+Solution\b", user_code))
+    if has_solution_class:
         solution_code = user_code
     else:
         solution_code = f"class Solution {{\n{user_code}\n}}"
@@ -89,7 +89,12 @@ public class Main {{
             sb.append("]");
             return sb.toString();
         }}
-        if (val instanceof String) return "\\"" + val + "\\"";
+        if (val instanceof String) {{
+            String s = (String) val;
+            s = s.replace("\\\\", "\\\\\\\\").replace("\\"", "\\\\\\"");
+            s = s.replace("\\n", "\\\\n").replace("\\r", "\\\\r").replace("\\t", "\\\\t");
+            return "\\"" + s + "\\"";
+        }}
         return String.valueOf(val);
     }}
 
@@ -100,7 +105,13 @@ public class Main {{
         if (s.equals("true")) return Boolean.TRUE;
         if (s.equals("false")) return Boolean.FALSE;
         if (s.startsWith("\\"") && s.endsWith("\\"")) {{
-            return s.substring(1, s.length() - 1);
+            String inner = s.substring(1, s.length() - 1);
+            inner = inner.replace("\\\\\\\\", "\\\\");
+            inner = inner.replace("\\\\\\"", "\\"");
+            inner = inner.replace("\\\\n", "\\n");
+            inner = inner.replace("\\\\r", "\\r");
+            inner = inner.replace("\\\\t", "\\t");
+            return inner;
         }}
         if (s.startsWith("[")) {{
             List<Object> list = new ArrayList<>();
@@ -108,8 +119,12 @@ public class Main {{
             if (s.isEmpty()) return list;
             int depth = 0;
             int start = 0;
+            boolean inStr = false;
             for (int i = 0; i < s.length(); i++) {{
                 char c = s.charAt(i);
+                if (c == '\\\\' && inStr) {{ i++; continue; }}
+                if (c == '\\"') {{ inStr = !inStr; continue; }}
+                if (inStr) continue;
                 if (c == '[' || c == '{{') depth++;
                 else if (c == ']' || c == '}}') depth--;
                 else if (c == ',' && depth == 0) {{
@@ -126,9 +141,13 @@ public class Main {{
             if (s.isEmpty()) return map;
             int depth = 0;
             int start = 0;
+            boolean inStr = false;
             List<String> parts = new ArrayList<>();
             for (int i = 0; i < s.length(); i++) {{
                 char c = s.charAt(i);
+                if (c == '\\\\' && inStr) {{ i++; continue; }}
+                if (c == '\\"') {{ inStr = !inStr; continue; }}
+                if (inStr) continue;
                 if (c == '[' || c == '{{') depth++;
                 else if (c == ']' || c == '}}') depth--;
                 else if (c == ',' && depth == 0) {{
@@ -148,10 +167,6 @@ public class Main {{
         }}
         if (s.contains(".")) return Double.parseDouble(s);
         return Integer.parseInt(s);
-    }}
-
-    private static int toInt(Object o) {{
-        return ((Number) o).intValue();
     }}
 
     private static int[] toIntArray(Object o) {{

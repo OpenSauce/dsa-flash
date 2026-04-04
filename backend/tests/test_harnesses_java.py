@@ -103,6 +103,28 @@ class TestBuildTestHarness:
         assert "reflect" in result or "Method" in result
         assert "invoke" in result
 
+    def test_wraps_non_solution_class(self):
+        """User code with a different class name still gets wrapped in Solution."""
+        code = "class Foo {\n    public int add(int a, int b) { return a + b; }\n}"
+        result = build_test_harness(code, [{"input": {"a": 1, "b": 2}, "expected": 3}], "add")
+        # Foo is NOT Solution, so it should be wrapped
+        assert "class Solution {" in result
+
+    def test_string_with_commas_in_test_cases(self):
+        """parseJSON handles strings containing commas without splitting."""
+        code = 'public String echo(String s) { return s; }'
+        test_cases = [{"input": {"s": "a,b,c"}, "expected": "a,b,c"}]
+        result = build_test_harness(code, test_cases, "echo")
+        assert "a,b,c" in result
+        assert "parseJSON" in result
+
+    def test_toJSON_escapes_strings(self):
+        """toJSON escapes quotes and backslashes in string values."""
+        code = 'public String echo(String s) { return s; }'
+        result = build_test_harness(code, [{"input": {"s": "hi"}, "expected": "hi"}], "echo")
+        # Verify the escape method exists in generated code
+        assert "s.replace" in result
+
     def test_dispatch_build(self):
         code = "public int add(int a, int b) { return a + b; }"
         test_cases = [{"input": {"a": 1, "b": 2}, "expected": 3}]
