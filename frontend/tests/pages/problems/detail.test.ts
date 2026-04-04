@@ -210,7 +210,7 @@ describe('Problem Detail Page', () => {
 
     expect(mockApiFetch).toHaveBeenCalledWith('/problems/42/submit', {
       method: 'POST',
-      body: { code: 'def two_sum(nums, target):' },
+      body: { code: 'def two_sum(nums, target):', language: 'python' },
     })
     expect(wrapper.find('.test-results').exists()).toBe(true)
   })

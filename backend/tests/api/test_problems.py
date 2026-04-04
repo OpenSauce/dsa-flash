@@ -137,7 +137,10 @@ def test_get_problem_not_found(client):
 
 def test_submit_requires_auth(anon_client, create_coding_problem):
     problem = create_coding_problem()
-    resp = anon_client.post(f"/problems/{problem.id}/submit", json={"code": "def two_sum(nums, target): pass"})
+    resp = anon_client.post(
+        f"/problems/{problem.id}/submit",
+        json={"code": "def two_sum(nums, target): pass", "language": "python"},
+    )
     assert resp.status_code == 401
 
 
@@ -169,7 +172,10 @@ def test_submit_code(client, session, create_coding_problem, create_user):
         mock_client.post.return_value = mock_response
         mock_client_class.return_value = mock_client
 
-        resp = client.post(f"/problems/{problem.id}/submit", json={"code": "def two_sum(nums, target): return [0, 1]"})
+        resp = client.post(
+            f"/problems/{problem.id}/submit",
+            json={"code": "def two_sum(nums, target): return [0, 1]", "language": "python"},
+        )
 
     assert resp.status_code == 200
     data = resp.json()
@@ -182,7 +188,7 @@ def test_submit_code(client, session, create_coding_problem, create_user):
 def test_submit_code_too_large(client, create_coding_problem):
     problem = create_coding_problem()
     large_code = "x = 1\n" * 2000  # well over 10KB
-    resp = client.post(f"/problems/{problem.id}/submit", json={"code": large_code})
+    resp = client.post(f"/problems/{problem.id}/submit", json={"code": large_code, "language": "python"})
     assert resp.status_code == 422
 
 
@@ -197,10 +203,118 @@ def test_submit_judge0_unavailable(client, create_coding_problem):
         mock_client.post.side_effect = httpx_module.ConnectError("Connection refused")
         mock_client_class.return_value = mock_client
 
-        resp = client.post(f"/problems/{problem.id}/submit", json={"code": "def two_sum(nums, target): pass"})
+        resp = client.post(
+            f"/problems/{problem.id}/submit",
+            json={"code": "def two_sum(nums, target): pass", "language": "python"},
+        )
 
     assert resp.status_code == 503
     assert "unavailable" in resp.json()["detail"].lower()
+
+
+def test_submit_unsupported_language(client, create_coding_problem):
+    problem = create_coding_problem()
+    resp = client.post(f"/problems/{problem.id}/submit", json={"code": "some code", "language": "ruby"})
+    assert resp.status_code == 422
+    assert "Unsupported language" in resp.json()["detail"]
+
+
+def test_submit_language_not_in_starter_code(client, create_coding_problem):
+    problem = create_coding_problem(
+        starter_code={"python": "def two_sum(nums, target):\n    pass\n"},
+    )
+    resp = client.post(
+        f"/problems/{problem.id}/submit",
+        json={"code": "function twoSum(nums, target) {}", "language": "javascript"},
+    )
+    assert resp.status_code == 422
+    assert "does not support javascript" in resp.json()["detail"]
+
+
+def test_submit_javascript(client, session, create_coding_problem):
+    problem = create_coding_problem(
+        starter_code={
+            "python": "def two_sum(nums, target):\n    pass\n",
+            "javascript": "function twoSum(nums, target) {\n    // your code\n}\n",
+        },
+        solution={
+            "python": (
+                "def two_sum(nums, target):\n"
+                "    seen = {}\n"
+                "    for i, n in enumerate(nums):\n"
+                "        if target - n in seen:\n"
+                "            return [seen[target - n], i]\n"
+                "        seen[n] = i\n"
+            ),
+            "javascript": (
+                "function twoSum(nums, target) {"
+                " const m = {};"
+                " for (let i = 0; i < nums.length; i++) {"
+                " if (m[target - nums[i]] !== undefined)"
+                " return [m[target - nums[i]], i];"
+                " m[nums[i]] = i; } }"
+            ),
+        },
+    )
+
+    harness_output = (
+        '===HARNESS_OUTPUT===\n'
+        '[{"input": "{\\"nums\\": [2, 7], \\"target\\": 9}",'
+        ' "expected": "[0, 1]", "actual": "[0, 1]", "passed": true}]'
+    )
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "status": {"id": 3, "description": "Accepted"},
+        "stdout": harness_output,
+        "stderr": None,
+        "compile_output": None,
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("app.api.problems.httpx.Client") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        resp = client.post(
+            f"/problems/{problem.id}/submit",
+            json={"code": "function twoSum(nums, target) { return [0, 1]; }", "language": "javascript"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["passed"] is True
+    assert len(data["test_results"]) == 1
+    call_kwargs = mock_client.post.call_args
+    assert call_kwargs[1]["json"]["language_id"] == 63
+
+
+def test_categories_returns_actual_languages(client, create_coding_problem):
+    create_coding_problem(
+        title="Two Sum",
+        category="data-structures",
+        starter_code={
+            "python": "def two_sum(nums, target):\n    pass\n",
+            "javascript": "function twoSum(nums, target) {}\n",
+        },
+    )
+    create_coding_problem(
+        title="Contains Duplicate",
+        category="data-structures",
+        starter_code={
+            "python": "def contains_duplicate(nums):\n    pass\n",
+            "go": "func containsDuplicate(nums []int) bool {\n    return false\n}\n",
+        },
+    )
+
+    resp = client.get("/problems/categories")
+    assert resp.status_code == 200
+    data = resp.json()
+    categories = {item["category"]: item for item in data}
+    ds = categories["data-structures"]
+    assert sorted(ds["languages"]) == ["go", "javascript", "python"]
 
 
 def test_review_problem(client, session, create_coding_problem, create_user):
@@ -463,3 +577,46 @@ def test_list_problem_categories_empty(client):
     resp = client.get("/problems/categories")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_submit_defaults_to_python(client, session, create_coding_problem):
+    """Submitting without a language field should default to Python and succeed."""
+    problem = create_coding_problem(
+        title="Default Lang",
+        test_cases=[
+            {"input": {"nums": [1, 2], "target": 3}, "expected": [0, 1]},
+        ],
+    )
+
+    harness_output = (
+        '[{"input": "{\\"nums\\": [1, 2], \\"target\\": 3}",'
+        ' "expected": "[0, 1]", "actual": "[0, 1]", "passed": true}]'
+    )
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "status": {"id": 3, "description": "Accepted"},
+        "stdout": harness_output,
+        "stderr": None,
+        "compile_output": None,
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("app.api.problems.httpx.Client") as mock_client_class:
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        # Omit 'language' — should default to python
+        resp = client.post(
+            f"/problems/{problem.id}/submit",
+            json={"code": "def two_sum(nums, target): return [0, 1]"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["passed"] is True
+    # Verify Python language_id (71) was sent to Judge0
+    call_kwargs = mock_client.post.call_args
+    assert call_kwargs[1]["json"]["language_id"] == 71
