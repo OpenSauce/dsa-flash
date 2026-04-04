@@ -49,11 +49,14 @@ class TestBuildTestHarness:
         assert '"fmt"' in result
         assert '"reflect"' in result
 
-    def test_missing_function_check(self):
+    def test_missing_function_emits_error_harness(self):
+        """Missing function detected at generation time, not compile time."""
         code = "// no function"
         result = build_test_harness(code, [{"input": {}, "expected": 1}], "missing")
-        assert "reflect.ValueOf(missing)" in result
         assert "Function 'missing' not found" in result
+        assert "===HARNESS_OUTPUT===" in result
+        # Should NOT reference the missing identifier (would fail to compile)
+        assert "reflect.ValueOf(missing)" not in result
 
     def test_defer_recover_for_panics(self):
         code = "func boom() int { panic(42) }"
@@ -76,6 +79,17 @@ class TestBuildTestHarness:
         result = build_test_harness(code, [{"input": {"n": 5}, "expected": 5}], "f")
         assert "convertArg" in result
         assert "reflect.Int" in result
+
+    def test_arg_order_preserved(self):
+        """Dict input args are passed in JSON key order, not random Go map order."""
+        code = "func sub(a, b int) int { return a - b }"
+        test_cases = [{"input": {"a": 10, "b": 3}, "expected": 7}]
+        result = build_test_harness(code, test_cases, "sub")
+        # The harness should embed ordered key names
+        assert "argOrderJSON" in result
+        # Keys are embedded as escaped JSON: \\"a\\"
+        assert '\\"a\\"' in result
+        assert '\\"b\\"' in result
 
     def test_dispatch_build(self):
         code = "func add(a, b int) int { return a + b }"

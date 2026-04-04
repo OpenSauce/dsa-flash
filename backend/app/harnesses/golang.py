@@ -9,6 +9,11 @@ def extract_func_name(starter_code: dict) -> str | None:
     return match.group(1) if match else None
 
 
+def _func_exists(user_code: str, func_name: str) -> bool:
+    """Check if user code defines a Go function with the given name."""
+    return bool(re.search(rf"func\s+{re.escape(func_name)}\s*\(", user_code))
+
+
 def build_test_harness(user_code: str, test_cases: list, func_name: str) -> str:
     """Build a Go test harness that runs user code against test cases.
 
@@ -16,8 +21,30 @@ def build_test_harness(user_code: str, test_cases: list, func_name: str) -> str:
     JSON string and parsed at runtime with encoding/json. Uses reflect to
     call the user function dynamically. Outputs JSON after a
     ===HARNESS_OUTPUT=== marker so user fmt.Println() doesn't corrupt results.
+
+    If the function is not found in user code, emits a harness that prints
+    an error result without referencing the missing identifier (which would
+    cause a compile error).
     """
-    test_cases_json = json.dumps(test_cases).replace("\\", "\\\\").replace('"', '\\"')
+    if not _func_exists(user_code, func_name):
+        return _build_missing_func_harness(func_name)
+
+    test_cases_json = json.dumps(test_cases).replace(
+        "\\", "\\\\"
+    ).replace('"', '\\"')
+
+    # Extract ordered key names from each test case's input dict so Go
+    # can look them up in insertion order (Go maps lose ordering).
+    arg_orders = []
+    for tc in test_cases:
+        inp = tc.get("input", {})
+        if isinstance(inp, dict):
+            arg_orders.append(list(inp.keys()))
+        else:
+            arg_orders.append([])
+    arg_orders_json = json.dumps(arg_orders).replace(
+        "\\", "\\\\"
+    ).replace('"', '\\"')
 
     harness = f"""\
 package main
@@ -125,19 +152,16 @@ func main() {{
 \t\tos.Exit(1)
 \t}}
 
-\tfn := reflect.ValueOf({func_name})
-\tif !fn.IsValid() || fn.Kind() != reflect.Func {{
-\t\tfmt.Println("===HARNESS_OUTPUT===")
-\t\terrMsg := "Function '{func_name}' not found"
-\t\tout, _ := json.Marshal([]result{{{{Actual: errMsg, Passed: false}}}})
-\t\tfmt.Println(string(out))
-\t\tos.Exit(0)
-\t}}
+\t// Ordered arg keys per test case (from Python, preserves JSON key order)
+\targOrderJSON := "{arg_orders_json}"
+\tvar argOrders [][]string
+\tjson.Unmarshal([]byte(argOrderJSON), &argOrders)
 
+\tfn := reflect.ValueOf({func_name})
 \tfnType := fn.Type()
 \tresults := []result{{}}
 
-\tfor _, tc := range cases {{
+\tfor idx, tc := range cases {{
 \t\tfunc() {{
 \t\t\tdefer func() {{
 \t\t\t\tif r := recover(); r != nil {{
@@ -152,15 +176,15 @@ func main() {{
 
 \t\t\tvar args []reflect.Value
 \t\t\tif inputMap, ok := tc.Input.(map[string]interface{{}}); ok {{
-\t\t\t\t// Dict input: pass values as positional args in order
-\t\t\t\t// JSON object ordering matches Go map iteration (not guaranteed),
-\t\t\t\t// so we rely on function parameter count matching
-\t\t\t\ti := 0
-\t\t\t\tfor _, v := range inputMap {{
+\t\t\t\t// Use ordered keys from Python to preserve argument order
+\t\t\t\tvar keys []string
+\t\t\t\tif idx < len(argOrders) {{
+\t\t\t\t\tkeys = argOrders[idx]
+\t\t\t\t}}
+\t\t\t\tfor i, key := range keys {{
 \t\t\t\t\tif i < fnType.NumIn() {{
-\t\t\t\t\t\targs = append(args, convertArg(v, fnType.In(i)))
+\t\t\t\t\t\targs = append(args, convertArg(inputMap[key], fnType.In(i)))
 \t\t\t\t\t}}
-\t\t\t\t\ti++
 \t\t\t\t}}
 \t\t\t}} else {{
 \t\t\t\tif fnType.NumIn() > 0 {{
@@ -192,3 +216,29 @@ func main() {{
 }}
 """
     return harness
+
+
+def _build_missing_func_harness(func_name: str) -> str:
+    """Emit a Go program that prints an error result for a missing function."""
+    return f"""\
+package main
+
+import (
+\t"encoding/json"
+\t"fmt"
+)
+
+type result struct {{
+\tInput    string `json:"input"`
+\tExpected string `json:"expected"`
+\tActual   string `json:"actual"`
+\tPassed   bool   `json:"passed"`
+}}
+
+func main() {{
+\terrMsg := "Function '{func_name}' not found"
+\tout, _ := json.Marshal([]result{{{{Actual: errMsg, Passed: false}}}})
+\tfmt.Println("===HARNESS_OUTPUT===")
+\tfmt.Println(string(out))
+}}
+"""
