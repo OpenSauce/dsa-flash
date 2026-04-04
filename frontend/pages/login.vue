@@ -42,7 +42,7 @@ async function onLogin() {
       <input v-model="password" type="password" placeholder="Password" required
         class="w-full border rounded px-3 py-2" />
       <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-2">
-        Continue
+        Log in
       </button>
     </form>
 
