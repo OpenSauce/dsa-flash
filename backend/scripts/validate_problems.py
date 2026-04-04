@@ -322,7 +322,10 @@ def main() -> int:
                 print(f"  FAIL   {title} [{lang}] — {reason}")
                 failures = lang_result.get("failures", [])
                 for failure in failures:
-                    print(f"         input={failure.get('input')} expected={failure.get('expected')} got={failure.get('actual')}")
+                    inp = failure.get("input")
+                    exp = failure.get("expected")
+                    got = failure.get("actual")
+                    print(f"         input={inp} expected={exp} got={got}")
                 total_fail += 1
 
     print(f"\nResults: {total_pass} passed, {total_fail} failed, {total_skip} skipped\n")
