@@ -11,7 +11,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        headline: ['"Space Grotesk"', 'sans-serif'], // optional alias
+        headline: ['Tektur', 'sans-serif'],
         tektur: ['Tektur', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
