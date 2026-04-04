@@ -348,6 +348,11 @@ useSeoMeta({
           </ul>
         </div>
 
+        <!-- Feedback link -->
+        <div class="mb-4">
+          <FeedbackLink page-type="Problem" :title="problem.title" />
+        </div>
+
         <!-- Hints -->
         <div class="mb-4">
           <ProblemsHintButton

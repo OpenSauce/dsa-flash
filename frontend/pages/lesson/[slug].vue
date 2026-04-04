@@ -241,6 +241,9 @@ const renderedContent = computed(() =>
           </NuxtLink>
           <div v-else class="flex-1" />
         </div>
+        <div class="text-center mt-6">
+          <FeedbackLink page-type="Lesson" :title="lesson.title" />
+        </div>
         <NuxtLink to="/" class="block text-sm text-gray-400 hover:text-gray-600 mt-8 text-center">&larr; Back to categories</NuxtLink>
       </div>
     </template>
