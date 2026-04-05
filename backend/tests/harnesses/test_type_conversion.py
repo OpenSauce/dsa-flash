@@ -703,6 +703,33 @@ func reverseList(head *ListNode) *ListNode {
     assert harness.count("type ListNode struct") == 1
 
 
+def test_java_strip_user_node_class_with_nested_braces() -> None:
+    """_strip_user_node_classes must handle constructor bodies with nested braces.
+
+    Regression guard: earlier implementation used a naive regex that refused
+    braces inside the class body, so user classes with constructors like
+    `ListNode(int x) { val = x; }` were not stripped — leading to top-level
+    collisions with the harness-injected ListNode and "argument type mismatch"
+    runtime errors on method.invoke.
+    """
+    from app.harnesses.java import _strip_user_node_classes
+
+    user_code = """
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
+public ListNode reorderList(ListNode head) {
+    return null;
+}
+"""
+    stripped = _strip_user_node_classes(user_code, {"ListNode"})
+    assert "class ListNode" not in stripped
+    assert "reorderList" in stripped
+
+
 def test_js_converters_still_injected_when_user_defines_listnode() -> None:
     from app.harnesses.javascript import build_test_harness
 

@@ -163,16 +163,74 @@ def extract_func_name(starter_code: dict) -> str | None:
     return match.group(1) if match else None
 
 
-def _build_java_node_classes(user_code: str, needed_types: set) -> str:
-    """Build top-level node class definitions for types not already in user_code."""
+def _build_java_node_classes(needed_types: set) -> str:
+    """Build top-level node class definitions for all needed types.
+
+    Always inject — Java user code typically defines its own ListNode/TreeNode
+    inline, but when the harness wraps user code in `class Solution { ... }`,
+    the user's classes become nested (e.g. Solution.ListNode) and no longer
+    satisfy the top-level type references in harness-generated converters.
+    Callers should strip user's top-level node classes before wrapping
+    (see _strip_user_node_classes) so this injection wins.
+    """
     parts = []
     for type_name in ["ListNode", "TreeNode", "GraphNode"]:
         if type_name not in needed_types:
             continue
-        if re.search(rf"\bclass\s+{re.escape(type_name)}\b", user_code):
-            continue
         parts.append(_JAVA_TOPLEVEL_CLASS[type_name])
     return "\n".join(parts)
+
+
+def _strip_user_node_classes(user_code: str, needed_types: set) -> str:
+    """Remove user's top-level `class ListNode { ... }` declarations.
+
+    The harness provides its own canonical versions of these classes (LeetCode
+    convention: fields `val`, `next`, `left`, `right`, `neighbors`). User YAML
+    starter code frequently includes a minimal inline version for documentation;
+    removing it avoids collisions when the surrounding code gets wrapped in
+    `class Solution`, and ensures harness converters and user methods reference
+    the same top-level class.
+
+    Uses brace-balance counting rather than a regex so class bodies with
+    nested braces (e.g. constructor bodies like `ListNode(int x) { val = x; }`)
+    are handled correctly.
+    """
+    for type_name in ["ListNode", "TreeNode", "GraphNode"]:
+        if type_name not in needed_types:
+            continue
+        pattern = re.compile(rf"\bclass\s+{re.escape(type_name)}\b")
+        while True:
+            match = pattern.search(user_code)
+            if match is None:
+                break
+            # Find the opening brace after the class name.
+            open_idx = user_code.find("{", match.end())
+            if open_idx == -1:
+                break
+            # Walk to the matching closing brace.
+            depth = 1
+            i = open_idx + 1
+            while i < len(user_code) and depth > 0:
+                ch = user_code[i]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                i += 1
+            if depth != 0:
+                break  # unbalanced — leave the code alone
+            # Strip leading whitespace before the class and any trailing
+            # blank line(s) so we don't leave orphan newlines.
+            start = match.start()
+            while start > 0 and user_code[start - 1] in " \t":
+                start -= 1
+            end = i
+            while end < len(user_code) and user_code[end] in " \t":
+                end += 1
+            if end < len(user_code) and user_code[end] == "\n":
+                end += 1
+            user_code = user_code[:start] + user_code[end:]
+    return user_code
 
 
 def _build_main_converters(needed_types: set) -> str:
@@ -262,8 +320,12 @@ def build_test_harness(
 
     test_cases_json = json.dumps(test_cases).replace("\\", "\\\\").replace('"', '\\"')
 
+    # Strip any user-provided top-level node classes; harness will inject its
+    # own canonical versions so converters and user code reference the same types.
+    user_code = _strip_user_node_classes(user_code, needed_types)
+
     # Build top-level node class defs (before Solution)
-    node_class_defs = _build_java_node_classes(user_code, needed_types)
+    node_class_defs = _build_java_node_classes(needed_types)
 
     # Only skip wrapping if user code already declares class Solution
     has_solution_class = bool(re.search(r"\bclass\s+Solution\b", user_code))
