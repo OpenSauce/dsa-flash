@@ -96,12 +96,12 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve([])
       return Promise.resolve(null)
     })
 
     mockApiFetch.mockImplementation((path: string) => {
       if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve([])
       return Promise.resolve(null)
     })
   })
@@ -117,7 +117,11 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
+      return Promise.resolve(null)
+    })
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
       return Promise.resolve(null)
     })
 
@@ -134,7 +138,11 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
+      return Promise.resolve(null)
+    })
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
       return Promise.resolve(null)
     })
 
@@ -150,7 +158,11 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
+      return Promise.resolve(null)
+    })
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
       return Promise.resolve(null)
     })
 
@@ -174,7 +186,11 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve(manyProblems)
+      return Promise.resolve(null)
+    })
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve(manyProblems)
       return Promise.resolve(null)
     })
 
@@ -191,7 +207,11 @@ describe('Lesson page — Related Problems section', () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
       if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
+      return Promise.resolve(null)
+    })
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) return Promise.resolve(MOCK_PROBLEMS)
       return Promise.resolve(null)
     })
 
@@ -203,11 +223,10 @@ describe('Lesson page — Related Problems section', () => {
 
   it('fetches problems using the lesson category', async () => {
     let capturedUrl = ''
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes('/lessons/arrays-intro')) return Promise.resolve(MOCK_LESSON)
-      if (url.includes('/quizzes')) return Promise.resolve([])
-      if (url.includes('/problems')) {
-        capturedUrl = url
+    mockApiFetch.mockImplementation((path: string) => {
+      if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) {
+        capturedUrl = path
         return Promise.resolve(MOCK_PROBLEMS)
       }
       return Promise.resolve(null)

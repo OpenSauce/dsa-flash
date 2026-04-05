@@ -93,13 +93,13 @@ function mountQuiz() {
 async function mountAndComplete(problems: typeof MOCK_PROBLEMS) {
   mockFetch.mockImplementation((url: string) => {
     if (url.includes('/quizzes/arrays-quiz')) return Promise.resolve(MOCK_QUIZ)
-    if (url.includes('/problems')) return Promise.resolve(problems)
     return Promise.resolve(null)
   })
 
   mockApiFetch.mockImplementation((path: string) => {
     if (path.includes('/quizzes/arrays-quiz/submit')) return Promise.resolve(MOCK_SUBMIT_RESULT)
     if (path.includes('/lessons/by-category')) return Promise.resolve([])
+    if (path.includes('/problems')) return Promise.resolve(problems)
     return Promise.resolve(null)
   })
 
@@ -155,15 +155,15 @@ describe('Quiz page — Ready to code? section', () => {
     let capturedUrl = ''
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('/quizzes/arrays-quiz')) return Promise.resolve(MOCK_QUIZ)
-      if (url.includes('/problems')) {
-        capturedUrl = url
-        return Promise.resolve(MOCK_PROBLEMS)
-      }
       return Promise.resolve(null)
     })
     mockApiFetch.mockImplementation((path: string) => {
       if (path.includes('/quizzes/arrays-quiz/submit')) return Promise.resolve(MOCK_SUBMIT_RESULT)
       if (path.includes('/lessons/by-category')) return Promise.resolve([])
+      if (path.includes('/problems')) {
+        capturedUrl = path
+        return Promise.resolve(MOCK_PROBLEMS)
+      }
       return Promise.resolve(null)
     })
 

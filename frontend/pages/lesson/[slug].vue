@@ -3,6 +3,7 @@ import { useMarkdown } from '@/composables/useMarkdown'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
+import type { CodingProblemOut } from '@/types/problem'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -32,15 +33,6 @@ interface CategoryLessonInfo {
   completed: boolean
 }
 
-interface RelatedProblem {
-  id: number
-  title: string
-  difficulty: string
-  category: string
-  tags: string[]
-  due_status: string | null
-}
-
 const { data: lesson, error } = await useAsyncData<LessonDetail>(
   `lesson-${slug}`,
   () => $fetch<LessonDetail>(`${apiBase}/lessons/${slug}`),
@@ -62,7 +54,7 @@ const isCompleted = ref(false)
 const completing = ref(false)
 const completionSuccess = ref(false)
 const linkedQuiz = ref<{ slug: string; title: string } | null>(null)
-const relatedProblems = ref<RelatedProblem[]>([])
+const relatedProblems = ref<CodingProblemOut[]>([])
 
 const RELATED_PROBLEMS_LIMIT = 6
 
@@ -97,8 +89,8 @@ const fetchLinkedQuiz = async () => {
 const fetchRelatedProblems = async () => {
   if (!lesson.value?.category) return
   try {
-    const problems = await $fetch<RelatedProblem[]>(
-      `${apiBase}/problems?category=${lesson.value.category}`
+    const problems = await apiFetch<CodingProblemOut[]>(
+      `/problems?category=${encodeURIComponent(lesson.value.category)}`
     )
     relatedProblems.value = problems
   } catch {

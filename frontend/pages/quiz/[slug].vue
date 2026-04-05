@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
+import type { CodingProblemOut } from '@/types/problem'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -40,15 +41,6 @@ interface QuizSubmitOut {
   results: QuizAnswerResult[]
 }
 
-interface RelatedProblem {
-  id: number
-  title: string
-  difficulty: string
-  category: string
-  tags: string[]
-  due_status: string | null
-}
-
 const { data: quiz, error } = await useAsyncData<QuizDetail>(
   `quiz-${slug}`,
   () => $fetch<QuizDetail>(`${apiBase}/quizzes/${slug}`),
@@ -75,7 +67,7 @@ const submitting = ref(false)
 const retryQuestions = ref<QuizQuestion[]>([])
 const inRetryRound = ref(false)
 const firstPassAnswers = ref<Record<number, number>>({})
-const relatedProblems = ref<RelatedProblem[]>([])
+const relatedProblems = ref<CodingProblemOut[]>([])
 
 const QUIZ_PROBLEMS_LIMIT = 3
 
@@ -114,8 +106,8 @@ async function fetchNextLesson() {
 async function fetchRelatedProblems() {
   if (!quiz.value?.category) return
   try {
-    const problems = await $fetch<RelatedProblem[]>(
-      `${apiBase}/problems?category=${quiz.value.category}`
+    const problems = await apiFetch<CodingProblemOut[]>(
+      `/problems?category=${encodeURIComponent(quiz.value.category)}`
     )
     relatedProblems.value = problems
   } catch {
