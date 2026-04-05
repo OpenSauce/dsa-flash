@@ -479,3 +479,192 @@ def solve(node: Trie) -> int:
     }
     with pytest.raises(ValueError, match="Unsupported custom type 'Trie'"):
         get_param_types(starter)
+
+
+# ---------------------------------------------------------------------------
+# Mixed-signature round-trip tests (custom + primitive params)
+# ---------------------------------------------------------------------------
+
+# Minimal starter for parse_python_param_types: (head: ListNode, n: int) -> ListNode
+_MIXED_LIST_INT_STARTER = """
+from typing import Optional
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def remove_nth(head: Optional[ListNode], n: int) -> Optional[ListNode]:
+    pass
+"""
+
+# Minimal starter: (root: TreeNode, k: int) -> int
+_MIXED_TREE_INT_STARTER = """
+from typing import Optional
+
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def kth_val(root: Optional[TreeNode], k: int) -> int:
+    pass
+"""
+
+_MIXED_SOLUTIONS = {
+    # remove_nth: just returns head unchanged (deterministic for testing)
+    "python_remove_nth": """
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def remove_nth(head, n):
+    # return the nth node's val as a single-element list (predictable)
+    cur = head
+    for _ in range(n - 1):
+        if cur is None:
+            return None
+        cur = cur.next
+    return cur
+""",
+    "go_remove_nth": """
+func removeNth(head *ListNode, n int) *ListNode {
+    cur := head
+    for i := 0; i < n-1; i++ {
+        if cur == nil {
+            return nil
+        }
+        cur = cur.Next
+    }
+    return cur
+}
+""",
+    "java_remove_nth": """
+public ListNode removeNth(ListNode head, int n) {
+    ListNode cur = head;
+    for (int i = 0; i < n - 1; i++) {
+        if (cur == null) return null;
+        cur = cur.next;
+    }
+    return cur;
+}
+""",
+    "js_remove_nth": """
+function removeNth(head, n) {
+    let cur = head;
+    for (let i = 0; i < n - 1; i++) {
+        if (!cur) return null;
+        cur = cur.next;
+    }
+    return cur;
+}
+""",
+    # kth_val: returns root.val (trivial, tests tree+int param path)
+    "python_kth_val": """
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def kth_val(root, k):
+    return root.val if root else 0
+""",
+    "go_kth_val": """
+func kthVal(root *TreeNode, k int) int {
+    if root == nil {
+        return 0
+    }
+    return root.Val
+}
+""",
+    "java_kth_val": """
+public int kthVal(TreeNode root, int k) {
+    if (root == null) return 0;
+    return root.val;
+}
+""",
+    "js_kth_val": """
+function kthVal(root, k) {
+    if (!root) return 0;
+    return root.val;
+}
+""",
+}
+
+_MIXED_TEST_CASES = {
+    "list_int": [
+        # remove_nth: returns the node at position n (1-indexed), as a ListNode
+        # input head=[1,2,3,4,5], n=2 -> returns node starting at 2 -> [2,3,4,5]
+        {"input": {"head": [1, 2, 3, 4, 5], "n": 2}, "expected": [2, 3, 4, 5]},
+        {"input": {"head": [10, 20, 30], "n": 1}, "expected": [10, 20, 30]},
+    ],
+    "tree_int": [
+        # kth_val: returns root.val ignoring k
+        {"input": {"root": [4, 2, 7], "k": 1}, "expected": 4},
+        {"input": {"root": [9], "k": 3}, "expected": 9},
+    ],
+}
+
+
+@pytest.mark.parametrize("language", ["go", "java"])
+def test_mixed_list_int_signature(language: str) -> None:
+    """(head: ListNode, n: int) -> ListNode — custom + primitive param."""
+    param_types = parse_python_param_types(_MIXED_LIST_INT_STARTER)
+    assert param_types.get("head") == "ListNode"
+    assert "__return__" in param_types
+
+    if language == "go":
+        solution = _MIXED_SOLUTIONS["go_remove_nth"]
+        func_name = "removeNth"
+    else:
+        solution = _MIXED_SOLUTIONS["java_remove_nth"]
+        func_name = "removeNth"
+
+    harness = build(language, solution, _MIXED_TEST_CASES["list_int"], func_name, param_types)
+    runner = _RUNNERS[language]
+    results = runner(harness)
+    _assert_all_passed(results)
+
+
+@pytest.mark.parametrize("language", ["go", "java"])
+def test_mixed_tree_int_signature(language: str) -> None:
+    """(root: TreeNode, k: int) -> int — custom + primitive param, primitive return."""
+    param_types = parse_python_param_types(_MIXED_TREE_INT_STARTER)
+    assert param_types.get("root") == "TreeNode"
+    # __return__ is not a custom type here (int), so it may be absent
+    assert "root" in param_types
+
+    if language == "go":
+        solution = _MIXED_SOLUTIONS["go_kth_val"]
+        func_name = "kthVal"
+    else:
+        solution = _MIXED_SOLUTIONS["java_kth_val"]
+        func_name = "kthVal"
+
+    harness = build(language, solution, _MIXED_TEST_CASES["tree_int"], func_name, param_types)
+    runner = _RUNNERS[language]
+    results = runner(harness)
+    _assert_all_passed(results)
+
+
+def test_list_to_treenode_null_input_returns_none() -> None:
+    """_list_to_treenode([None]) must return None, not TreeNode(None)."""
+    from app.harnesses.python import _CONVERTERS
+
+    exec_ns: dict = {}
+    exec(
+        """
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+"""
+        + _CONVERTERS,
+        exec_ns,
+    )
+    result = exec_ns["_list_to_treenode"]([None])
+    assert result is None, f"Expected None, got {result}"
