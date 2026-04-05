@@ -21,6 +21,7 @@ DISPLAY_NAMES: dict[str, str] = {
     "docker": "Docker",
     "linux": "Linux",
     "networking": "Networking",
+    "ai-ml-fundamentals": "AI/ML Fundamentals",
 }
 
 
@@ -56,6 +57,7 @@ class User(SQLModel, table=True):
 class UserCreate(BaseModel):
     username: str = PydanticField(min_length=3, pattern=r'^[a-zA-Z0-9_]+$')
     password: str = PydanticField(min_length=8)
+    referrer_category: Optional[str] = None
 
 
 class Token(BaseModel):
