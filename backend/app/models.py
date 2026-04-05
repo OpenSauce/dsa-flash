@@ -21,6 +21,7 @@ DISPLAY_NAMES: dict[str, str] = {
     "docker": "Docker",
     "linux": "Linux",
     "networking": "Networking",
+    "ai-ml-fundamentals": "AI/ML Fundamentals",
 }
 
 
@@ -56,6 +57,20 @@ class User(SQLModel, table=True):
 class UserCreate(BaseModel):
     username: str = PydanticField(min_length=3, pattern=r'^[a-zA-Z0-9_]+$')
     password: str = PydanticField(min_length=8)
+    referrer_category: Optional[str] = PydanticField(default=None, max_length=64)
+
+    @field_validator("referrer_category")
+    @classmethod
+    def normalize_referrer_category(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if not normalized or len(normalized) > 64:
+            return None
+        parts = normalized.split("-")
+        if any(not part or not part.isalnum() for part in parts):
+            return None
+        return normalized
 
 
 class Token(BaseModel):

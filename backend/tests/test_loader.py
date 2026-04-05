@@ -10,10 +10,11 @@ from app.loader import (
     _estimate_reading_time,
     _parse_front_matter,
     load_lessons,
+    load_quizzes,
     load_yaml_flashcards,
     upsert_flashcard,
 )
-from app.models import Flashcard, Lesson
+from app.models import Flashcard, Lesson, Quiz, QuizQuestion
 
 # ---------------------------------------------------------------------------
 # _dir_metadata
@@ -400,3 +401,133 @@ def test_upsert_flashcard_updates_lesson_slug(session):
     results = session.exec(select(Flashcard).where(Flashcard.title == "Card")).all()
     assert len(results) == 1
     assert results[0].lesson_slug == "new-lesson"
+
+
+# ---------------------------------------------------------------------------
+# Loader hardening: malformed cards are skipped, valid cards still load
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_card_skipped_valid_cards_load(tmp_path, engine, caplog):
+    """A card missing required fields is skipped; other cards in the file still load."""
+    cards = [
+        {"title": "Good Card 1", "Front": "Q1", "Back": "A1"},
+        {"title": "Missing Front", "Back": "A2"},  # missing 'Front'
+        {"title": "Good Card 2", "Front": "Q3", "Back": "A3"},
+        {"Front": "Q4", "Back": "A4"},  # missing 'title'
+        {"title": "Missing Back", "Front": "Q5"},  # missing 'Back'
+    ]
+    _write_yaml(tmp_path / "cat" / "cards.yaml", cards)
+
+    with caplog.at_level(logging.WARNING, logger="app.loader"):
+        with patch("app.loader.ROOT", tmp_path), patch("app.loader.engine", engine):
+            load_yaml_flashcards()
+
+    with Session(engine) as session:
+        loaded = session.exec(select(Flashcard)).all()
+
+    titles = {c.title for c in loaded}
+    assert "Good Card 1" in titles
+    assert "Good Card 2" in titles
+    assert "Missing Front" not in titles
+    assert "Missing Back" not in titles
+    assert len(loaded) == 2
+
+    assert "missing required field" in caplog.text
+
+
+def test_malformed_card_no_exception(tmp_path, engine):
+    """load_yaml_flashcards does not raise even when all cards are malformed."""
+    cards = [
+        {"Front": "Q1", "Back": "A1"},  # missing title
+    ]
+    _write_yaml(tmp_path / "cat" / "bad.yaml", cards)
+
+    with patch("app.loader.ROOT", tmp_path), patch("app.loader.engine", engine):
+        load_yaml_flashcards()  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# T79e: Fresh-category integration test
+# ---------------------------------------------------------------------------
+
+
+def _write_lesson_md(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+
+
+def _write_quiz_yaml(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.dump(data))
+
+
+def test_fresh_category_roundtrip(tmp_path, engine):
+    """A fresh category directory with lessons, quizzes, and flashcards loads correctly."""
+    category = "test-ai-category"
+    lesson_slug = "test-lesson"
+
+    lesson_content = (
+        "---\ntitle: Test AI Lesson\norder: 1\n"
+        "summary: A test lesson for AI.\n---\n"
+        "# AI Basics\n\nThis is test content about AI.\n"
+    )
+    _write_lesson_md(
+        tmp_path / category / "lessons" / f"{lesson_slug}.md",
+        lesson_content,
+    )
+
+    quiz_data = {
+        "title": "Test AI Quiz",
+        "lesson_slug": lesson_slug,
+        "questions": [
+            {
+                "question": "What is a neural network?",
+                "options": ["A network of neurons", "A database", "A sorting algorithm", "A graph"],
+                "correct": 0,
+                "explanation": "Neural networks are inspired by biological neurons.",
+            },
+            {
+                "question": "What does ML stand for?",
+                "options": ["Machine Learning", "Meta Language", "Markup Logic", "Model Layer"],
+                "correct": 0,
+                "explanation": "ML stands for Machine Learning.",
+            },
+        ],
+    }
+    _write_quiz_yaml(tmp_path / category / "quizzes" / f"{lesson_slug}.yaml", quiz_data)
+
+    flashcards = [
+        {"title": f"AI Card {i}", "Front": f"Q{i}", "Back": f"A{i}", "lesson": lesson_slug}
+        for i in range(3)
+    ]
+    _write_yaml(tmp_path / category / f"{category}.yaml", flashcards)
+
+    with patch("app.loader.ROOT", tmp_path), patch("app.loader.engine", engine):
+        load_lessons()
+        load_quizzes()
+        load_yaml_flashcards()
+
+    with Session(engine) as session:
+        lessons = session.exec(
+            select(Lesson).where(Lesson.slug == lesson_slug)
+        ).all()
+        assert len(lessons) == 1
+        assert lessons[0].category == category
+
+        quizzes = session.exec(
+            select(Quiz).where(Quiz.lesson_slug == lesson_slug)
+        ).all()
+        assert len(quizzes) == 1
+        assert quizzes[0].category == category
+
+        questions = session.exec(
+            select(QuizQuestion).where(QuizQuestion.quiz_id == quizzes[0].id)
+        ).all()
+        assert len(questions) == 2
+
+        cards = session.exec(
+            select(Flashcard).where(Flashcard.lesson_slug == lesson_slug)
+        ).all()
+        assert len(cards) == 3
+        assert all(c.category == category for c in cards)

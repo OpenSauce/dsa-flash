@@ -43,11 +43,14 @@ export const useAuth = () => {
   }
 
   const signup = async (username: string, password: string): Promise<void> => {
+    const referrer_category = import.meta.client
+      ? (sessionStorage.getItem('referrer_category') ?? undefined)
+      : undefined
     const { access_token } = await $fetch<TokenResponse>(
       `${apiBase}/signup`,
       {
         method: 'POST',
-        body: { username, password },
+        body: { username, password, referrer_category },
       }
     )
     tokenCookie.value = access_token

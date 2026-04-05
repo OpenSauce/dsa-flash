@@ -73,7 +73,28 @@ def load_yaml_flashcards() -> None:
             if not isinstance(data, list):
                 logger.warning("Skipping %s: root is %s, not list", file, type(data).__name__)
                 continue
-            for raw in data:
+            for idx, raw in enumerate(data):
+                if not isinstance(raw, dict):
+                    logger.warning(
+                        "Skipping card %d in %s: expected dict, got %s",
+                        idx,
+                        file,
+                        type(raw).__name__,
+                    )
+                    continue
+                missing_key = None
+                for required in ("title", "Front", "Back"):
+                    if required not in raw:
+                        missing_key = required
+                        break
+                if missing_key is not None:
+                    logger.warning(
+                        "Skipping card %d in %s: missing required field '%s'",
+                        idx,
+                        file,
+                        missing_key,
+                    )
+                    continue
                 card = Flashcard(
                     title=raw["title"],
                     front=raw["Front"],

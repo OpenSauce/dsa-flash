@@ -10,6 +10,12 @@ export const CATEGORY_META: Record<string, { emoji: string; description: string;
   'docker': { emoji: '🐳', description: 'Containers, images, Dockerfiles, networking, volumes...', section: 'Infrastructure' },
   'linux': { emoji: '🐧', description: 'Processes, permissions, filesystem, shell commands...', section: 'Infrastructure' },
   'networking': { emoji: '🌐', description: 'TCP/IP, DNS, TLS, HTTP, proxies...', section: 'System Design' },
+  'ai-ml-fundamentals': {
+    emoji: '🤖',
+    description: 'AI/ML interview vocabulary — neural nets, transformers, embeddings, RAG. Hands-on problems coming later.',
+    section: 'Other',
+    displayName: 'AI/ML Fundamentals',
+  },
 }
 
 export const DEFAULT_META = { emoji: '📘', description: 'Flashcard concepts.', section: 'Other' }

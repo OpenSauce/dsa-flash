@@ -3,11 +3,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlmodel import select
 
 from app.api.users import ALGORITHM, SECRET_KEY, User, get_password_hash
 from app.api.users import router as user_router
 from app.database import get_session
 from app.limiter import limiter
+from app.models import Event
 from tests.conftest import get_test_session
 
 
@@ -123,3 +125,31 @@ def test_login_sets_last_login(session):
 
     session.refresh(user)
     assert user.last_login is not None
+
+
+def test_signup_referrer_category_emits_event(session):
+    """Signing up with a referrer_category stores a signup Event with that value."""
+    client = TestClient(anon_app(session))
+    resp = client.post(
+        "/signup",
+        json={"username": "referred_user", "password": "pass1234", "referrer_category": "ai-ml-fundamentals"},
+    )
+    assert resp.status_code == 201
+
+    events = session.exec(select(Event).where(Event.event_type == "signup")).all()
+    assert len(events) == 1
+    assert events[0].payload["referrer_category"] == "ai-ml-fundamentals"
+
+
+def test_signup_no_referrer_category_emits_event_with_none(session):
+    """Signing up without referrer_category emits a signup Event with null value."""
+    client = TestClient(anon_app(session))
+    resp = client.post(
+        "/signup",
+        json={"username": "no_referral_user", "password": "pass1234"},
+    )
+    assert resp.status_code == 201
+
+    events = session.exec(select(Event).where(Event.event_type == "signup")).all()
+    assert len(events) == 1
+    assert events[0].payload["referrer_category"] is None

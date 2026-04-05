@@ -1,6 +1,7 @@
 # app/api/users.py
 
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -13,7 +14,7 @@ from sqlmodel import Field, Session, SQLModel, select
 
 from ..database import get_session
 from ..limiter import limiter
-from ..models import StreakOut, StudySession, Token, User, UserCreate
+from ..models import Event, StreakOut, StudySession, Token, User, UserCreate
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────
 
@@ -137,6 +138,16 @@ def signup(
         hashed_password=get_password_hash(data.password),
     )
     session.add(user)
+    session.flush()
+
+    session_id = request.cookies.get("session_id") or str(uuid.uuid4())
+    event = Event(
+        session_id=session_id,
+        user_id=user.id,
+        event_type="signup",
+        payload={"referrer_category": data.referrer_category},
+    )
+    session.add(event)
     session.commit()
     access_token = create_access_token({"sub": data.username})
     return Token(access_token=access_token)
