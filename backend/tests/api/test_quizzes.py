@@ -7,7 +7,7 @@ from app.api.quizzes import router as quizzes_router
 from app.api.users import get_current_user, get_optional_user
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import UserQuizAttempt
+from app.models import Flashcard, Lesson, UserFlashcard, UserQuizAttempt
 from tests.conftest import get_test_session
 
 
@@ -246,3 +246,52 @@ def test_submit_quiz_zero_score(client, create_quiz, create_quiz_question):
     for r in data["results"]:
         assert "correct_index" in r
         assert "explanation" in r
+
+
+def test_seed_flashcards_fresh_category(client, session, create_user, create_quiz, create_quiz_question):
+    """Submitting a quiz for a fresh category seeds UserFlashcard rows for all linked flashcards."""
+    create_user(username="user", password="password")
+    lesson_slug = "ai-foundations"
+    category = "ai-ml-fundamentals"
+
+    lesson = Lesson(
+        title="AI Foundations",
+        slug=lesson_slug,
+        category=category,
+        content="Content",
+        summary="Summary",
+        reading_time_minutes=5,
+        order=0,
+    )
+    session.add(lesson)
+    session.commit()
+
+    quiz = create_quiz(slug="ai-foundations", category=category, lesson_slug=lesson_slug)
+    q1 = create_quiz_question(quiz_id=quiz.id, correct_index=0, order=0)
+
+    for i in range(10):
+        card = Flashcard(
+            title=f"AI Card {i}",
+            front=f"Q{i}",
+            back=f"A{i}",
+            category=category,
+            lesson_slug=lesson_slug,
+            tags=[],
+        )
+        session.add(card)
+    session.commit()
+
+    response = client.post(
+        f"/quizzes/{quiz.slug}/submit",
+        json={"answers": {str(q1.id): 0}},
+    )
+    assert response.status_code == 200
+
+    uf_rows = session.exec(
+        select(UserFlashcard).where(UserFlashcard.user_id == FakeUser.id)
+    ).all()
+    assert len(uf_rows) == 10
+    for uf in uf_rows:
+        flashcard = session.get(Flashcard, uf.flashcard_id)
+        assert flashcard is not None
+        assert flashcard.lesson_slug == lesson_slug
