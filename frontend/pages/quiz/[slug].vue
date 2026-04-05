@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
+import type { CodingProblemOut } from '@/types/problem'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -66,6 +67,9 @@ const submitting = ref(false)
 const retryQuestions = ref<QuizQuestion[]>([])
 const inRetryRound = ref(false)
 const firstPassAnswers = ref<Record<number, number>>({})
+const relatedProblems = ref<CodingProblemOut[]>([])
+
+const QUIZ_PROBLEMS_LIMIT = 3
 
 const categoryDisplayName = computed(() =>
   quiz.value?.category ? getCategoryDisplayName(quiz.value.category) : ''
@@ -98,6 +102,22 @@ async function fetchNextLesson() {
     // non-fatal
   }
 }
+
+async function fetchRelatedProblems() {
+  if (!quiz.value?.category) return
+  try {
+    const problems = await apiFetch<CodingProblemOut[]>(
+      `/problems?category=${encodeURIComponent(quiz.value.category)}`
+    )
+    relatedProblems.value = problems
+  } catch {
+    // non-fatal
+  }
+}
+
+const suggestedProblems = computed(() =>
+  relatedProblems.value.slice(0, QUIZ_PROBLEMS_LIMIT)
+)
 
 const activeQuestions = computed(() =>
   inRetryRound.value ? retryQuestions.value : (quiz.value?.questions ?? [])
@@ -228,6 +248,7 @@ async function submitQuiz() {
     submitting.value = false
     quizComplete.value = true
     await fetchNextLesson()
+    await fetchRelatedProblems()
   }
 }
 
@@ -315,6 +336,22 @@ function resultForQuestion(questionId: number): QuizAnswerResult | undefined {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Ready to code? -->
+          <div v-if="suggestedProblems.length > 0" class="max-w-sm mx-auto rounded-xl border border-purple-100 bg-purple-50 px-6 py-5 mb-6 text-left">
+            <p class="text-sm font-semibold text-purple-800 mb-1">Ready to code?</p>
+            <p class="text-sm text-purple-700 mb-3">Try these problems to put your knowledge into practice:</p>
+            <ul class="space-y-1.5">
+              <li v-for="problem in suggestedProblems" :key="problem.id">
+                <NuxtLink
+                  :to="`/problems/${problem.id}`"
+                  class="text-sm text-purple-700 hover:text-purple-900 font-medium hover:underline"
+                >
+                  {{ problem.title }}
+                </NuxtLink>
+              </li>
+            </ul>
           </div>
 
           <!-- Signup CTA for anonymous users -->

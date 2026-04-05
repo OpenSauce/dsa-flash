@@ -3,6 +3,7 @@ import { useMarkdown } from '@/composables/useMarkdown'
 import { useAuth } from '@/composables/useAuth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { getCategoryDisplayName } from '@/utils/categoryMeta'
+import type { CodingProblemOut } from '@/types/problem'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -53,6 +54,9 @@ const isCompleted = ref(false)
 const completing = ref(false)
 const completionSuccess = ref(false)
 const linkedQuiz = ref<{ slug: string; title: string } | null>(null)
+const relatedProblems = ref<CodingProblemOut[]>([])
+
+const RELATED_PROBLEMS_LIMIT = 6
 
 const fetchCategoryLessons = async () => {
   if (!lesson.value?.category) return
@@ -82,10 +86,23 @@ const fetchLinkedQuiz = async () => {
   }
 }
 
+const fetchRelatedProblems = async () => {
+  if (!lesson.value?.category) return
+  try {
+    const problems = await apiFetch<CodingProblemOut[]>(
+      `/problems?category=${encodeURIComponent(lesson.value.category)}`
+    )
+    relatedProblems.value = problems
+  } catch {
+    // non-fatal
+  }
+}
+
 onMounted(async () => {
   track('lesson_view', { category: lesson.value?.category, slug })
   await fetchCategoryLessons()
   await fetchLinkedQuiz()
+  await fetchRelatedProblems()
 })
 
 const prevLesson = computed<CategoryLessonInfo | null>(() => {
@@ -105,6 +122,20 @@ const nextLesson = computed<CategoryLessonInfo | null>(() => {
 const categoryDisplayName = computed(() =>
   lesson.value?.category ? getCategoryDisplayName(lesson.value.category) : ''
 )
+
+const visibleProblems = computed(() =>
+  relatedProblems.value.slice(0, RELATED_PROBLEMS_LIMIT)
+)
+
+const hasMoreProblems = computed(() =>
+  relatedProblems.value.length > RELATED_PROBLEMS_LIMIT
+)
+
+const difficultyClasses: Record<string, string> = {
+  easy: 'bg-green-100 text-green-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  hard: 'bg-red-100 text-red-700',
+}
 
 async function markComplete() {
   if (!lesson.value || completing.value || isCompleted.value) return
@@ -164,6 +195,38 @@ const renderedContent = computed(() =>
         :lesson-slug="lesson.slug"
         :initial-rating="lesson.user_rating ?? null"
       />
+
+      <!-- Related Problems -->
+      <div v-if="relatedProblems.length > 0" class="border-t border-gray-200 pt-8 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Related Problems</h2>
+        <ul class="space-y-2">
+          <li
+            v-for="problem in visibleProblems"
+            :key="problem.id"
+            class="flex items-center gap-3"
+          >
+            <NuxtLink
+              :to="`/problems/${problem.id}`"
+              class="text-purple-700 hover:text-purple-900 font-medium hover:underline"
+            >
+              {{ problem.title }}
+            </NuxtLink>
+            <span
+              class="inline-block px-2 py-0.5 text-xs font-semibold rounded capitalize"
+              :class="difficultyClasses[problem.difficulty] ?? 'bg-gray-100 text-gray-600'"
+            >
+              {{ problem.difficulty }}
+            </span>
+          </li>
+        </ul>
+        <NuxtLink
+          v-if="hasMoreProblems"
+          :to="`/problems?category=${lesson.category}`"
+          class="inline-block mt-3 text-sm text-purple-700 hover:text-purple-900 hover:underline"
+        >
+          See all {{ relatedProblems.length }} problems &rarr;
+        </NuxtLink>
+      </div>
 
       <!-- Completion section -->
       <div class="border-t border-gray-200 pt-8">
