@@ -145,6 +145,8 @@ services:
   judge0-server:
     profiles: ["prod", "dev"]
     image: judge0/judge0:1.13.1
+    ports:
+      - "2358:2358"
     depends_on:
       judge0-db:
         condition: service_healthy
