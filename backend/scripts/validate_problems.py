@@ -210,19 +210,14 @@ def validate_problem(
             lang_results[lang] = {"status": "FAIL", "reason": "Could not extract function name"}
             continue
 
-        # Dunder names (e.g. __init__) mean the extractor hit a class method
-        # rather than the standalone function. The harness can't handle
-        # class-based problems (custom data structures like ListNode/TreeNode)
-        # so skip them with a warning instead of reporting a false failure.
-        if func_name.startswith("__") and func_name.endswith("__"):
-            lang_results[lang] = {
-                "status": "SKIP",
-                "reason": f"Class-based problem (extracted '{func_name}'); harness unsupported",
-            }
+        try:
+            param_types = harnesses.get_param_types(starter_code)
+        except ValueError as e:
+            lang_results[lang] = {"status": "FAIL", "reason": str(e)}
             continue
 
         try:
-            code = harnesses.build(lang, solution[lang], test_cases, func_name)
+            code = harnesses.build(lang, solution[lang], test_cases, func_name, param_types)
         except Exception as e:
             lang_results[lang] = {"status": "FAIL", "reason": f"Harness build error: {e}"}
             continue

@@ -8,6 +8,7 @@ from .javascript import build_test_harness as _js_build
 from .javascript import extract_func_name as _js_extract
 from .python import build_test_harness as _python_build
 from .python import extract_func_name as _python_extract
+from .python import parse_python_param_types
 
 _FUNC_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
@@ -26,13 +27,19 @@ _EXTRACTORS = {
 }
 
 
-def build(language: str, user_code: str, test_cases: list, func_name: str) -> str:
+def build(
+    language: str,
+    user_code: str,
+    test_cases: list,
+    func_name: str,
+    param_types: dict[str, str] | None = None,
+) -> str:
     if not _FUNC_NAME_RE.match(func_name):
         raise ValueError(f"Invalid function name: {func_name}")
     builder = _BUILDERS.get(language)
     if builder is None:
         raise ValueError(f"Unsupported language: {language}")
-    return builder(user_code, test_cases, func_name)
+    return builder(user_code, test_cases, func_name, param_types or {})
 
 
 def extract_func_name(language: str, starter_code: dict) -> str | None:
@@ -40,3 +47,16 @@ def extract_func_name(language: str, starter_code: dict) -> str | None:
     if extractor is None:
         raise ValueError(f"Unsupported language: {language}")
     return extractor(starter_code)
+
+
+def get_param_types(starter_code: dict) -> dict[str, str]:
+    """Parse Python starter code once to get canonical param type map.
+
+    Returns a dict mapping parameter names (and "__return__") to type tags
+    like "ListNode", "TreeNode", "GraphNode". Empty dict if no custom types.
+    Raises ValueError for unsupported custom type names.
+    """
+    python_code = starter_code.get("python", "")
+    if not python_code:
+        return {}
+    return parse_python_param_types(python_code)

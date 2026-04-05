@@ -12,7 +12,7 @@ from sqlmodel import Session, col, select
 
 from ..database import get_session
 from ..harnesses import build as build_harness
-from ..harnesses import extract_func_name
+from ..harnesses import extract_func_name, get_param_types
 from ..limiter import limiter
 from ..models import (
     CodingProblem,
@@ -296,7 +296,12 @@ def submit_code(
     if not func_name:
         raise HTTPException(status_code=500, detail="Problem has no valid starter code")
 
-    harness = build_harness(body.language, body.code, problem.test_cases, func_name)
+    try:
+        param_types = get_param_types(problem.starter_code)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    harness = build_harness(body.language, body.code, problem.test_cases, func_name, param_types)
 
     start_ms = int(time.time() * 1000)
 
