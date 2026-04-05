@@ -148,6 +148,8 @@ func _graphNodeToAdj(node *GraphNode) [][]int {
 \t\t}
 \t\tif adj[idx] == nil {
 \t\t\tadj[idx] = []int{}
+\t\t} else {
+\t\t\tsort.Ints(adj[idx])
 \t\t}
 \t}
 \treturn adj
@@ -205,11 +207,27 @@ _TYPE_ASSERTION = {
 
 
 def _build_run_func(func_name: str, keys: list, param_types: dict) -> str:
-    """Generate a _runTestCase function that handles custom-type arg/return conversion."""
+    """Generate a _runTestCase function that handles custom-type arg/return conversion.
+
+    Custom-type params (ListNode/TreeNode/GraphNode) are converted via the
+    dedicated deserializers.  Non-custom params are converted via reflect so
+    that the generated call compiles for typed signatures like (head *ListNode,
+    n int) where n must be int, not interface{}.
+    """
     lines = []
     arg_exprs = []
 
-    for key in keys:
+    has_plain_params = any(
+        not (param_types.get(k) and param_types.get(k) in _PARAM_TO_DESERIALIZER)
+        for k in keys
+    )
+
+    # reflect is needed to convert non-custom params to their concrete types.
+    lines.append(f"\tfn := reflect.ValueOf({func_name})")
+    if has_plain_params:
+        lines.append("\tfnType := fn.Type()")
+
+    for i, key in enumerate(keys):
         type_tag = param_types.get(key)
         if type_tag and type_tag in _PARAM_TO_DESERIALIZER:
             deser = _PARAM_TO_DESERIALIZER[type_tag]
@@ -234,20 +252,24 @@ def _build_run_func(func_name: str, keys: list, param_types: dict) -> str:
             lines.append(
                 '\t}'
             )
-            arg_exprs.append(f"_p_{key}")
+            arg_exprs.append(f"reflect.ValueOf(_p_{key})")
         else:
-            lines.append(f'\t_plain_{key} := inputMap["{key}"]')
-            arg_exprs.append(f"_plain_{key}")
+            lines.append(
+                f'\t_conv_{key} := convertArg(inputMap["{key}"], fnType.In({i}))'
+            )
+            arg_exprs.append(f"_conv_{key}")
 
-    call_expr = f"{func_name}({', '.join(arg_exprs)})"
+    lines.append(f"\t_out := fn.Call([]reflect.Value{{{', '.join(arg_exprs)}}})")
 
     ret_tag = param_types.get("__return__")
     if ret_tag and ret_tag in _RETURN_SERIALIZER:
         serializer = _RETURN_SERIALIZER[ret_tag]
-        lines.append(f"\t_ret := {call_expr}")
+        go_type = _TYPE_ASSERTION[ret_tag]
+        lines.append(f"\t_ret := _out[0].Interface().({go_type})")
         lines.append(f"\treturn {serializer}(_ret)")
     else:
-        lines.append(f"\treturn {call_expr}")
+        lines.append("\tif len(_out) == 0 { return nil }")
+        lines.append("\treturn _out[0].Interface()")
 
     body = "\n".join(lines)
     return f"func _runTestCase(inputMap map[string]interface{{}}) interface{{}} {{\n{body}\n}}"
@@ -301,10 +323,12 @@ def build_test_harness(
             canonical_keys = order
             break
 
+    sort_import = '\t"sort"' if "GraphNode" in needed_types else ""
+
     if has_custom and canonical_keys:
         run_func = _build_run_func(func_name, canonical_keys, param_types)
         call_snippet = _CUSTOM_CALL_SNIPPET
-        extra_imports = ""
+        extra_imports = '\t"reflect"'
         loop_var = "_"
     else:
         run_func = ""
@@ -321,6 +345,7 @@ import (
 \t"math"
 \t"os"
 {extra_imports}
+{sort_import}
 \t"strings"
 )
 
@@ -371,7 +396,7 @@ func normalizeForComparison(val interface{{}}) interface{{}} {{
 \t}}
 }}
 
-{_REFLECT_CONVERT_IF_NEEDED if not has_custom else ""}
+{_REFLECT_CONVERT_IF_NEEDED}
 
 func main() {{
 \ttestJSON := "{test_cases_json}"

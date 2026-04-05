@@ -186,11 +186,25 @@ def _build_main_converters(needed_types: set) -> str:
 
 
 def _build_run_test_case(func_name: str, keys: list, param_types: dict) -> str:
-    """Generate a Java _runTestCase method."""
-    lines = []
-    arg_names = []
+    """Generate a Java _runTestCase method.
 
-    for key in keys:
+    Custom-type params use the dedicated deserializers.  Non-custom params are
+    converted via convertArg with the reflected parameter type.  All args are
+    passed through method.invoke() so mixed signatures like
+    (ListNode head, int n) work — Java's reflection layer handles the
+    Object→primitive unboxing automatically.
+    """
+    lines = []
+
+    # Reflect on the method once to get concrete parameter types.
+    lines.append("        java.lang.reflect.Method _m = null;")
+    lines.append("        for (java.lang.reflect.Method _cm : Solution.class.getDeclaredMethods()) {")
+    lines.append(f"            if (_cm.getName().equals(\"{func_name}\")) {{ _m = _cm; break; }}")
+    lines.append("        }")
+    lines.append(f"        if (_m == null) throw new RuntimeException(\"Method {func_name} not found\");")
+    lines.append(f"        Object[] _invokeArgs = new Object[{len(keys)}];")
+
+    for i, key in enumerate(keys):
         type_tag = param_types.get(key)
         if type_tag and type_tag in _JAVA_DESERIALIZER:
             deser = _JAVA_DESERIALIZER[type_tag]
@@ -205,26 +219,26 @@ def _build_run_test_case(func_name: str, keys: list, param_types: dict) -> str:
                 f"            _arg_{key} = {deser}((List<?>)inputMap.get(\"{key}\"));"
             )
             lines.append("        }")
-            arg_names.append(f"_arg_{key}")
+            lines.append(f"        _invokeArgs[{i}] = _arg_{key};")
         else:
-            lines.append(f"        Object _arg_{key} = inputMap.get(\"{key}\");")
-            arg_names.append(f"_arg_{key}")
-
-    call_expr = f"sol.{func_name}({', '.join(arg_names)})"
+            lines.append(
+                f"        _invokeArgs[{i}] = convertArg(inputMap.get(\"{key}\"),"
+                f" _m.getParameterTypes()[{i}]);"
+            )
 
     ret_tag = param_types.get("__return__")
+    lines.append("        Object _ret = _m.invoke(sol, _invokeArgs);")
     if ret_tag and ret_tag in _JAVA_SERIALIZER:
         ser = _JAVA_SERIALIZER[ret_tag]
         ret_type = _JAVA_TYPE_DECL[ret_tag]
-        lines.append(f"        {ret_type} _ret = ({ret_type}){call_expr};")
-        lines.append(f"        return {ser}(_ret);")
+        lines.append(f"        return {ser}(({ret_type})_ret);")
     else:
-        lines.append(f"        return {call_expr};")
+        lines.append("        return _ret;")
 
     body = "\n".join(lines)
     return f"""\
     @SuppressWarnings("unchecked")
-    private static Object _runTestCase(Map<String, Object> inputMap, Solution sol) {{
+    private static Object _runTestCase(Map<String, Object> inputMap, Solution sol) throws Exception {{
 {body}
     }}"""
 

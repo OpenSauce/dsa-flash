@@ -47,6 +47,8 @@ def _listnode_to_list(node):
 def _list_to_treenode(arr):
     if not arr:
         return None
+    if arr[0] is None:
+        return None
     root = TreeNode(arr[0])
     queue = [root]
     i = 1
