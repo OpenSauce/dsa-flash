@@ -1,12 +1,14 @@
 import json
 import re
 
-_LISTNODE_STRUCT = """\
+_LISTNODE_TYPE = """\
 type ListNode struct {
 \tVal  int
 \tNext *ListNode
 }
+"""
 
+_LISTNODE_CONVERTERS = """\
 func _arrayToListNode(arr []interface{}) *ListNode {
 \tif len(arr) == 0 {
 \t\treturn nil
@@ -33,13 +35,15 @@ func _listNodeToArray(node *ListNode) []int {
 }
 """
 
-_TREENODE_STRUCT = """\
+_TREENODE_TYPE = """\
 type TreeNode struct {
 \tVal   int
 \tLeft  *TreeNode
 \tRight *TreeNode
 }
+"""
 
+_TREENODE_CONVERTERS = """\
 func _arrayToTreeNode(arr []interface{}) *TreeNode {
 \tif len(arr) == 0 {
 \t\treturn nil
@@ -94,12 +98,14 @@ func _treeNodeToArray(root *TreeNode) []interface{} {
 }
 """
 
-_GRAPHNODE_STRUCT = """\
+_GRAPHNODE_TYPE = """\
 type GraphNode struct {
 \tVal       int
 \tNeighbors []*GraphNode
 }
+"""
 
+_GRAPHNODE_CONVERTERS = """\
 func _adjToGraphNode(adj []interface{}) *GraphNode {
 \tif len(adj) == 0 {
 \t\treturn nil
@@ -156,10 +162,16 @@ func _graphNodeToAdj(node *GraphNode) [][]int {
 }
 """
 
-_STRUCT_DEFS = {
-    "ListNode": _LISTNODE_STRUCT,
-    "TreeNode": _TREENODE_STRUCT,
-    "GraphNode": _GRAPHNODE_STRUCT,
+_TYPE_DEFS = {
+    "ListNode": _LISTNODE_TYPE,
+    "TreeNode": _TREENODE_TYPE,
+    "GraphNode": _GRAPHNODE_TYPE,
+}
+
+_CONVERTER_DEFS = {
+    "ListNode": _LISTNODE_CONVERTERS,
+    "TreeNode": _TREENODE_CONVERTERS,
+    "GraphNode": _GRAPHNODE_CONVERTERS,
 }
 
 
@@ -176,14 +188,20 @@ def _func_exists(user_code: str, func_name: str) -> bool:
 
 
 def _build_struct_defs(user_code: str, needed_types: set) -> str:
-    """Inject struct defs for types not already defined in user_code."""
+    """Inject struct defs + converters for needed types.
+
+    Skip the type definition itself when user code already declares it
+    (Go disallows redeclaration), but ALWAYS inject the converter functions
+    — they are harness-private (underscore-prefixed) and the generated
+    _runTestCase call site references them unconditionally.
+    """
     parts = []
     for type_name in ["ListNode", "TreeNode", "GraphNode"]:
         if type_name not in needed_types:
             continue
-        if re.search(rf"\btype\s+{re.escape(type_name)}\s+struct\b", user_code):
-            continue
-        parts.append(_STRUCT_DEFS[type_name])
+        if not re.search(rf"\btype\s+{re.escape(type_name)}\s+struct\b", user_code):
+            parts.append(_TYPE_DEFS[type_name])
+        parts.append(_CONVERTER_DEFS[type_name])
     return "\n".join(parts)
 
 

@@ -668,3 +668,90 @@ class TreeNode:
     )
     result = exec_ns["_list_to_treenode"]([None])
     assert result is None, f"Expected None, got {result}"
+
+
+# Regression test for the Go/JS struct-and-converter-bundled-together bug.
+# If user code already defines `type ListNode struct` / `class ListNode`, the
+# harness must still emit the converter functions (_arrayToListNode etc.) —
+# earlier revisions skipped the entire bundle, producing "undefined symbol"
+# compile errors in the generated program.
+def test_go_converters_still_injected_when_user_defines_listnode() -> None:
+    from app.harnesses.golang import build_test_harness
+
+    user_code = """
+type ListNode struct {
+\tVal  int
+\tNext *ListNode
+}
+
+func reverseList(head *ListNode) *ListNode {
+\treturn head
+}
+"""
+    harness = build_test_harness(
+        user_code,
+        [{"input": {"head": [1, 2, 3]}, "expected": [3, 2, 1]}],
+        "reverseList",
+        param_types={"head": "ListNode", "__return__": "ListNode"},
+    )
+    # Struct must not be redeclared (user already provides it)
+    # — check the harness-injected section before user_code only.
+    # The converter functions, however, MUST be present.
+    assert "_arrayToListNode" in harness and "func _arrayToListNode(" in harness
+    assert "_listNodeToArray" in harness and "func _listNodeToArray(" in harness
+    # User's struct is still there (from user_code)
+    assert harness.count("type ListNode struct") == 1
+
+
+def test_java_strip_user_node_class_with_nested_braces() -> None:
+    """_strip_user_node_classes must handle constructor bodies with nested braces.
+
+    Regression guard: earlier implementation used a naive regex that refused
+    braces inside the class body, so user classes with constructors like
+    `ListNode(int x) { val = x; }` were not stripped — leading to top-level
+    collisions with the harness-injected ListNode and "argument type mismatch"
+    runtime errors on method.invoke.
+    """
+    from app.harnesses.java import _strip_user_node_classes
+
+    user_code = """
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
+public ListNode reorderList(ListNode head) {
+    return null;
+}
+"""
+    stripped = _strip_user_node_classes(user_code, {"ListNode"})
+    assert "class ListNode" not in stripped
+    assert "reorderList" in stripped
+
+
+def test_js_converters_still_injected_when_user_defines_listnode() -> None:
+    from app.harnesses.javascript import build_test_harness
+
+    user_code = """
+class ListNode {
+  constructor(val = 0, next = null) {
+    this.val = val;
+    this.next = next;
+  }
+}
+
+function reverseList(head) {
+  return head;
+}
+"""
+    harness = build_test_harness(
+        user_code,
+        [{"input": {"head": [1, 2, 3]}, "expected": [3, 2, 1]}],
+        "reverseList",
+        param_types={"head": "ListNode", "__return__": "ListNode"},
+    )
+    assert "function _arrayToListNode(" in harness
+    assert "function _listNodeToArray(" in harness
+    # User's class is still there (from user_code), not duplicated
+    assert harness.count("class ListNode") == 1
