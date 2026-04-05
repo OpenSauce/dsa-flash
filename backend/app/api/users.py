@@ -1,6 +1,7 @@
 # app/api/users.py
 
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -139,7 +140,7 @@ def signup(
     session.add(user)
     session.flush()
 
-    session_id = request.cookies.get("session_id", "")
+    session_id = request.cookies.get("session_id") or str(uuid.uuid4())
     event = Event(
         session_id=session_id,
         user_id=user.id,

@@ -243,6 +243,7 @@ def analytics_summary(
             SELECT payload->>'category' AS cat, COUNT(*) AS cnt
             FROM event
             WHERE event_type = 'lesson_view'
+              AND user_id IS NULL
               AND payload->>'category' IS NOT NULL
             GROUP BY cat
             ORDER BY cnt DESC
