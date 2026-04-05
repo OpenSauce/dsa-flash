@@ -168,9 +168,11 @@ def extract_func_name(strater_code_or_starter_code: dict) -> str | None:
 
     # Regex matches one method signature: optional modifiers, return type,
     # method name, open paren. Return type allows nested generics etc.
+    # Modifiers are optional — starters without any access modifier
+    # (e.g. `boolean maxProfit(int[] prices)`) should still match.
     sig_re = re.compile(
-        r"(?:(?:public|private|protected|static|final|abstract)\s+)+"
-        r"[\w<>?,.&\[\]\s]+?"
+        r"(?:(?:public|private|protected|static|final|abstract)\s+)*"
+        r"[\w<>?,.&\[\]]+"
         r"\s+(\w+)\s*\(",
     )
     reserved = {"class", "interface", "enum", "extends", "implements", "throws"}
