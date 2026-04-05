@@ -187,6 +187,48 @@ def _func_exists(user_code: str, func_name: str) -> bool:
     return bool(re.search(rf"func\s+{re.escape(func_name)}\s*\(", user_code))
 
 
+def _strip_go_package_and_imports(user_code: str) -> tuple[str, set[str]]:
+    """Remove `package main` and import blocks from user code.
+
+    Returns (stripped_code, extra_imports) where extra_imports is the set of
+    import paths the user code requested. Callers merge these into the
+    harness's own import list so user code can reference them without the
+    harness redeclaring `package main`.
+    """
+    extra: set[str] = set()
+
+    # Drop any `package <name>` line (typically `package main`).
+    user_code = re.sub(r"^\s*package\s+\w+\s*\n", "", user_code, flags=re.MULTILINE)
+
+    # Collect and drop single-line imports: `import "fmt"` or `import f "fmt"`.
+    def _capture_single(match: re.Match) -> str:
+        extra.add(match.group(1))
+        return ""
+
+    user_code = re.sub(
+        r"^\s*import\s+(?:\w+\s+)?\"([^\"]+)\"\s*\n",
+        _capture_single,
+        user_code,
+        flags=re.MULTILINE,
+    )
+
+    # Collect and drop multi-line import blocks: `import ( ... )`.
+    def _capture_block(match: re.Match) -> str:
+        for line in match.group(1).splitlines():
+            m = re.search(r"\"([^\"]+)\"", line)
+            if m:
+                extra.add(m.group(1))
+        return ""
+
+    user_code = re.sub(
+        r"^\s*import\s*\(\s*([^)]*)\)\s*\n",
+        _capture_block,
+        user_code,
+        flags=re.MULTILINE,
+    )
+    return user_code, extra
+
+
 def _build_struct_defs(user_code: str, needed_types: set) -> str:
     """Inject struct defs + converters for needed types.
 
@@ -310,6 +352,14 @@ def build_test_harness(
     if param_types is None:
         param_types = {}
 
+    # User starters occasionally include a leading `package main` declaration
+    # and/or their own import block for documentation. The harness supplies
+    # its own package clause and import list, so strip these from user code
+    # to avoid "package main redeclared" and "non-declaration statement
+    # outside function body" compile errors. Imports the user actually needs
+    # are merged back into the harness import list below.
+    user_code, user_imports = _strip_go_package_and_imports(user_code)
+
     if not _func_exists(user_code, func_name):
         return _build_missing_func_harness(func_name)
 
@@ -354,6 +404,15 @@ def build_test_harness(
         extra_imports = '\t"reflect"'
         loop_var = "idx"
 
+    # Merge user-requested imports that aren't already in the harness list,
+    # so their solutions can reference packages like strconv/unicode/bytes.
+    _already_imported = {
+        "encoding/json", "fmt", "math", "os", "reflect", "sort", "strings",
+    }
+    user_extra = "\n".join(
+        f'\t"{imp}"' for imp in sorted(user_imports) if imp not in _already_imported
+    )
+
     harness = f"""\
 package main
 
@@ -365,6 +424,7 @@ import (
 {extra_imports}
 {sort_import}
 \t"strings"
+{user_extra}
 )
 
 // Silence unused import errors — these are available for user code

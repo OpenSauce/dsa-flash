@@ -150,17 +150,73 @@ _JAVA_TYPE_DECL = {
 }
 
 
-def extract_func_name(starter_code: dict) -> str | None:
-    """Extract the method name from starter_code's Java entry."""
-    java_code = starter_code.get("java", "")
-    # Match Java method signatures with optional modifiers and return types
-    # e.g. "public int[] twoSum(", "boolean isPalindrome(", "static List<Integer> solve("
-    match = re.search(
-        r"(?:public|private|protected|static|\s)*"
-        r"\s*\w+(?:<[^>]+>)?(?:\[\])?\s+(\w+)\s*\(",
-        java_code,
+def extract_func_name(strater_code_or_starter_code: dict) -> str | None:
+    """Extract the method name from starter_code's Java entry.
+
+    Strategy: scan the code once, tracking brace depth, and return the first
+    method declaration found at the top level (depth 0) or inside a single
+    `class Solution { ... }` wrapper (depth 1 with outer class Solution).
+    This correctly ignores methods and constructors inside helper node
+    classes like `class ListNode { int val; ListNode(int x) { ... } }`.
+
+    Handles return types including primitives, arrays (any dim), nested
+    generics, and qualified names. Excludes reserved words.
+    """
+    java_code = strater_code_or_starter_code.get("java", "")
+    if not java_code:
+        return None
+
+    # Regex matches one method signature: optional modifiers, return type,
+    # method name, open paren. Return type allows nested generics etc.
+    sig_re = re.compile(
+        r"(?:(?:public|private|protected|static|final|abstract)\s+)+"
+        r"[\w<>?,.&\[\]\s]+?"
+        r"\s+(\w+)\s*\(",
     )
-    return match.group(1) if match else None
+    reserved = {"class", "interface", "enum", "extends", "implements", "throws"}
+
+    # Walk char-by-char tracking brace depth and line starts. For each line,
+    # if depth is 0 (top-level) or we're inside `class Solution` at depth 1,
+    # try to match a method signature there.
+    in_solution = False
+    solution_depth: int | None = None
+    depth = 0
+    i = 0
+    n = len(java_code)
+
+    # Precompute positions of `class Solution {` to know when we enter it.
+    solution_match = re.search(r"\bclass\s+Solution\b\s*\{", java_code)
+    solution_open = solution_match.end() - 1 if solution_match else -1  # index of '{'
+
+    while i < n:
+        ch = java_code[i]
+        if ch == "{":
+            if i == solution_open:
+                in_solution = True
+                solution_depth = depth
+            depth += 1
+            i += 1
+            continue
+        if ch == "}":
+            depth -= 1
+            if in_solution and solution_depth is not None and depth == solution_depth:
+                in_solution = False
+            i += 1
+            continue
+
+        # Only try matching at top-level or inside the Solution class body.
+        eligible = (depth == 0) or (in_solution and depth == (solution_depth or 0) + 1)
+        if eligible:
+            m = sig_re.match(java_code, i)
+            if m:
+                name = m.group(1)
+                if name not in reserved:
+                    return name
+                i = m.end()
+                continue
+        i += 1
+
+    return None
 
 
 def _build_java_node_classes(needed_types: set) -> str:
@@ -179,6 +235,29 @@ def _build_java_node_classes(needed_types: set) -> str:
             continue
         parts.append(_JAVA_TOPLEVEL_CLASS[type_name])
     return "\n".join(parts)
+
+
+def _strip_java_imports(user_code: str) -> tuple[str, set[str]]:
+    """Remove `import ...;` lines from user code and return them.
+
+    Imports inside the harness-injected `class Solution { ... }` wrapper are
+    illegal in Java. Callers re-emit the collected imports at the top of
+    Main.java so user solutions can still reference packages beyond the
+    default `java.util.*`.
+    """
+    imports: set[str] = set()
+
+    def _capture(match: re.Match) -> str:
+        imports.add(match.group(1))
+        return ""
+
+    user_code = re.sub(
+        r"^\s*import\s+([^;]+);\s*\n?",
+        _capture,
+        user_code,
+        flags=re.MULTILINE,
+    )
+    return user_code, imports
 
 
 def _strip_user_node_classes(user_code: str, needed_types: set) -> str:
@@ -320,6 +399,12 @@ def build_test_harness(
 
     test_cases_json = json.dumps(test_cases).replace("\\", "\\\\").replace('"', '\\"')
 
+    # Strip user's `import` statements and collect them so they can be re-emitted
+    # at the top of Main.java. Imports inside the wrapped `class Solution`
+    # are illegal in Java, and some solutions reference packages beyond
+    # java.util (e.g. java.util.stream, java.util.regex).
+    user_code, user_imports = _strip_java_imports(user_code)
+
     # Strip any user-provided top-level node classes; harness will inject its
     # own canonical versions so converters and user code reference the same types.
     user_code = _strip_user_node_classes(user_code, needed_types)
@@ -351,8 +436,16 @@ def build_test_harness(
         run_test_case_method = ""
         call_block = _REFLECT_CALL_BLOCK.format(func_name=func_name)
 
+    # Re-emit user-requested imports at the top of Main.java (skip the ones
+    # already in the harness's default import list).
+    _already_imported = {"java.util.*"}
+    extra_imports = "\n".join(
+        f"import {imp};" for imp in sorted(user_imports) if imp not in _already_imported
+    )
+
     harness = f"""\
 import java.util.*;
+{extra_imports}
 
 {node_class_defs}
 {solution_code}
@@ -507,6 +600,42 @@ public class Main {{
         return arr;
     }}
 
+    private static int[][] toIntMatrix(Object o) {{
+        List<?> outer = (List<?>) o;
+        int[][] arr = new int[outer.size()][];
+        for (int i = 0; i < outer.size(); i++) {{
+            List<?> inner = (List<?>) outer.get(i);
+            arr[i] = new int[inner.size()];
+            for (int j = 0; j < inner.size(); j++) arr[i][j] = ((Number) inner.get(j)).intValue();
+        }}
+        return arr;
+    }}
+
+    private static char[][] toCharMatrix(Object o) {{
+        List<?> outer = (List<?>) o;
+        char[][] arr = new char[outer.size()][];
+        for (int i = 0; i < outer.size(); i++) {{
+            List<?> inner = (List<?>) outer.get(i);
+            arr[i] = new char[inner.size()];
+            for (int j = 0; j < inner.size(); j++) {{
+                Object v = inner.get(j);
+                arr[i][j] = v instanceof String ? ((String) v).charAt(0) : (char) ((Number) v).intValue();
+            }}
+        }}
+        return arr;
+    }}
+
+    private static String[][] toStringMatrix(Object o) {{
+        List<?> outer = (List<?>) o;
+        String[][] arr = new String[outer.size()][];
+        for (int i = 0; i < outer.size(); i++) {{
+            List<?> inner = (List<?>) outer.get(i);
+            arr[i] = new String[inner.size()];
+            for (int j = 0; j < inner.size(); j++) arr[i][j] = (String) inner.get(j);
+        }}
+        return arr;
+    }}
+
     @SuppressWarnings("unchecked")
     public static void main(String[] args) {{
         String testJSON = "{test_cases_json}";
@@ -577,6 +706,15 @@ public class Main {{
         }}
         if (type == String[].class) {{
             return toStringArray(val);
+        }}
+        if (type == int[][].class) {{
+            return toIntMatrix(val);
+        }}
+        if (type == char[][].class) {{
+            return toCharMatrix(val);
+        }}
+        if (type == String[][].class) {{
+            return toStringMatrix(val);
         }}
         if (type == List.class) {{
             return val;
