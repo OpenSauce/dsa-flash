@@ -7,7 +7,16 @@ from app.api.analytics import router as events_router
 from app.api.analytics import summary_router
 from app.api.users import router as user_router
 from app.database import get_session
-from app.models import CodingProblem, Event, UserCodingProblem
+from app.models import (
+    CodingProblem,
+    Event,
+    Flashcard,
+    Lesson,
+    Quiz,
+    UserCodingProblem,
+    UserFlashcard,
+    UserQuizAttempt,
+)
 
 
 @pytest.fixture(name="app")
@@ -233,6 +242,96 @@ def test_summary_with_problem_metrics(client, session, create_user, get_token):
 
     assert data["funnel"]["problem_users"] == 1
     assert data["category_problem_submissions"]["data-structures"] == 3
+
+
+def test_per_category_breakdowns(client, session, create_user, get_token):
+    """quiz_completions_by_category, anon_lesson_views_by_category, and
+    flashcard_reviews_by_category are all present and correctly counted."""
+    admin = create_user(is_admin=True)
+    token = get_token(client, "user", "password")
+
+    # Seed two categories
+    lesson_a = Lesson(
+        title="Lesson A",
+        slug="lesson-a",
+        category="cat-a",
+        content="Content",
+        summary="Summary",
+        reading_time_minutes=1,
+        order=0,
+    )
+    lesson_b = Lesson(
+        title="Lesson B",
+        slug="lesson-b",
+        category="cat-b",
+        content="Content",
+        summary="Summary",
+        reading_time_minutes=1,
+        order=0,
+    )
+    session.add(lesson_a)
+    session.add(lesson_b)
+    session.commit()
+    session.refresh(lesson_a)
+    session.refresh(lesson_b)
+
+    quiz_a = Quiz(title="Quiz A", slug="quiz-a", category="cat-a", lesson_slug="lesson-a")
+    quiz_b = Quiz(title="Quiz B", slug="quiz-b", category="cat-b", lesson_slug="lesson-b")
+    session.add(quiz_a)
+    session.add(quiz_b)
+    session.commit()
+    session.refresh(quiz_a)
+    session.refresh(quiz_b)
+
+    # 2 quiz completions for cat-a, 1 for cat-b
+    session.add(UserQuizAttempt(user_id=admin.id, quiz_id=quiz_a.id, score=4, total=5))
+    session.commit()
+    second_user = create_user(username="user2")
+    session.add(UserQuizAttempt(user_id=second_user.id, quiz_id=quiz_a.id, score=3, total=5))
+    session.add(UserQuizAttempt(user_id=second_user.id, quiz_id=quiz_b.id, score=5, total=5))
+    session.commit()
+
+    # Anon lesson views: 3 for cat-a, 1 for cat-b
+    for _ in range(3):
+        session.add(Event(
+            session_id="anon-s",
+            user_id=None,
+            event_type="lesson_view",
+            payload={"category": "cat-a", "slug": "lesson-a"},
+        ))
+    session.add(Event(
+        session_id="anon-s2",
+        user_id=None,
+        event_type="lesson_view",
+        payload={"category": "cat-b", "slug": "lesson-b"},
+    ))
+    session.commit()
+
+    # Flashcard reviews: seed a card in cat-a with repetitions=5, cat-b with repetitions=2
+    card_a = Flashcard(title="Card A", front="Q", back="A", category="cat-a", tags=[])
+    card_b = Flashcard(title="Card B", front="Q", back="A", category="cat-b", tags=[])
+    session.add(card_a)
+    session.add(card_b)
+    session.commit()
+    session.refresh(card_a)
+    session.refresh(card_b)
+
+    session.add(UserFlashcard(user_id=admin.id, flashcard_id=card_a.id, repetitions=5))
+    session.add(UserFlashcard(user_id=admin.id, flashcard_id=card_b.id, repetitions=2))
+    session.commit()
+
+    resp = client.get("/analytics/summary", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["quiz_completions_by_category"]["cat-a"] == 2
+    assert data["quiz_completions_by_category"]["cat-b"] == 1
+
+    assert data["anon_lesson_views_by_category"]["cat-a"] == 3
+    assert data["anon_lesson_views_by_category"]["cat-b"] == 1
+
+    assert data["flashcard_reviews_by_category"]["cat-a"] == 5
+    assert data["flashcard_reviews_by_category"]["cat-b"] == 2
 
 
 def test_users_me_returns_is_admin_false(client, session, create_user, get_token):

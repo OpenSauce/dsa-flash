@@ -225,6 +225,42 @@ def analytics_summary(
         """)
     ).all()
 
+    # Per-category quiz completions
+    category_quizzes = session.exec(
+        text("""
+            SELECT q.category, COUNT(*) AS completions
+            FROM userquizattempt uqa
+            JOIN quiz q ON q.id = uqa.quiz_id
+            WHERE q.category IS NOT NULL
+            GROUP BY q.category
+            ORDER BY completions DESC
+        """)
+    ).all()
+
+    # Per-category anonymous lesson views (from event table)
+    category_anon_lesson_views = session.exec(
+        text("""
+            SELECT payload->>'category' AS cat, COUNT(*) AS cnt
+            FROM event
+            WHERE event_type = 'lesson_view'
+              AND payload->>'category' IS NOT NULL
+            GROUP BY cat
+            ORDER BY cnt DESC
+        """)
+    ).all()
+
+    # Per-category flashcard reviews (sum review repetitions proxy via userflashcard + flashcard join)
+    category_flashcard_reviews = session.exec(
+        text("""
+            SELECT f.category, SUM(uf.repetitions) AS reviews
+            FROM userflashcard uf
+            JOIN flashcard f ON f.id = uf.flashcard_id
+            WHERE f.category IS NOT NULL
+            GROUP BY f.category
+            ORDER BY reviews DESC
+        """)
+    ).all()
+
     return {
         "total_sessions": total_sessions,
         "anonymous_sessions": anonymous_sessions,
@@ -259,4 +295,7 @@ def analytics_summary(
             "users_with_problem_reviews": problem_user_row[0] or 0,
         },
         "category_problem_submissions": {r[0]: r[1] for r in category_problems},
+        "quiz_completions_by_category": {r[0]: r[1] for r in category_quizzes},
+        "anon_lesson_views_by_category": {r[0]: r[1] for r in category_anon_lesson_views},
+        "flashcard_reviews_by_category": {r[0]: int(r[1]) for r in category_flashcard_reviews},
     }
