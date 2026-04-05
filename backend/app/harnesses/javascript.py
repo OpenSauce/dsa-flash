@@ -1,13 +1,16 @@
 import json
 import re
 
-_JS_LISTNODE = """\
+_JS_LISTNODE_CLASS = """\
 class ListNode {
   constructor(val = 0, next = null) {
     this.val = val;
     this.next = next;
   }
 }
+"""
+
+_JS_LISTNODE_CONVERTERS = """\
 function _arrayToListNode(arr) {
   if (!arr || arr.length === 0) return null;
   const head = new ListNode(arr[0]);
@@ -28,7 +31,7 @@ function _listNodeToArray(node) {
 }
 """
 
-_JS_TREENODE = """\
+_JS_TREENODE_CLASS = """\
 class TreeNode {
   constructor(val = 0, left = null, right = null) {
     this.val = val;
@@ -36,6 +39,9 @@ class TreeNode {
     this.right = right;
   }
 }
+"""
+
+_JS_TREENODE_CONVERTERS = """\
 function _arrayToTreeNode(arr) {
   if (!arr || arr.length === 0) return null;
   if (arr[0] === null) return null;
@@ -78,13 +84,16 @@ function _treeNodeToArray(root) {
 }
 """
 
-_JS_GRAPHNODE = """\
+_JS_GRAPHNODE_CLASS = """\
 class GraphNode {
   constructor(val = 0, neighbors = []) {
     this.val = val;
     this.neighbors = neighbors;
   }
 }
+"""
+
+_JS_GRAPHNODE_CONVERTERS = """\
 function _adjToGraphNode(adj) {
   if (!adj || adj.length === 0) return null;
   const nodes = adj.map((_, i) => new GraphNode(i + 1));
@@ -116,9 +125,15 @@ function _graphNodeToAdj(node) {
 """
 
 _JS_CLASS_DEFS = {
-    "ListNode": _JS_LISTNODE,
-    "TreeNode": _JS_TREENODE,
-    "GraphNode": _JS_GRAPHNODE,
+    "ListNode": _JS_LISTNODE_CLASS,
+    "TreeNode": _JS_TREENODE_CLASS,
+    "GraphNode": _JS_GRAPHNODE_CLASS,
+}
+
+_JS_CONVERTER_DEFS = {
+    "ListNode": _JS_LISTNODE_CONVERTERS,
+    "TreeNode": _JS_TREENODE_CONVERTERS,
+    "GraphNode": _JS_GRAPHNODE_CONVERTERS,
 }
 
 _JS_DESERIALIZER = {
@@ -145,14 +160,20 @@ def extract_func_name(starter_code: dict) -> str | None:
 
 
 def _build_js_preamble(user_code: str, needed_types: set) -> str:
+    """Inject class defs + converters for needed types.
+
+    Skip the class definition itself when user code already declares it
+    (redeclaration is a SyntaxError in JS), but ALWAYS inject the converter
+    functions — they are harness-private and the generated runner references
+    them unconditionally.
+    """
     parts = []
     for type_name in ["ListNode", "TreeNode", "GraphNode"]:
         if type_name not in needed_types:
             continue
-        # Skip if user code already defines the class
-        if re.search(rf"\bclass\s+{re.escape(type_name)}\b", user_code):
-            continue
-        parts.append(_JS_CLASS_DEFS[type_name])
+        if not re.search(rf"\bclass\s+{re.escape(type_name)}\b", user_code):
+            parts.append(_JS_CLASS_DEFS[type_name])
+        parts.append(_JS_CONVERTER_DEFS[type_name])
     return "\n".join(parts)
 
 
