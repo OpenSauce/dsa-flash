@@ -31,7 +31,7 @@ The `--recurse-submodules` flag is required — flashcard content lives in the `
 ## Commands
 
 ```bash
-make dev     # start all services (frontend-dev, backend, db, pgadmin)
+make dev     # start dev-profile services (frontend-dev, backend-dev, db, pgadmin, plus Judge0 services)
 make prod    # start production services
 make down    # stop all services
 make logs    # tail logs
