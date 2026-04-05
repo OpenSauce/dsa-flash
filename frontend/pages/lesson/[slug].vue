@@ -100,6 +100,9 @@ const fetchRelatedProblems = async () => {
 
 onMounted(async () => {
   track('lesson_view', { category: lesson.value?.category, slug })
+  if (lesson.value?.category) {
+    sessionStorage.setItem('referrer_category', lesson.value.category)
+  }
   await fetchCategoryLessons()
   await fetchLinkedQuiz()
   await fetchRelatedProblems()
