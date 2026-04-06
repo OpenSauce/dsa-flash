@@ -12,9 +12,9 @@ import yaml
 
 from app.models import CodingProblem
 
-pytestmark = pytest.mark.integration
-
 from .catalog_solutions import CATALOG_SOLUTIONS
+
+pytestmark = pytest.mark.integration
 
 LANGUAGES = ["python", "javascript", "go", "java"]
 

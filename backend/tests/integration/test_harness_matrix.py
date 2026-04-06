@@ -12,9 +12,9 @@ import pytest
 
 from app.models import CodingProblem
 
-pytestmark = pytest.mark.integration
-
 from .fixtures import FIXTURES, ProblemFixture
+
+pytestmark = pytest.mark.integration
 
 LANGUAGES = ["python", "javascript", "go", "java"]
 
