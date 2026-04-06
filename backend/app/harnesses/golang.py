@@ -428,7 +428,7 @@ import (
 )
 
 // Silence unused import errors — these are available for user code
-var _ = math.MaxInt
+var _ = math.MaxInt64
 var _ = strings.Contains
 
 {struct_defs}
