@@ -14,6 +14,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import app.api.problems as problems_mod
 from app.api.problems import router as problems_router
 from app.api.users import get_current_user, get_optional_user
 from app.api.users import router as users_router
@@ -49,13 +50,24 @@ def app_fixture(session, create_user):
 
     fake_user = FakeUser()
 
+    # Patch JUDGE0_URL so the submit endpoint reaches localhost (host)
+    # instead of judge0-server (Docker DNS, unreachable from host).
+    # tests/conftest.py imports app.api.users which triggers app/api/__init__.py
+    # importing problems.py before our conftest loads, so env-var-based
+    # approaches don't work — we must patch the already-loaded module.
+    original_url = problems_mod.JUDGE0_URL
+    problems_mod.JUDGE0_URL = JUDGE0_URL
+
     app = FastAPI()
     app.include_router(problems_router)
     app.include_router(users_router)
     app.dependency_overrides[get_session] = get_test_session(session)
     app.dependency_overrides[get_current_user] = lambda: fake_user
     app.dependency_overrides[get_optional_user] = lambda: fake_user
-    return app
+
+    yield app
+
+    problems_mod.JUDGE0_URL = original_url
 
 
 @pytest.fixture(name="client")
