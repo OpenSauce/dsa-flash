@@ -57,7 +57,7 @@ LANGUAGE_CONFIG = {
             # uses Judge0's MAX_MEMORY_LIMIT server-side.
             # Judge0 server must set:
             #   MAX_MEMORY_LIMIT >= 4096000  (for Go/javac compile step)
-            #   MAX_MAX_PROCESSES_AND_OR_THREADS >= 256
+            #   MAX_MAX_PROCESSES_AND_OR_THREADS >= 512
             # (see docker-compose.yml x-judge0-env section)
             "memory_limit": 1024000,
             "max_processes_and_or_threads": 256,
@@ -74,7 +74,7 @@ LANGUAGE_CONFIG = {
             # here so the run step is not more restrictive than the compile step
             # (which uses MAX_MEMORY_LIMIT = 4096000 to accommodate go tool).
             "memory_limit": 4096000,
-            "max_processes_and_or_threads": 256,
+            "max_processes_and_or_threads": 512,
             "enable_per_process_and_thread_time_limit": True,
             "enable_per_process_and_thread_memory_limit": True,
         },
