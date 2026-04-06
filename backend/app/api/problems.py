@@ -35,10 +35,67 @@ JUDGE0_AUTHN_TOKEN = os.getenv("JUDGE0_AUTHN_TOKEN", "")
 MAX_CODE_BYTES = 10 * 1024  # 10KB
 
 LANGUAGE_CONFIG = {
-    "python": {"judge0_id": 71, "monaco_mode": "python"},
-    "javascript": {"judge0_id": 63, "monaco_mode": "javascript"},
-    "go": {"judge0_id": 60, "monaco_mode": "go"},
-    "java": {"judge0_id": 62, "monaco_mode": "java"},
+    "python": {
+        "judge0_id": 71,
+        "monaco_mode": "python",
+        "judge0_limits": {
+            "cpu_time_limit": 5,
+            "memory_limit": 128000,
+            "enable_per_process_and_thread_time_limit": True,
+            "enable_per_process_and_thread_memory_limit": True,
+        },
+    },
+    "javascript": {
+        "judge0_id": 63,
+        "monaco_mode": "javascript",
+        "judge0_limits": {
+            "cpu_time_limit": 10,
+            # Node.js 12 V8 CodeRange setup needs >512 MB of virtual address
+            # space. On cgroup-v2 hosts, --cg mode is unavailable (requires v1
+            # memory cgroup), so isolate -m (RLIMIT_AS) applies per-process.
+            # 1024 MB is sufficient for Node.js runtime; compilation (javac/go)
+            # uses Judge0's MAX_MEMORY_LIMIT server-side.
+            # Judge0 server must set:
+            #   MAX_MEMORY_LIMIT >= 4096000  (for Go/javac compile step)
+            #   MAX_MAX_PROCESSES_AND_OR_THREADS >= 512
+            # (see docker-compose.yml x-judge0-env section)
+            "memory_limit": 1024000,
+            "max_processes_and_or_threads": 256,
+            "enable_per_process_and_thread_time_limit": True,
+            "enable_per_process_and_thread_memory_limit": True,
+        },
+    },
+    "go": {
+        "judge0_id": 60,
+        "monaco_mode": "go",
+        "judge0_limits": {
+            "cpu_time_limit": 10,
+            # Go compiled binaries need modest runtime memory; 4096 MB is set
+            # here so the run step is not more restrictive than the compile step
+            # (which uses MAX_MEMORY_LIMIT = 4096000 to accommodate go tool).
+            "memory_limit": 4096000,
+            "max_processes_and_or_threads": 512,
+            "enable_per_process_and_thread_time_limit": True,
+            "enable_per_process_and_thread_memory_limit": True,
+        },
+    },
+    "java": {
+        "judge0_id": 62,
+        "monaco_mode": "java",
+        "judge0_limits": {
+            "cpu_time_limit": 10,
+            "memory_limit": 4096000,
+            "max_processes_and_or_threads": 256,
+            # OpenJDK 13 Class Data Sharing (CDS) tries to mmap a large shared
+            # archive during javac compilation. Under per-process VIRT limits
+            # on cgroup-v2 hosts, this CDS mmap exhausts the 4 GB budget.
+            # -J-Xshare:off disables CDS for the javac JVM; -J-Xmx256m caps
+            # javac's own Java heap so it leaves room for JVM native memory.
+            "compiler_options": "-J-Xshare:off -J-Xmx256m",
+            "enable_per_process_and_thread_time_limit": True,
+            "enable_per_process_and_thread_memory_limit": True,
+        },
+    },
 }
 
 # Judge0 status codes
@@ -309,18 +366,16 @@ def submit_code(
         headers = {}
         if JUDGE0_AUTHN_TOKEN:
             headers["X-Auth-Token"] = JUDGE0_AUTHN_TOKEN
+        cfg = LANGUAGE_CONFIG[body.language]
         with httpx.Client(timeout=30.0) as http:
             resp = http.post(
                 f"{JUDGE0_URL}/submissions",
                 params={"base64_encoded": "false", "wait": "true"},
                 headers=headers,
                 json={
-                    "language_id": LANGUAGE_CONFIG[body.language]["judge0_id"],
+                    "language_id": cfg["judge0_id"],
                     "source_code": harness,
-                    "cpu_time_limit": 5,
-                    "memory_limit": 128000,
-                    "enable_per_process_and_thread_time_limit": True,
-                    "enable_per_process_and_thread_memory_limit": True,
+                    **cfg["judge0_limits"],
                 },
             )
             resp.raise_for_status()

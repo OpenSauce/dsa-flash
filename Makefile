@@ -1,4 +1,4 @@
-.PHONY: dev prod down logs validate-problems
+.PHONY: dev prod down logs validate-problems test-integration
 
 dev:
 	docker compose --profile prod down --remove-orphans
@@ -28,3 +28,14 @@ validate-problems:
 		exit 1; \
 	fi
 	cd backend && .venv/bin/python scripts/validate_problems.py
+
+# Run the integration test suite. Requires `make dev` running in another
+# terminal so judge0-server is reachable at localhost:2358. Tests use a
+# TestContainers Postgres so they do not touch the dev database.
+test-integration:
+	@if [ ! -x backend/.venv/bin/python ]; then \
+		echo "error: backend/.venv not found. Create it with:"; \
+		echo "  cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-test.txt"; \
+		exit 1; \
+	fi
+	cd backend && .venv/bin/python -m pytest tests/integration/ -m integration -v

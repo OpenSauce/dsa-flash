@@ -11,6 +11,21 @@ x-judge0-env: &judge0-env
   REDIS_PORT: 6379
   AUTHN_TOKEN: ${JUDGE0_AUTHN_TOKEN:-}
   AUTHZ_TOKEN: ${JUDGE0_AUTHZ_TOKEN:-}
+  # On cgroup-v2 hosts, isolate cannot use --cg mode (requires cgroup v1
+  # memory subsystem). Per-process VIRT limits (isolate -m) apply instead.
+  #
+  # Go 1.13 compiler needs ~4 GB of virtual address space for the runtime
+  # loader + cgo + parallel package compilation. The compile step uses
+  # MAX_MEMORY_LIMIT directly, so it must be >= 4096000.
+  # The per-submission memory_limit (set per language in LANGUAGE_CONFIG)
+  # governs the run step and can be much lower (768 MB for JS/Java/Go).
+  #
+  # Java 13 JVM also needs >512 MB VIRT for heap reservation at startup.
+  MAX_MEMORY_LIMIT: ${JUDGE0_MAX_MEMORY_LIMIT:-4096000}
+  # Go's linker and JVM spawn many threads during compilation.
+  # 512 gives Go's runtime enough headroom to avoid intermittent
+  # pthread_create failures under concurrent submissions.
+  MAX_MAX_PROCESSES_AND_OR_THREADS: ${JUDGE0_MAX_MAX_PROCESSES:-512}
 
 services:
   backend:
@@ -145,6 +160,8 @@ services:
   judge0-server:
     profiles: ["prod", "dev"]
     image: judge0/judge0:1.13.1
+    ports:
+      - "127.0.0.1:2358:2358"
     depends_on:
       judge0-db:
         condition: service_healthy
