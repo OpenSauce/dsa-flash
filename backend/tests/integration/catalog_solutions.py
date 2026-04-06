@@ -1,9 +1,9 @@
 """Canonical known-good solutions for catalog smoke tests.
 
 Keys are catalog problem titles (matching the `title:` field in the YAML).
-Adding a smoke case: pick a catalog YAML, add its title as a new outer key
-with {lang: solution} inner dict, then add the title to
-test_catalog_smoke.CATALOG_SLUGS.
+Adding a smoke case: pick a catalog YAML and add its title as a new outer key
+with a {lang: solution} inner dict. The smoke tests parametrize directly over
+`CATALOG_SOLUTIONS.keys()`, so no separate slug list needs to be updated.
 """
 
 CATALOG_SOLUTIONS: dict[str, dict[str, str]] = {
